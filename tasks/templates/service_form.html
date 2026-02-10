@@ -1,0 +1,32 @@
+<form method="post">
+  {% csrf_token %}
+  <table>
+    <tr>
+      <th>Service Name</th>
+      <th>Supplier</th>
+      <!-- Add other fields as needed -->
+      <th>Actions</th>
+    </tr>
+    {% for service in services %}
+    <tr>
+      <td>{{ service.service_name }}</td>
+      <td>{{ service.supplier }}</td>
+      <!-- Add other fields as needed -->
+      <td>
+        <a href="{% url 'delete_service' pk=service.pk %}">Delete</a>
+    <form method="post" action="{% url 'update_service' service.pk %}">
+      {% csrf_token %}
+      <input type="checkbox" name="is_checked" onchange="this.form.submit();" {% if service.is_checked %} checked {% endif %}>
+    </form>
+
+      </td>
+    </tr>
+    {% endfor %}
+    <tr>
+      {{ form }}
+    </tr>
+  </table>
+  <button type="submit">Add Row</button>
+</form>
+
+

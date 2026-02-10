@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Display Data</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+  <div class="welcome-message">
+    Welcome, <span class="username">{{ user.username }}</span>!
+</div>
+    {% include 'navbar.html' %}
+      <div>
+    <h1>All Requests</h1>
+    <a class="add-more" href="{% url 'input_data' %}">+Add New Request</a>
+    <ul class="nav nav-tabs">
+          {% for d in data %}
+          <span class="display-time">created: {{ d.created_at }}</span> <span class="display-time">Last Modified: {{ d.last_modified }}</span></p>
+          <li class="{% if d.status == 'processing' %}processing{% elif d.status == 'negotiation' %}negotiation{% elif d.status == 'finalized' %}finalized{% elif d.status == 'onhold' %}onhold{% endif %}">                <a href="{% url 'edit-model' d.pk %}"> <!-- Ensure item.pk is provided -->
+                    <span>{{ d.name }}</span> <span>{{ d.destination }}</span><span>{{ d.status }}</span> <span>Follow Up Date: {{ d.follow_up }}</span>
+                    <button>Edit</button></a>
+                </li>
+        {% endfor %}  
+    <script src="{% static 'JS/sidebar.js'%}"></script>
+    </ul></div>
+</body>
+</html>
+

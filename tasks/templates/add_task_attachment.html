@@ -1,0 +1,18 @@
+<!-- add_task_attachment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Add Attachment</title>
+    <meta charset="UTF-8">
+    {% load static %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+</head>
+<body>
+    <form method="post" enctype="multipart/form-data" class="attachment-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Submit" class="submit-button">
+    </form>
+</body>
+</html>

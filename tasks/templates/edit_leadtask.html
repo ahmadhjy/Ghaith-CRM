@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit LeadTask</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+<h1>Edit Invoice</h1>
+<form method="post" enctype="multipart/form-data" id="inputForm">
+    {% csrf_token %}
+    <!-- Status field -->
+    <div class="form-group">
+        <label for="id_status">Status:</label>
+        {{ form.status }}
+    </div>
+
+<!-- Accordion Group 1: Name, Phone, Channel, Destination, Special Requests -->
+<div class="accordion">
+    <h2 class="accordion-header">Customer Details</h2>
+    <div class="accordion-content">
+        <div class="form-group">
+            <label for="id_name">Name:</label>
+            {{ lead.name }}
+        </div>
+        <div class="form-group">
+            <label for="id_phone">Phone:</label>
+            {{ lead.phone }}
+        </div>
+        <div class="form-group">
+            <label for="id_channel">Channel:</label>
+            {{ lead.channel }}
+        </div>
+        <div class="form-group">
+            <label for="id_destination">Destination:</label>
+            {{ lead.destination }}
+        </div>
+        <div class="form-group">
+            <label for="id_special_request">Request Details</label>
+            {{ lead.special_request }}
+        </div>
+        <div class="form-group">
+            <label for="id_finalization_notes">What Happened:</label>
+            {{ lead.finalization_notes }}
+        </div>
+    </div>
+</div>
+<div class="form-group">
+<h1>Notes:</h1>
+{{ form.notes }}
+</div>
+
+<div class="form-group">
+    <label for="id_travel_date">Exact Travel Date:</label>
+    {{ form.travel_date }}
+</div>
+
+<div class="form-group">
+    <label for="id_date_of_birth">Date of Birth:</label>
+    {{ form.date_of_birth }}
+</div>
+
+<div class="form-group">
+    <label for="id_passport_expiry_date">Passport Expiry Date:</label>
+    {{ form.passport_expiry_date }}
+</div>
+
+<div class="form-group">
+    <label for="id_payment">Payment Type:</label>
+    {{ form.payment }}
+</div>
+
+<div class="form-group">
+    <label for="id_travel_date">Assign to:</label>
+    {{ form.assigned_to }}
+</div>
+
+<!-- Button to submit form -->
+<button type="submit">Save</button>
+</form>
+<br><br>
+<hr/>
+<br><br>
+
+<form method="post" id="update_service_form" action="{% url 'add_multiple_services' leadid %}">
+    {% csrf_token %}
+<table id="servicesTable">
+    <thead>
+        <tr>
+            <th>Service Type</th>
+            <th>Supplier</th>
+            <th>Details</th>
+            <th>Net</th>
+            <th>Selling</th>
+            <th>Due Time</th>
+            <th>Voucher ID</th>
+            <th> </th>  <!-- Add a new column for the checkbox -->
+            <th> </th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Display existing services -->
+{% for service in services %}
+<tr class="{{ service.is_checked|yesno:'checked,' }}">
+    <td>{{ service.service_name }}</td>
+    <td>{{ service.supplier }}</td>
+    <td>{{ service.details }}</td>
+    <td>{{ service.net }}</td>
+    <td>{{ service.selling }}</td>
+    <td>{{ service.due_time }}</td>
+    <td>{{ service.voucher_id }}</td>
+    <td>
+    <input type="checkbox" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %} checked {% endif %}
+       onchange="updateCheckboxStatus(this)">
+    </td>
+    <td>
+        <a href="{% url 'delete_service' service.pk %}">Delete</a>
+    </td>
+</tr>
+{% endfor %}
+    </tbody>
+    <!-- Button to add new row -->
+</table>
+<button type="button" onclick="addRow()">Add New Service</button>
+<button type="submit">Submit Services</button>
+
+</form>
+
+<div class="payment-container">
+    {% if lead_task_payments %}
+    <h1>Payments</h1>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Payed?</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for payment in lead_task_payments %}
+
+            <tr class="{{ payment.is_checked|yesno:'checked,' }}">
+                <td>{{ payment.date }}</td>
+                <td>{{ payment.amount }}$</td>
+                <td>
+                    <form method="post" action="{% url 'update_payment' payment.pk %}">
+                        {% csrf_token %}
+                        <input type="checkbox" name="payment_checked" onchange="this.form.submit();" {% if payment.is_checked %} checked {% endif %}>
+                    </form>
+                </td>
+                <td>
+                    <a href="{% url 'delete_payment' payment.pk %}">Delete</a>
+                </td>
+            </tr>
+
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No payments found for this lead task.</p>
+    {% endif %}
+    <a href="{% url 'add_payment' pk=leadid %}" class="add-payment-link button">Add Payment</a>
+</div>
+
+<!-- attachment_list.html -->
+
+<div class="attach-container">  
+    {% if attachments %}
+    <h1>Attachments</h1>
+        <table class="attach-table">
+            <thead>
+                <tr>
+                    <th>Attachment</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attachment in attachments %}
+                    <tr>
+                        <td>
+                            <a href="{{ attachment.file.url }}" class="attach-link">{{ attachment.attachment_name }}</a>
+                        </td>
+                        <td>
+                            <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid%}" class="delete-attach">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No attachments found.</p>
+    {% endif %}
+    <a href="{% url 'add_leadtask_attachment' pk=leadid %}" class="add-payment-link button">Add Attachment</a>
+</div>
+<a href="{% url 'lead_task_pdf' pk=leadid %}">Download PDF</a>
+<script src="{% static 'JS/sidebar.js'%}"></script>
+<script>
+
+function addRow() {
+        const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+        newRow.innerHTML = `
+            <td><input type="text" name="service_name[]" class="form-control"></td>
+            <td><input type="text" name="supplier[]" class="form-control"></td>
+            <td><input type="text" name="details[]" class="form-control"></td>
+            <td><input type="text" name="net[]" class="form-control"></td>
+            <td><input type="text" name="selling[]" class="form-control"></td>
+            <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
+            <td><input type="text" name="voucher_id[]" class="form-control"></td>
+        `;
+    }
+function updateCheckboxStatus(checkbox) {
+    const serviceId = checkbox.getAttribute('data-service-id');
+    const isChecked = checkbox.checked ? 'on' : 'off';
+
+    fetch(`/tasks/service/update_checked_status/${serviceId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'), // Ensure CSRF token is correctly retrieved
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `is_checked=${isChecked}`
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('Update successful');
+        } else {
+            console.error('Failed to update');
+            checkbox.checked = !checkbox.checked; // Revert checkbox if update fails
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        checkbox.checked = !checkbox.checked; // Revert checkbox on network error
+    });
+}
+
+// Function to get the CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+</body>
+</html>

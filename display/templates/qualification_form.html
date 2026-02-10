@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer info form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/assist.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container-assist">
+        <hr/>
+        <b>Name  </b>{{ lead.name }} <br/>
+        <b>Phone  </b>{{ lead.phone }} <br/>
+        <hr/>
+    </div>
+    <div class="container">
+        <h2>Sales Prospect Information</h2>
+        <hr/>
+
+        <form method="post" id="info_form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_destination">Destination:</label>
+                {{ form.destination }}
+            </div>
+            <div class="form-group">
+                <label for="id_reason_of_travel">Travel Details:</label>
+                {{ form.reason_of_travel }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_finalization_notes">What Happened:</label>
+                <br/>
+                {{ form.finalization_notes }}
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="id_assigned_to">Assigned To:</label>
+                {{ form.assigned_to }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_offer_prepared">Offer Prepared:</label>
+                {{ form.offer_prepared }}
+            </div>
+
+            <div class="attach-container">
+                <a href="{% url 'add_attachment' pk=lead.id %}" class="button">Add Attachment</a>
+              
+                {% if lead.attachments.all %}
+                    <table class="attachment-table">
+                        <tbody>
+                            {% for attachment in lead.attachments.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ attachment.file.url }}" class="attachment-link">{{ attachment.attachment_name }}</a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'delete_attachment' lead_id=lead.id attachment_id=attachment.pk %}" class="delete-link">Delete</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No Offers Attached</p>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary" name="submit_next">Next</button>
+            <button type="submit" class="btn btn-secondary" name="submit_exit">Exit</button>
+            <button type="submit" class="btn btn-danger" name="submit_unqualified">Unqualify</button>
+        </form>
+    </div>
+    <a href="{% url 'edit_creation_lead' lead.pk %}" class="btn btn-secondary mt-3">< Previous Page</a>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        document.getElementById("info_form").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

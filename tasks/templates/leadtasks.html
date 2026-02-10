@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <div class="welcome-message">
+            Welcome, <span class="username">{{ user.username }}</span>!
+        </div>
+        {% include 'navbar.html' %}
+    </div>
+    <div class="content">
+        <div class="header">
+            <h2>My Invoices</h2>
+        </div>
+        <hr/>
+        <div class="status-counts-box">
+            <ul class="status-list">
+                {% for status, count in status_counts.items %}
+                <li>
+                    <span class="status">{{ status }}</span>
+                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="filter-container">
+            <!-- Filter dropdown -->
+            <form method="GET" action="{% url 'current_lead_tasks' %}" class="filter-form">
+                <label for="status" class="filter-label">Filter by Status:</label>
+                <select id="status" name="status" class="filter-select">
+                    <option value="">All</option>
+                    {% for choice in status_choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="filter-button">Apply Filter</button>
+            </form>
+            <!-- End of filter dropdown -->
+        
+            <!-- Smart Search form -->
+            <form method="GET" action="{% url 'current_lead_tasks' %}" class="smart-search-form">
+                <label for="search" class="filter-label">Search:</label>
+                <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
+                <button type="submit" class="filter-button">Search</button>
+            </form>
+            <!-- End of Smart Search form -->
+        </div>            
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Invoice ID</th>
+                    <th>Lead Name</th>
+                    <th>Destination</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                    <th>Finalization Notes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead_task in data %}
+                    <tr class="{{ lead_task.status }}">
+                        <td data-label="Invoice ID">{{ lead_task.pk }}</td>
+                        <td data-label="Lead Name">{{ lead_task.lead.name }}</td>
+                        <td data-label="Destination">{{ lead_task.lead.destination }}</td>
+                        <td data-label="Status">{{ lead_task.status }}</td>
+                        <td data-label="Assigned To">{{ lead_task.assigned_to.username }}</td>
+                        <td data-label="Finalization Notes">{{ lead_task.lead.finalization_notes }}</td>
+                        <td data-label="Action"><a href="{% url 'edit_lead_tasks' lead_task.pk %}" class="edit-link">Edit</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+</div>
+</body>
+</html>

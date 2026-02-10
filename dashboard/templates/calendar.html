@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<div class="welcome-message">
+    Welcome, <span class="username">{{ user.username }}</span>!
+</div>
+{% endblock %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<div class="form-event-type">
+    <form method="get" action="{% url 'calendar' %}">
+        <select name="event_type" onchange="this.form.submit()">
+            <option value="">All Types</option>
+            {% for type_value, type_name in type_choices %}
+            <option value="{{ type_value }}" {% if type_value == event_type %}selected{% endif %}>{{ type_name }}</option>
+            {% endfor %}
+        </select>
+        <!-- Keep the current month in the form to maintain context -->
+        <input type="hidden" name="month" value="{{ request.GET.month }}">
+        <label>
+            <input
+            type="checkbox"
+            name="show_done"
+            value="on"
+            onchange="this.form.submit()"
+            {% if show_done == 'on' %} checked {% endif %}
+        >
+        Show Done Events
+    </label>
+    </form>
+</div>
+<div class="status-counts-container">
+    <div class="status-counts-box">
+        <div class="status-title">My Requests</div>
+        <ul class="status-list">
+            {% for status, count in lead_counts.items %}
+                <li>
+                    <span class="status">{{ status }}</span>
+                    <span class="count {% if status == 'processing' %}processing{% elif status == 'negotiation' %}negotiation{% elif status == 'finalized' %}finalized{% elif status == 'onhold' %}onhold{% elif status == 'done' %}unqual{% elif status == 'followup' %}followup{% endif %}">{{ count }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="status-counts-box">
+        <div class="status-title">My Tasks</div>
+        <ul class="status-list">
+            {% for status, count in task_counts.items %}
+                <li>
+                    <span class="status">{{ status }}</span>
+                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}in-progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="status-counts-box">
+        <div class="status-title">Orders</div>
+        <ul class="status-list">
+            {% for status, count in lead_task_counts.items %}
+                <li>
+                    <span class="status">{{ status }}</span>
+                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}in-progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="calendar-lists-links">
+    <a class="btn btn-info" href="{% url 'supplier_payments_list' %}">Supplier Payments List</a>
+    <a class="btn btn-info" href="{% url 'client_payments_list' %}">Client Payments List</a>
+</div>
+
+<div class="clearfix">
+    <a class="btn btn-info left" href="{% url 'calendar' %}?{{ prev_month }}"> Previous Month </a>
+    <a class="btn btn-info right" href="{% url 'calendar' %}?{{ next_month }}"> Next Month </a>
+    <a class="btn btn-info right" href="{% url 'event_new' %}"> New Event </a>
+</div>
+
+{{ calendar }}
+
+<script>
+
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Delete links have been removed from events
+    </script>
+    
+{% endblock %}

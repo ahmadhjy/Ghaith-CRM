@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Data</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="welcome-message">
+                Welcome, <span class="username">{{ user.username }}</span>!
+            </div>
+            {% include 'navbar.html' %}
+        </div>
+        <div class="content">
+            <div class="header">
+                <h2>All Requests</h2>
+                <a class="add-more fancy-link" href="{% url 'create_lead' %}">Add Request</a>
+            </div>
+            <hr/>
+
+            <div class="status-counts-box">
+                <ul class="status-list">
+                    {% for status, count in status_counts.items %}
+                    {% if status != "finalized" %}
+                        <li>
+                            <span class="status">{{ status }}</span>
+                            <span class="count {{ status }}">{{ count }}</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                    <!-- Additional stats for sold and lost requests -->
+                    <li>
+                        <span class="status">Sold</span>
+                        <span class="count sold">{{ sold_count }}</span>
+                    </li>
+                    <li>
+                        <span class="status">Lost</span>
+                        <span class="count lost">{{ lost_count }}</span>
+                    </li>
+                </ul>
+            </div>
+                       
+                        
+            <div class="filter-container">
+                <!-- Filter dropdown -->
+                <form method="GET" action="{% url 'display_data' %}" class="filter-form">
+                    <label for="status" class="filter-label">Filter by Status:</label>
+                    <select id="status" name="status" class="filter-select">
+                        <option value="">All</option>
+                        {% for choice in status_choices %}
+                            <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>                   
+                    <button type="submit" class="filter-button">Apply Filter</button>
+                </form>
+                <!-- End of filter dropdown -->
+            
+                <!-- Smart Search form -->
+                <form method="GET" action="{% url 'display_data' %}" class="smart-search-form">
+                    <label for="search" class="filter-label">Search:</label>
+                    <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
+                    <button type="submit" class="filter-button">Search</button>
+                </form>
+                <!-- End of Smart Search form -->
+            </div>            
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>What Happened</th>
+                        <th>Time Left</th>
+                        <th>Created At</th> <!-- Added Created At header -->
+                        <th>Action</th>
+                        <th>Archive</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in data %}
+                    <tr class="{% if d.is_overdue %}overdue-lead{% elif d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">
+                        <td data-label="Name" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.name }}</td>
+                        <td data-label="Destination" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.destination }}</td>
+                        <td data-label="Status" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.status }}</td>
+                        <td data-label="What Happened" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.finalization_notes }}</td>
+                        <td data-label="Time Left" class="{% if d.is_overdue %}overdue-lead{% endif %}">
+                            <span class="time-left" data-end-time="{{ d.end_time.timestamp }}">{{ d.time_left }}</span>
+                        </td>
+                        <td data-label="Created At" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.created_at }}</td>
+                        <td data-label="Action" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'edit-model' d.pk %}" class="edit-link">Edit</a></td>
+                        <td data-label="Archive" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'archive_lead' d.pk %}" class="archive-link">Archive</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- pagination -->
+                <div class="pagination">
+                    <div class="step-links">
+                        {% if data.has_previous %}
+                            <a href="?page=1&status={{ selected_status }}&search={{ search_query }}" class="button first"><< First</a>
+                            <a href="?page={{ data.previous_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button previous">< Previous</a>
+                        {% endif %}
+                        
+                        <span class="current">
+                            Page {{ data.number }} of {{ data.paginator.num_pages }}
+                        </span>
+                
+                        {% if data.has_next %}
+                            <a href="?page={{ data.next_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button next">Next ></a>
+                            <a href="?page={{ data.paginator.num_pages }}&status={{ selected_status }}&search={{ search_query }}" class="button last">Last >></a>
+                        {% endif %}
+                    </div>
+                </div>                      
+
+        </div>
+    </div>
+            </table>        
+
+</body>
+<script>
+    function updateCountdowns() {
+        const elements = document.querySelectorAll('.time-left');
+        elements.forEach(element => {
+            const endTime = parseInt(element.getAttribute('data-end-time')) * 1000; // Convert to milliseconds
+            const currentTime = new Date().getTime();
+            const timeLeft = endTime - currentTime;
+            let displayText = "N/A";
+
+            if (element.closest('tr').classList.contains('onhold') || 
+                element.closest('tr').classList.contains('done') || 
+                element.closest('tr').classList.contains('finalized')) {
+                displayText = "N/A";
+            } else if (timeLeft > 0) {
+                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                displayText = days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+            } else {
+                const overdueTime = currentTime - endTime;
+                const days = Math.floor(overdueTime / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((overdueTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((overdueTime % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((overdueTime % (1000 * 60)) / 1000);
+                displayText = "-" + days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+            }
+
+            element.textContent = displayText;
+        });
+    }
+
+    setInterval(updateCountdowns, 1000);
+    updateCountdowns();
+</script>
+</html>
+

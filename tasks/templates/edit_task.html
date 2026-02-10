@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Task</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+<h1>Edit Task Info:</h1>
+<form method="post" enctype="multipart/form-data" id="inputForm">
+    {% csrf_token %}
+    <!-- Status field -->
+    <div class="form-group">
+        <label for="id_status">Status:</label>
+        {{ form.status }}
+    </div>
+
+    <!-- Accordion Group 1: Title, Details, Due Time -->
+    <div class="accordion">
+        <h2 class="accordion-header">Basic Information</h2>
+        <div class="accordion-content">
+            <div class="form-group">
+                <label for="id_title">Task:</label>
+                {{ form.title }}
+            </div>
+            <div class="form-group">
+                <label for="id_details">Task Details:</label>
+                {{ form.details }}
+            </div>
+            <div class="form-group">
+                <label for="id_due_time">Due Time:</label>
+                {{ form.due_time }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Accordion Group 2: Tag, Assigned To -->
+    <div class="accordion">
+        <h2 class="accordion-header">Assignment</h2>
+        <div class="accordion-content">
+            <div class="form-group">
+                <label for="id_tag">Department:</label>
+                {{ form.tag }}
+            </div>
+            <div class="form-group">
+                <label for="id_assigned_to">Assigned To:</label>
+                {{ form.assigned_to }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Accordion Group 3: What Happened -->
+    <div class="accordion">
+        <h2 class="accordion-header">What Happened</h2>
+        <div class="accordion-content">
+            <div class="form-group">
+                <label for="id_what_happened">What Happened:</label>
+                {{ form.what_happened }}
+            </div>
+        </div>
+    </div>  
+
+    <!-- Button to submit form -->
+    <button type="submit">Save</button>
+</form>
+
+<div class="attach-container">
+    {% if attachments %}
+    <h1>Attachments</h1>
+    <table class="attach-table">
+        <thead>
+            <tr>
+                <th>Attachment</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attachment in attachments %}
+            <tr>
+                <td>
+                    <a href="{{ attachment.file.url }}" class="attach-link" target="_blank">{{ attachment.attachment_name }}</a>
+                </td>
+                <td>
+                    <a href="{% url 'delete_task_attachment' attachment.id task.id %}" class="delete-attach">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No attachments found.</p>
+    {% endif %}
+</div>
+
+    <a href="{% url 'add_task_attachment' pk=task.id %}">Add Attachment</a>
+
+<script src="{% static 'JS/sidebar.js'%}"></script>
+<script>
+    // Add event listeners to accordion headers
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            header.nextElementSibling.classList.toggle('active');
+        });
+    });
+</script>
+</body>
+</html>

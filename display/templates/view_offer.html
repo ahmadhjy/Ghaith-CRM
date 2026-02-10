@@ -1,0 +1,68 @@
+<!-- view_offer.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ offer.title }}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/offer.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container mt-5">
+        <h2>{{ offer.title }}</h2>
+        <p><strong>Lead:</strong> <a href="{% url 'edit-model' offer.lead.pk %}">{{ offer.lead.name }}</a></p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="title">Title:</label>
+                {{ form.title }}
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                {{ form.description }}
+            </div>
+            <div class="form-group">
+                <label for="inclusions">Inclusions:</label>
+                {{ form.inclusions }}
+            </div>
+            <div class="form-group">
+                <label for="exclusions">Exclusions:</label>
+                {{ form.exclusions }}
+            </div>
+            <div class="form-group">
+                <label for="itinerary">Itinerary:</label>
+                {{ form.itinerary }}
+            </div>
+            <div class="form-group">
+                <label for="accommodation_options">Accommodation Options:</label>
+                {{ form.accommodation_options }}
+            </div>
+            <div class="form-group">
+                <label for="flight_details">Flight Details:</label>
+                {{ form.flight_details }}
+            </div>
+            <div class="form-group">
+                <label for="pricing_usd">Pricing:</label>
+                {{ form.pricing_usd }}
+            </div>
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="sent" id="sent" {% if offer.sent %}checked{% endif %}>
+                <label class="form-check-label" for="sent">
+                    Sent
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="sold" id="sold" {% if offer.sold %}checked{% endif %}>
+                <label class="form-check-label" for="sold">
+                    Sold
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Update Offer</button>
+        </form>
+        <a href="{% url 'download_offer_pdf' offer.pk %}" class="btn btn-secondary mt-3">Download PDF</a>
+    </div>
+</body>
+</html>

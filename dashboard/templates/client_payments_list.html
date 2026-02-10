@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<div class="welcome-message">Client Payments (Calendar)</div>
+{% endblock %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<div class="container list-page list-page--client">
+    <header class="list-page__header">
+        <h2 class="list-page__title">Client Payments</h2>
+        <p class="list-page__desc">Client payments. Filter by date, month, or paid status.</p>
+        <a href="{% url 'client_payments' %}" class="btn btn--link list-page__link">Full client payments list</a>
+    </header>
+
+    <div class="list-page__filters">
+        <form method="GET" action="{% url 'client_payments_list' %}" class="filter-form filter-form--stack">
+            <label for="month">Month:</label>
+            <input type="month" name="month" id="month" value="{{ month }}" class="filter-input">
+            <label for="date_filter">Or date:</label>
+            <input type="date" name="date" id="date_filter" value="{{ date_filter }}" class="filter-input">
+            <label for="paid">Paid:</label>
+            <select name="paid" id="paid" class="filter-select">
+                <option value="">All</option>
+                <option value="paid" {% if paid_filter == 'paid' %}selected{% endif %}>Paid</option>
+                <option value="unpaid" {% if paid_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+            </select>
+            <div class="filter-form__actions">
+                <button type="submit" class="btn btn--primary">Filter</button>
+                <a href="{% url 'client_payments_list' %}" class="btn btn--secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-wrapper table-wrapper--responsive">
+        <table class="list-table list-table--client">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Amount</th>
+                    <th>Order</th>
+                    <th>Paid</th>
+                    <th>Mark paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr class="list-table__row {% if payment.is_checked %}list-table__row--paid{% endif %}">
+                    <td data-label="Date">{{ payment.date|date:"Y-m-d" }}</td>
+                    <td data-label="Client">{{ payment.leadtask.lead.name }}</td>
+                    <td data-label="Amount">{{ payment.amount }}</td>
+                    <td data-label="Order">
+                        <a href="{% url 'edit_lead_tasks' payment.leadtask_id %}" class="list-table__link">#{{ payment.leadtask_id }}</a>
+                    </td>
+                    <td data-label="Paid">{{ payment.is_checked|yesno:"Yes,No" }}</td>
+                    <td data-label="Mark paid">
+                        <form method="post" action="{% url 'update_payment' payment.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
+                            {% csrf_token %}
+                            <label class="list-table__checkbox-label">
+                                <input type="checkbox" name="payment_checked" onchange="this.form.submit();" {% if payment.is_checked %}checked{% endif %}>
+                                <span class="list-table__checkbox-text">Paid</span>
+                            </label>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="list-table__empty">No client payments found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

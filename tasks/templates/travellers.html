@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travellers</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container list-page list-page--travellers">
+        <header class="list-page__header">
+            <h1 class="list-page__title">Travellers</h1>
+            <p class="list-page__desc">Orders marked done with a travel date.</p>
+        </header>
+
+        <div class="list-page__filters">
+            <form method="GET" action="{% url 'travellers_list' %}" class="filter-form filter-form--stack">
+                <label for="month">Month:</label>
+                <input type="month" name="month" id="month" value="{{ request_month }}" class="filter-input">
+                <label for="travel_date">Travel date:</label>
+                <input type="date" name="travel_date" id="travel_date" value="{{ request_travel_date }}" class="filter-input">
+                <label for="destination">Destination:</label>
+                <input type="text" name="destination" id="destination" placeholder="Filter by destination" value="{{ request_destination }}" class="search-input">
+                <label class="filter-form__checkbox">
+                    <input type="checkbox" name="show_past" value="on" {% if show_past %}checked{% endif %}> Include already traveled
+                </label>
+                <div class="filter-form__actions">
+                    <button type="submit" class="btn btn--primary">Filter</button>
+                    <a href="{% url 'travellers_list' %}" class="btn btn--secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-wrapper table-wrapper--responsive">
+            <table class="list-table list-table--travellers">
+                <thead>
+                    <tr>
+                        <th>Client name</th>
+                        <th>Destinations</th>
+                        <th>Travel date</th>
+                        <th>Order ID</th>
+                        <th>Assigned to</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lt in travellers %}
+                    <tr class="list-table__row {% if lt.travel_date %}{% if lt.travel_date|date:'Y-m-d' < today|date:'Y-m-d' %}list-table__row--past{% endif %}{% endif %}">
+                        <td data-label="Client name">{{ lt.lead.name }}</td>
+                        <td data-label="Destinations">{{ lt.lead.destination|default:"—" }}</td>
+                        <td data-label="Travel date">{{ lt.travel_date|date:"Y-m-d" }}</td>
+                        <td data-label="Order ID">
+                            <a href="{% url 'edit_lead_tasks' lt.pk %}" class="list-table__link">#{{ lt.pk }}</a>
+                        </td>
+                        <td data-label="Assigned to">{{ lt.assigned_to.get_full_name|default:lt.assigned_to.username }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="list-table__empty">No travellers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

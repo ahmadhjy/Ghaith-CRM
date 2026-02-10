@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Add New Payment</title>
+    <meta charset="UTF-8">
+    {% load static %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+</head>
+<body>
+    <div class="payment-form-container">
+        <form method="post" enctype="multipart/form-data" class="payment-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <input type="submit" value="Submit" class="submit-button">
+        </form>
+    </div>
+</body>
+</html>

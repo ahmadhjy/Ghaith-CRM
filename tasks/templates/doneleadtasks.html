@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Display Tasks</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+<div class="welcome-message">
+    Welcome, <span class="username">{{ user.username }}</span>!
+</div>
+<div>
+    {% include 'navbar.html' %}
+    <h1>Done Lead Tasks</h1>
+    <ul class="nav nav-tabs">
+        <li class="top-bar">
+            <a href="#">
+                <span>Name</span> <span>Destination</span><span>Status</span> <span>What Happened</span>
+            </a>
+        </li>
+        {% for d in data %}
+        <p>
+            <span class="display-time">created: {{ d.created_at }}</span> <span class="display-time">Last Modified: {{ d.last_modified }}</span></p>
+        <li class="{% if d.status == 'processing' %}processing{% elif d.status == 'negotiation' %}negotiation{% elif d.status == 'finalized' %}finalized{% elif d.status == 'onhold' %}onhold{% endif %}"> <a href="{% url 'edit_lead_tasks' d.pk %}"> <!-- Ensure item.pk is provided -->
+                <span>{{ d.lead.name }}</span> <span>{{ d.lead.destination }}</span><span>{{ d.status }}</span> <span>{{ d.lead.finalization_notes }}</span>
+                <button>Edit</button></a>
+        </li>
+        {% endfor %}
+        <script src="{% static 'JS/sidebar.js'%}"></script>
+    </ul>
+</div>
+</body>
+</html>
+

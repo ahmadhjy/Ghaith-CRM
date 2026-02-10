@@ -1,0 +1,66 @@
+<!-- client_payments.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Payments</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <h1>Client Payments</h1>
+
+        <div class="filter-container">
+            <form method="GET" action="{% url 'client_payments' %}" class="filter-form">
+                <input type="text" name="search" placeholder="Search payments" value="{{ request.GET.search }}" class="search-input">
+                <select name="filter" class="filter-select">
+                    <option value="">All</option>
+                    <option value="paid" {% if request.GET.filter == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="unpaid" {% if request.GET.filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                    <option value="overdue" {% if request.GET.filter == 'overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="processed" {% if request.GET.filter == 'processed' %}selected{% endif %}>Processed</option>
+                    <option value="unprocessed" {% if request.GET.filter == 'unprocessed' %}selected{% endif %}>Unprocessed</option>
+                </select>
+                <button type="submit" class="filter-button">Filter</button>
+            </form>
+        </div>
+
+        <table id="servicesTable">
+            <thead>
+                <tr>
+                    <th>Client Name</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Payment Type</th>
+                    <th>Paid</th>
+                    <th>Processed</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr class="{% if payment.processed %}processed{% elif payment.date and payment.date < now and not payment.is_checked %}overdue{% endif %}">
+                    <td data-label="Client Name"><a class="supplier-link" href="{% url 'edit_lead_tasks' payment.leadtask.pk %}">{{ payment.leadtask.lead.name }}</a></td>
+                    <td data-label="Amount">{{ payment.amount }}</td>
+                    <td data-label="Due Date">{{ payment.date }}</td>
+                    <td data-label="Payment Type">{{ payment.leadtask.payment }}</td>
+                    <td data-label="Paid">{{ payment.is_checked|yesno:"Yes,No" }}</td>
+                    <td data-label="Processed">{{ payment.processed|yesno:"Yes,No" }}</td>
+                    <td data-label="Actions">
+                        {% if not payment.processed %}
+                        <form method="POST" action="{% url 'mark_payment_processed' payment.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="process-button">Mark Processed</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

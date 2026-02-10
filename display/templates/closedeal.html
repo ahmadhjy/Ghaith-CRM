@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sale Form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+    <style>
+        .toggle-fields {
+            display: none;
+        }
+    </style>
+    <script>
+        window.onload = function() {
+            toggleFields();
+            // Calculate profit on page load if values exist
+            if (document.getElementById('sold').checked) {
+                calculateProfit();
+            }
+        }
+
+        function toggleFields() {
+            var sold = document.getElementById('sold');
+            var lost = document.getElementById('lost');
+            var postpone = document.getElementById('postpone');
+            var selling_price_div = document.getElementById('selling_price_div');
+            var net_div = document.getElementById('net_div');
+            var profit_div = document.getElementById('profit_div');
+            var finalization_notes_div = document.getElementById('finalization_notes_div');
+            var follow_up_div = document.getElementById('follow_up_div');
+            var finalization_label = document.getElementById('finalization_label');
+
+            selling_price_div.style.display = sold.checked ? 'block' : 'none';
+            net_div.style.display = sold.checked ? 'block' : 'none';
+            profit_div.style.display = sold.checked ? 'block' : 'none';
+            finalization_notes_div.style.display = lost.checked ? 'block' : 'none';
+            follow_up_div.style.display = postpone.checked ? 'block' : 'none';
+            
+            if (lost.checked && finalization_label) {
+                finalization_label.textContent = 'Why?';
+            } else if (finalization_label) {
+                finalization_label.textContent = 'Finalization Notes:';
+            }
+        }
+
+        function calculateProfit() {
+            var sellingPrice = parseFloat(document.getElementById('selling_price').value.replace(/[^\d.]/g, '')) || 0;
+            var net = parseFloat(document.getElementById('net').value.replace(/[^\d.]/g, '')) || 0;
+            var profit = sellingPrice - net;
+            document.getElementById('profit').value = profit > 0 ? profit.toFixed(2) : '';
+        }
+    </script>
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <form method="post" id="closing_form">
+            {% csrf_token %}
+
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" name="sold" id="sold" onclick="toggleFields()" {% if main_lead.sold or main_lead.status == 'finalized' and main_lead.sold %}checked{% endif %}>
+                <label class="form-check-label" for="sold">Sold</label>
+            </div>
+            <div id="selling_price_div" class="toggle-fields">
+                <label for="selling_price">Selling Price:</label>
+                <input type="text" class="form-control" name="selling_price" id="selling_price" value="{{ form.selling_price.value|default:'' }}" oninput="calculateProfit()">
+            </div>
+            <div id="net_div" class="toggle-fields">
+                <label for="net">Net:</label>
+                <input type="text" class="form-control" name="net" id="net" value="{{ form.net.value|default:'' }}" oninput="calculateProfit()">
+            </div>
+            <div id="profit_div" class="toggle-fields">
+                <label for="profit">Profit:</label>
+                <input type="text" class="form-control" name="profit" id="profit" value="{{ form.profit.value|default:'' }}" readonly>
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" name="lost" id="lost" onclick="toggleFields()" {% if main_lead.lost or main_lead.status == 'finalized' and main_lead.lost %}checked{% endif %}>
+                <label class="form-check-label" for="lost">Lost</label>
+            </div>
+            <div id="finalization_notes_div" class="toggle-fields">
+                <label for="finalization_notes" id="finalization_label">Why?</label>
+                <textarea class="form-control" name="finalization_notes" id="finalization_notes">{{ form.finalization_notes.value|default:'' }}</textarea>
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" name="postpone" id="postpone" onclick="toggleFields()" {% if main_lead.status == 'followup' %}checked{% endif %}>
+                <label class="form-check-label" for="postpone">Postpone</label>
+            </div>
+            <div id="follow_up_div" class="toggle-fields">
+                <label for="follow_up">Follow Up:</label>
+                {{ form.follow_up }}
+            </div>
+
+            <button type="submit" class="close-deal btn btn-primary">Submit</button>
+        </form>
+    </div>
+    <a href="{% url 'qualify_lead' lead.pk %}" class="btn btn-secondary mt-3">< Previous Page</a>
+    <script>
+        document.getElementById("closing_form").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
+

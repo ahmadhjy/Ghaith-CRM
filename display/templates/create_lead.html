@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Lead Form</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+    <style>
+        .duplicate-warning {
+            margin-top: 20px;
+        }
+        .duplicate-warning ul {
+            padding-left: 20px;
+        }
+        .duplicate-warning ul li {
+            list-style-type: disc;
+        }
+        .duplicate-warning ul li a {
+            color: #dc3545;
+            text-decoration: none;
+        }
+        .duplicate-warning ul li a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+<div class="container">
+    <h2>Create Lead</h2>
+    <hr/>
+    <form method="post" id="createForm">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_name">Name:</label>
+            {{ form.name }}
+        </div>
+        <div class="form-group">
+            <label for="id_country_code">Country Code:</label>
+            {{ form.country_code }}
+        </div>
+        <div class="form-group">
+            <label for="id_phone">Phone:</label>
+            {{ form.phone }}
+        </div>
+        <div class="form-group">
+            <label for="id_channel">Channel:</label>
+            {{ form.channel }}
+        </div>
+        <div class="form-group">
+            <label for="id_reason_of_travel">Travel Details:</label>
+            {{ form.reason_of_travel }}
+        </div>
+        <div class="form-group">
+            <label for="id_destination">Destination:</label>
+            {{ form.destination }}
+        </div>
+        <div class="form-group">
+            <label for="id_assigned_to">Assigned To:</label>
+            {{ form.assigned_to }}
+        </div>
+        <div class="form-group">
+            <label for="id_takeover">Add to Takeover List:</label>
+            {{ form.takeover }}
+        </div>
+
+        {% if duplicate_warning %}
+            <div class="alert alert-warning duplicate-warning" role="alert">
+                {{ duplicate_warning }}
+                <ul>
+                    {% for duplicate in duplicates %}
+                        <li><a href="{% url 'edit-model' duplicate.pk %}">{{ duplicate.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                <input type="hidden" name="confirm" value="true">
+            </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" name="submit_next">Submit & Next ></button>
+        <button type="submit" class="btn btn-secondary" name="submit_exit">Submit & Exit</button>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    document.getElementById("createForm").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    });
+
+    document.getElementById("id_phone").addEventListener("input", function(event) {
+        this.value = this.value.replace(/\D/g, '');
+    });
+</script>
+</body>
+</html>

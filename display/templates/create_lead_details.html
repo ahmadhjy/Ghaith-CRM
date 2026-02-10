@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+    <head>
+        <title></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="css/style.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+    </head>
+    <body>
+        {% include 'navbar.html' %}
+        <h2>Create Lead</h2>
+        <hr/>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" name="create_next">Create and Next ></button>
+        <button type="submit" name="submit_exit">Submit and Exit</button>
+    </form>
+
+    </body>
+</html>

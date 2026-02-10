@@ -1,0 +1,33 @@
+# urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('current/', views.display_current_tasks, name='current tasks'),
+    path('current/expired/', views.expired_tasks, name='expired_tasks'),
+    path('done/', views.display_done_tasks, name='done tasks'),
+    path('input/', views.input_task, name='input_task'),
+    path('edit/task/<int:pk>/', views.edit_task, name='edit_task'),
+    path('services/', views.service_form, name='service_form'),
+    path('services/add_multiple/<int:leadid>/', views.add_multiple_services, name='add_multiple_services'),
+    path('service/update_checked_status/<int:service_id>/', views.update_checked_status, name='update_checked_status'),
+    path('services/delete/<int:pk>/', views.delete_service, name='delete_service'),
+    path('services/update/<int:pk>/', views.update_service, name='update_service'),
+    path('payments/delete/<int:pk>/', views.delete_payment, name='delete_payment'),
+    path('payments/update/<int:pk>/', views.update_payment, name='update_payment'),
+    path('leads/current/', views.current_leadtasks, name='current_lead_tasks'),
+    path('leads/done/', views.done_leadtasks, name='doneLeadTask'),
+    path('leads/edit/<int:pk>/', views.edit_lead_task, name='edit_lead_tasks'),
+    path('payment/<int:pk>/', views.add_payment, name='add_payment'),
+    path('attachment/add/<int:pk>/', views.add_attachment, name='add_leadtask_attachment'),
+    path('attachment/delete/<int:attachment_id>/<int:pk>/', views.delete_attachment, name='delete_leadtask_attachment'),
+    path('attachment/list/<int:invoiceid>/', views.attachment_list, name='attachment_list'),
+    path('task/attachment/add/<int:pk>/', views.add_task_attachment, name='add_task_attachment'),
+    path('task/attachment/delete/<int:attachment_id>/<int:pk>/', views.delete_task_attachment, name='delete_task_attachment'),
+    path('lead_task/<int:pk>/pdf/', views.generate_pdf, name='lead_task_pdf'),
+    path('services/purchased/', views.purchased_services, name='purchased_services'),
+    path('services/mark_processed/<int:pk>/', views.mark_service_processed, name='mark_service_processed'),
+    path('client_payments/', views.client_payments, name='client_payments'),
+    path('client_payments/mark_processed/<int:pk>/', views.mark_payment_processed, name='mark_payment_processed'),
+    path('travellers/', views.travellers_list, name='travellers_list'),
+]

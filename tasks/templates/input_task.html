@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Task</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+<h1>New Task</h1>
+<form method="post" enctype="multipart/form-data" id="inputForm">
+    {% csrf_token %}
+    <!-- Status field -->
+    <div class="form-group">
+        <label for="id_status">Status:</label>
+        {{ form.status }}
+    </div>
+
+    <!-- Accordion Group 1: Title, Details, Due Time -->
+    <div class="accordion">
+        <h2 class="accordion-header">Basic Information</h2>
+        <div class="accordion-content">
+            <div class="form-group">
+                <label for="id_title">Task:</label>
+                {{ form.title }}
+            </div>
+            <div class="form-group">
+                <label for="id_details"> Task Details:</label>
+                {{ form.details }}
+            </div>
+            <div class="form-group">
+                <label for="id_due_time">Due Time:</label>
+                {{ form.due_time }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Accordion Group 2: Tag, Assigned To -->
+    <div class="accordion">
+        <h2 class="accordion-header">Assignment</h2>
+        <div class="accordion-content">
+            <div class="form-group">
+                <label for="id_tag">Department:</label>
+                {{ form.tag }}
+            </div>
+            <div class="form-group">
+                <label for="id_assigned_to">Assigned To:</label>
+                {{ form.assigned_to }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Button to submit form -->
+    <button type="submit">Save</button>
+</form>
+
+<script src="{% static 'JS/sidebar.js'%}"></script>
+<script>
+    // Add event listeners to accordion headers
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            header.nextElementSibling.classList.toggle('active');
+        });
+    });
+</script>
+</body>
+</html>

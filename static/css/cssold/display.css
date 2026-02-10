@@ -1,0 +1,318 @@
+body{
+    padding-bottom: 100px;
+    margin-left: 250px;
+    padding-top: 50px;
+    padding-left: 50px;
+}
+
+.welcome-message {
+    position: fixed;
+    top: 20px; /* Adjust distance from the top */
+    right: 20px; /* Adjust distance from the right */
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
+}
+
+.username {
+    font-weight: bold;
+    color: #007bff; /* Adjust color */
+}
+
+.content{
+    width: 80%;
+    margin: 0 auto; /* Center the table horizontally */
+
+}
+
+h2{
+    padding: 10px;
+    margin-top: 50px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 50px;
+}
+
+.header h2 {
+    margin: 0; /* Remove default margin */
+}
+
+.add-more {
+    text-decoration: none;
+    background-color: #28a745;
+    color: #fff;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+
+hr{
+    color: rgb(0, 0, 65);
+    margin-bottom: 50px;
+}
+
+.status-counts-box {
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.status-list {
+    list-style: none;
+    padding: 0;
+}
+
+.status-list li {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status {
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.count {
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: white;
+    font-weight: 600;
+}
+
+/* Table row styles based on lead status */
+.processing, .negotiation, .finalized, .unqual, .followup, .lost, .sold {
+    border-left: 8px solid; /* Default border style */
+}
+
+.processing { 
+    background-color: #ffc107; /* Yellow */
+    border-left-color: #ffc107; /* Yellow */
+}
+
+.negotiation {
+    background-color: #007bff; /* Blue */
+    border-left-color: #007bff; /* Blue */
+}
+
+.sold {
+    background-color: #28a745; /* Green */
+    border-left-color: #28a745; /* Green */
+}
+
+.finalized {
+    background-color: pink; /* Pink */
+    border-left-color: pink; /* Pink */
+}
+
+.unqual, .lost {
+    background-color: red; /* Red */
+    border-left-color: red; /* Red */
+}
+
+.followup {
+    background-color: rgb(233, 233, 0); /* Light Yellow */
+    border-left-color: rgb(233, 233, 0); /* Light Yellow */
+}
+
+/* Styles for status counts */
+.onhold {
+    background-color: grey; /* Apply grey color for 'onhold' status */
+    border-left: 8px solid grey !important;
+}
+
+.progress {
+    background-color: blue; /* Apply blue color for 'progress' status */
+    border-left: 8px solid blue; /* Blue */
+}
+
+.done {
+    background-color: green; /* Apply green color for 'done' status */
+    border-left:8px solid green; /* Green */
+}
+
+.filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 80%;
+    margin: 0 auto;
+    padding-bottom: 50px;
+}
+
+.filter-form,
+.smart-search-form {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.smart-search-form {
+    display: flex;
+    align-items: center; /* Align items vertically */
+}
+
+.filter-label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.filter-select,
+.filter-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.filter-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.filter-button:hover {
+    background-color: #0056b3;
+}
+
+.top-bar {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto; /* Center the table horizontally */
+}
+
+.top-bar th {
+    padding: 15px 20px; /* Increase padding for better spacing */
+    text-align: center;
+    font-weight: bold;
+    border-bottom: 2px solid #007bff; /* Add bottom border to each th */
+    background-color: #f0f0f0; /* Light gray background color */
+    color: #333; /* Dark text color */
+}
+
+.top-bar .add-more {
+    text-decoration: none;
+    background-color: #007bff;
+    color: #fff;
+    padding: 8px 15px; /* Increase padding for better button size */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease; /* Add smooth transition */
+}
+
+.top-bar .add-more:hover {
+    background-color: #0056b3;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 15px 20px; /* Increase padding for better spacing */
+    text-align: center;
+    border-bottom: 1px solid #ddd; /* Add bottom border to each cell */
+}
+
+.data-table th {
+    background-color: #f0f0f0; /* Light gray background color */
+    color: #333; /* Dark text color */
+    font-weight: bold;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f9f9f9; /* Alternate row background color */
+}
+
+.data-table tr:hover {
+    background-color: #e3e3e3; /* Light gray background color on hover */
+}
+
+.data-table td {
+    background-color: #fff; /* White background color */
+    color: #333; /* Dark text color */
+}
+
+.data-table .edit-link {
+    text-decoration: none;
+    background-color: #007bff;
+    color: #fff;
+    padding: 8px 15px; /* Increase padding for better button size */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease; /* Add smooth transition */
+}
+
+.data-table .edit-link:hover {
+    background-color: #0056b3;
+}
+
+.pagination {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 50px;
+}
+
+.step-links {
+    display: inline-block;
+}
+
+.step-links a.button {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    margin: 0 5px;
+    transition: background-color 0.3s;
+}
+
+.step-links a.button:hover {
+    background-color: #0056b3;
+}
+
+.step-links .current {
+    padding: 10px 15px;
+    margin: 0 5px;
+    font-weight: bold;
+    background-color: #f0f0f0;
+    color: #333;
+    border-radius: 5px;
+}
+
+.step-links .first, .step-links .last {
+    background-color: #28a745; /* Green background for First and Last buttons */
+}
+
+.step-links .first:hover, .step-links .last:hover {
+    background-color: #1e7e34;
+}
+
+.step-links .disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    background-color: #e9ecef;
+}

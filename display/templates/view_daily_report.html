@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Daily Report</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/report.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="welcome-message">
+            Welcome, <span class="username">{{ user.username }}</span>!
+        </div>
+        {% include 'navbar.html' %}
+    </div>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Daily Report</h2>
+                <a href="{% url 'list_daily_reports' %}" class="btn btn-secondary">Back to Reports</a>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label><strong>Name:</strong></label>
+                    <p class="form-control-static">{{ report.user.username }}</p>
+                </div>
+                <div class="form-group">
+                    <label><strong>Date:</strong></label>
+                    <p class="form-control-static">{{ report.date }}</p>
+                </div>
+                <div class="form-group">
+                    <label><strong>Took over leads today:</strong></label>
+                    <ul class="list-group">
+                        {% for lead in took_over_leads %}
+                            <li class="list-group-item"><a href="{% url 'edit-model' lead.pk %}">{{ lead.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label><strong>Unqualified leads:</strong></label>
+                    <ul class="list-group">
+                        {% for lead in unqualified_leads %}
+                            <li class="list-group-item"><a href="{% url 'edit-model' lead.pk %}">{{ lead.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label><strong>Follow ups:</strong></label>
+                    <p class="form-control-static">{{ report.modified_leads_today }}</p>
+                </div>                
+                <div class="form-group">
+                    <label><strong>Notes:</strong></label>
+                    <p class="form-control-static">{{ report.notes }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

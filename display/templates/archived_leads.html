@@ -1,0 +1,112 @@
+<!-- archived_leads.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archived Leads</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="welcome-message">
+                Welcome, <span class="username">{{ user.username }}</span>!
+            </div>
+            {% include 'navbar.html' %}
+        </div>
+        <div class="content">
+            <div class="header">
+                <h2>Archived Leads</h2>
+                <a class="add-more fancy-link" href="{% url 'create_lead' %}">Add Request</a>
+            </div>
+            <hr/>
+
+            <div class="status-counts-box">
+                <ul class="status-list">
+                    {% for status, count in status_counts.items %}
+                    {% if status != "finalized" %}
+                        <li>
+                            <span class="status">{{ status }}</span>
+                            <span class="count {{ status }}">{{ count }}</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                    <li>
+                        <span class="status">Sold</span>
+                        <span class="count sold">{{ sold_count }}</span>
+                    </li>
+                    <li>
+                        <span class="status">Lost</span>
+                        <span class="count lost">{{ lost_count }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="filter-container">
+                <form method="GET" action="{% url 'archived_leads' %}" class="filter-form">
+                    <label for="status" class="filter-label">Filter by Status:</label>
+                    <select id="status" name="status" class="filter-select">
+                        <option value="">All</option>
+                        {% for choice in status_choices %}
+                            <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="filter-button">Apply Filter</button>
+                </form>
+                <form method="GET" action="{% url 'archived_leads' %}" class="smart-search-form">
+                    <label for="search" class="filter-label">Search:</label>
+                    <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
+                    <button type="submit" class="filter-button">Search</button>
+                </form>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>What Happened</th>
+                        <th>Action</th>
+                        <th>Unarchive</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in data %}
+                    <tr class="{% if d.is_overdue %}overdue-lead{% elif d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">
+                        <td data-label="Name" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.name }}</td>
+                        <td data-label="Destination" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.destination }}</td>
+                        <td data-label="Status" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.status }}</td>
+                        <td data-label="What Happened" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.finalization_notes }}</td>
+                        <td data-label="Action" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'edit-model' d.pk %}" class="edit-link">Edit</a></td>
+                        <td data-label="Unarchive" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'unarchive_lead' d.pk %}" class="archive-link">Unarchive</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <div class="step-links">
+                    {% if data.has_previous %}
+                        <a href="?page=1&status={{ selected_status }}&search={{ search_query }}" class="button first"><< First</a>
+                        <a href="?page={{ data.previous_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button previous">< Previous</a>
+                    {% endif %}
+
+                    <span class="current">
+                        Page {{ data.number }} of {{ data.paginator.num_pages }}
+                    </span>
+
+                    {% if data.has_next %}
+                        <a href="?page={{ data.next_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button next">Next ></a>
+                        <a href="?page={{ data.paginator.num_pages }}&status={{ selected_status }}&search={{ search_query }}" class="button last">Last >></a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

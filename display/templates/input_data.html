@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Input Data</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+</head>
+<body>
+
+    {% include 'navbar.html' %}
+  <h1>Add New Request:</h1>
+  <form method="post" enctype="multipart/form-data" id="inputForm">
+      {% csrf_token %}
+      <!-- Assigned to and Status fields -->
+      <div class="form-group">
+        <label for="id_status">Status:</label>
+        {{ form.status }}
+    </div>
+    <div class="accordion">
+      <h2 class="accordion-header">Assign Request</h2>
+      <div class="accordion-content">
+        <div class="form-group">
+          <label for="id_assigned_to">Assigned To:</label>
+          {{ form.assigned_to }}
+      </div>
+      <!-- Assignment Notes field -->
+      </div>
+  </div>
+  
+      <!-- Accordion Group 1: Name, Phone, Channel, Destination, Special Requests -->
+      <div class="accordion">
+          <h2 class="accordion-header">Basic Information</h2>
+          <div class="accordion-content">
+              <div class="form-group">
+                  <label for="id_name">Name:</label>
+                  {{ form.name }}
+              </div>
+              <div class="form-group">
+                  <label for="id_phone">Phone:</label>
+                  {{ form.phone }}
+              </div>
+              <div class="form-group">
+                  <label for="id_channel">Channel:</label>
+                  {{ form.channel }}
+              </div>
+              <div class="form-group">
+                  <label for="id_destination">Destination:</label>
+                  {{ form.destination }}
+              </div>
+              <div class="form-group">
+                  <label for="id_special_request">Request Details:</label>
+                  {{ form.special_request }}
+              </div>
+          </div>
+      </div>
+  
+      <!-- Accordion Group 2: Pax, Duration, Travel Dates, Date Notes -->
+      <div class="accordion">
+          <h2 class="accordion-header">Travel Details</h2>
+          <div class="accordion-content">
+            <div class="form-group">
+              <label for="id_type_of_service">Type Of Service:</label>
+              {{ form.type_of_service }}
+          </div>
+              <div class="form-group">
+                  <label for="id_pax">Pax:</label>
+                  {{ form.pax }}
+              </div>
+              <div class="form-group">
+                  <label for="id_duration">Duration:</label>
+                  {{ form.duration }}
+              </div>
+              <div class="form-group">
+                  <label for="id_travel_date_from">Travel Date From:</label>
+                  {{ form.travel_date_from }}
+              </div>
+              <div class="form-group">
+                  <label for="id_travel_date_to">Travel Date To:</label>
+                  {{ form.travel_date_to }}
+              </div>
+              <div class="form-group">
+                  <label for="id_date_notes">Notes:</label>
+                  {{ form.date_notes }}
+              </div>
+              <div class="form-group">
+                <label for="id_urgent">Urgent ?</label>
+                {{ form.urgent }}
+            </div>
+          </div>
+      </div>
+  
+      <!-- Accordion Group 3: Finalization Notes, Follow-up -->
+      <div class="accordion">
+          <h2 class="accordion-header">Finalization and Follow-up</h2>
+          <div class="accordion-content">
+              <div class="form-group">
+                  <label for="id_finalization_notes">What Happened:</label>
+                  {{ form.finalization_notes }}
+              </div>
+              <div class="form-group">
+                  <label for="id_follow_up">Follow-up:</label>
+                  {{ form.follow_up }}
+              </div>
+          </div>
+      </div>
+  
+            <!-- Accordion Group 4: Selling Price, Supplier, Sold -->
+            <div class="accordion">
+              <h2 class="accordion-header">Sales Information</h2>
+              <div class="accordion-content">
+                  <div class="form-group">
+                      <label for="id_selling_price">Selling Price:</label>
+                      {{ form.selling_price }}
+                  </div>
+                  <div class="form-group">
+                      <label for="id_supplier">Supplier:</label>
+                      {{ form.supplier }}
+                  </div>
+                  <div class="form-group">
+                    <label for="id_profit">Profit:</label>
+                    {{ form.profit }}
+                </div>
+                  <div class="form-group">
+                      <label for="id_sold">Sold?</label>
+                      {{ form.sold }}
+                      <label for="id_lost">Lost?</label>
+                      {{ form.lost }}
+                  </div>
+              </div>
+          </div>
+      
+      <button type="submit">Submit</button>
+  </form>
+  
+  <script src="{% static 'JS/sidebar.js'%}"></script>
+  <script src="{% static 'JS/bootstrap.min.js'%}"></script>
+  <script>
+      // Add event listeners to accordion headers
+      const accordionHeaders = document.querySelectorAll('.accordion-header');
+      accordionHeaders.forEach(header => {
+          header.addEventListener('click', () => {
+              header.nextElementSibling.classList.toggle('active');
+          });
+      });
+  </script>
+</body>
+</html>

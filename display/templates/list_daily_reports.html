@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Reports</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/report.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="welcome-message">
+                Welcome, <span class="username">{{ user.username }}</span>!
+            </div>
+            {% include 'navbar.html' %}
+        </div>
+        <h2 class="fancy-header">Daily Reports</h2>
+        <div class="d-flex justify-content-between mb-3">
+            <a href="{% url 'daily_report' %}" class="btn btn-primary">New Report</a>
+            <form method="get" class="form-inline">
+                <div class="form-group mx-sm-3 mb-2">
+                    <label for="date" class="sr-only">Date</label>
+                    <input type="date" class="form-control" id="date" name="date" value="{{ date_filter }}">
+                </div>
+                <button type="submit" class="btn btn-secondary mb-2">Filter</button>
+            </form>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Username</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                    <tr>
+                        <td><a href="{% url 'view_daily_report' report.pk %}">{{ report.created_at }}</a></td>
+                        <td>{{ report.user.username }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

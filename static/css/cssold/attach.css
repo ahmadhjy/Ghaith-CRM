@@ -1,0 +1,151 @@
+/* Hide the label */
+label[for="id_attachments"] {
+    display: none;
+  }
+  
+  /* Hide the select element */
+  select[name="attachments"] {
+    display: none;
+  } 
+  
+  
+/* Style for the attachment form */
+.attachment-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 50px 200px;
+    background-color: #e4e4e4;
+    border-radius: 8px;
+    margin-top: 10%;
+}
+
+/* Style for form inputs */
+.attachment-form input[type="text"],
+.attachment-form input[type="email"],
+.attachment-form input[type="password"],
+.attachment-form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Style for the submit button */
+.submit-button {
+    background-color: rgb(0, 0, 65);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Style for the submit button on hover */
+.submit-button:hover {
+    background-color: #0056b3;
+}
+
+/* CSS styles for the payment form container */
+.payment-form-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* CSS styles for the payment form */
+.payment-form {
+  width: 600px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.payment-form input[type="submit"] {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.payment-form input[type="submit"]:hover {
+  background-color: #0056b3;
+}
+
+.payment-form label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #333;
+}
+
+.payment-form input[type="text"],
+.payment-form input[type="date"],
+.payment-form input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.payment-form .submit-button {
+  margin-top: 20px;
+}
+
+/* Modern Styling for Attachments */
+/* Modern Styling for Attachments */
+.attach-container {
+  font-family: Arial, sans-serif;
+  margin-bottom: 20px;
+  margin-left: 0px !important;
+}
+
+.attach-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+}
+
+.attach-table th, .attach-table td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.attach-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.attach-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.attach-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.attach-link:hover {
+  text-decoration: underline;
+}
+
+.delete-attach {
+  color: #dc3545;
+  text-decoration: none;
+}
+
+.delete-attach:hover {
+  text-decoration: underline;
+}
+

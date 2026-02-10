@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Display Tasks</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <div class="welcome-message">
+            Welcome, <span class="username">{{ user.username }}</span>!
+        </div>
+        {% include 'navbar.html' %}
+    </div>
+    <div class="content">
+        <div class="header">
+            <h2>Overdue</h2>
+            <a class="add-more fancy-link" href="{% url 'input_task' %}">New Task</a>
+        </div>
+        <hr/>
+        <div class="status-counts-box">
+            <ul class="status-list">
+                {% for status, count in status_counts.items %}
+                <li>
+                    <span class="status">{{ status }}</span>
+                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="filter-container">
+            <!-- Filter dropdown -->
+            <form method="GET" action="{% url 'expired_tasks' %}" class="filter-form">
+                <label for="status" class="filter-label">Filter by Status:</label>
+                <select id="status" name="status" class="filter-select">
+                    <option value="">All</option>
+                    {% for choice in status_choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="filter-button">Apply Filter</button>
+            </form>
+            <!-- End of filter dropdown -->
+        
+            <!-- Smart Search form -->
+            <form method="GET" action="{% url 'expired_tasks' %}" class="smart-search-form">
+                <label for="search" class="filter-label">Search:</label>
+                <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
+                <button type="submit" class="filter-button">Search</button>
+            </form>
+            <!-- End of Smart Search form -->
+        </div>            
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Due Time</th>
+                    <th>Status</th>
+                    <th>What Happened</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in expired_tasks %}
+                    <tr class="{% if task.status == 'processing' %}processing{% elif task.status == 'negotiation' %}negotiation{% elif task.status == 'finalized' %}finalized{% elif task.status == 'onhold' %}onhold{% endif %}">
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.due_time }}</td>
+                        <td>{{ task.status }}</td>
+                        <td>{{ task.what_happened }}</td>
+                        <td><a href="{% url 'edit_task' task.pk %}" class="edit-link">Edit</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+</div>
+</body>
+</html>

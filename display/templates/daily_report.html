@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Report</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/report.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="welcome-message">
+                Welcome, <span class="username">{{ user.username }}</span>!
+            </div>
+            {% include 'navbar.html' %}
+        </div>
+        <h2>Daily Report</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Name:</label>
+                <input type="text" class="form-control" id="username" value="{{ username }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="date">Date:</label>
+                <input type="text" class="form-control" id="date" value="{{ today }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="took_over_leads_today">Took over leads today:</label>
+                <input type="text" class="form-control" id="took_over_leads_today" value="{{ took_over_leads_today }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="unqualified_leads">Unqualified leads:</label>
+                <input type="text" class="form-control" id="unqualified_leads" value="{{ unqualified_leads_count }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="modified_leads_today">Follow ups:</label>
+                <input type="text" class="form-control" id="modified_leads_today" value="{{ modified_leads_today }}" readonly>
+            </div>            
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                {{ form.notes }}
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Report</button>
+        </form>
+    </div>
+</body>
+</html>
+

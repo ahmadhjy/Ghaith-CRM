@@ -1,0 +1,53 @@
+<!-- create_offer.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Offer</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/offer.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container mt-4">
+        <h2>Create Offer for {{ lead.name }}</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="title">Title:</label>
+                {{ form.title }}
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                {{ form.description }}
+            </div>
+            <div class="form-group">
+                <label for="inclusions">Inclusions:</label>
+                {{ form.inclusions }}
+            </div>
+            <div class="form-group">
+                <label for="exclusions">Exclusions:</label>
+                {{ form.exclusions }}
+            </div>
+            <div class="form-group">
+                <label for="itinerary">Itinerary:</label>
+                {{ form.itinerary }}
+            </div>
+            <div class="form-group">
+                <label for="accommodation_options">Accommodation Options:</label>
+                {{ form.accommodation_options }}
+            </div>
+            <div class="form-group">
+                <label for="flight_details">Flight Details:</label>
+                {{ form.flight_details }}
+            </div>
+            <div class="form-group">
+                <label for="pricing_usd">Pricing:</label>
+                {{ form.pricing_usd }}
+            </div>
+            <button type="submit" class="btn btn-primary">Create Offer</button>
+        </form>
+    </div>
+</body>
+</html>

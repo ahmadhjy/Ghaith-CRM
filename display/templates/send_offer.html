@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Offer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+</head>
+<body>
+    
+    <div class="container">
+        {% include 'navbar.html' %}
+        <h2>Send Offer</h2>
+        <hr/>
+        <div class="container-assist">
+        <b>Name  </b>{{ lead.name }} <br/>
+        <b>Phone  </b>{{ lead.phone }} <br/>
+        <b>Destination  </b>{{ lead.destination }} <br/>
+        <hr/>
+        </div>
+
+
+        <div class="attach-container">
+            <a href="{% url 'add_attachment' pk=lead.id %}" class="button">Add Attachment</a>
+          
+            {% if attachments.all %}
+                <table class="attachment-table">
+                    <tbody>
+                        {% for attachment in lead.attachments.all %}
+                            <tr>
+                                <td>
+                                    <a href="{{ attachment.file.url }}" class="attachment-link">{{ attachment.attachment_name }}</a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'delete_attachment' lead_id=lead.id attachment_id=attachment.pk %}" class="delete-link">Delete</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No Offers Attached</p>
+            {% endif %}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_offer_details">Offer Sent:</label>
+                {{ form.offer_details }}
+            </div>
+            <div class="form-group">
+                <label for="id_finalization_notes">What Happened:</label>
+                <br/>
+                {{ form.finalization_notes }}
+            </div>
+            <div class="form-group">
+                <label for="id_assigned_to">Assigned To:</label>
+                <br/>
+                {{ form.assigned_to }}
+            </div>
+            <a href="{% url 'create_offer' lead.pk %}" class="btn btn-create-offer">Create Offer</a>
+            <button type="submit" class="btn btn-primary" name="submit_next">Submit & Next ></button>
+            <button type="submit" class="btn btn-secondary" name="submit_exit">Submit & Exit</button>
+        </form>
+    </div>
+    <a href="{% url 'qualify_lead' lead.pk %}" class="btn btn-secondary mt-3">< Previous Page</a>
+</body>
+</html>

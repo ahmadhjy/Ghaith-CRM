@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+    <head>
+        <meta name="description" content="Main Dashboard" />
+        <title>Ghaith system dashboard</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/dashboard.css' %}">
+    </head>
+    <body>
+        {% include 'navbar.html' %}
+        <h1>Dashboard</h1>
+ 
+        {% include 'calendar.html' %}
+    </body>
+</html>
+

@@ -1,0 +1,142 @@
+body {
+    background-color: #f4f6f8;
+    /* font-family: 'Comic Sans MS', 'Comic Sans', cursive; */
+}
+
+.container {
+    padding: 20px;
+    margin-left: 250px;
+}
+
+h3 {
+    color: #333;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.progress {
+    height: 30px;
+    position: relative;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+    border: none;
+}
+
+.progress-bar {
+    font-size: 16px;
+    background-color: #28a745; /* Green for the progress bar */
+}
+
+.progress-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.table {
+    margin-top: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+th, td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.thead-custom {
+    background-color: #1e90ff; /* Joyful color for table headers */
+    color: #fff;
+    font-weight: bold;
+}
+
+.thead-yellow {
+    background-color: #f1cdff; /* Yellow color for Most Wanted Locations table header */
+    color: #333;
+    font-weight: bold;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}
+
+.table-striped tbody tr:nth-of-type(even) {
+    background-color: #f1f1f1;
+}
+
+.section {
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+    color: #7d0bb3; /* Tomato color for section titles */
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.form-inline {
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.form-control {
+    margin-right: 10px;
+}
+
+.crown-icon {
+    color: gold;
+    margin-left: 5px;
+}
+
+.highlight {
+    color: #333;
+    font-weight: bold;
+}
+
+.low-percentage {
+    background-color: #bd0000; /* Light red for low percentage */
+}
+
+.medium-percentage {
+    background-color: #fff5cc; /* Light yellow for medium percentage */
+}
+
+.high-percentage {
+    background-color: #ddffdd; /* Light green for high percentage */
+}
+
+.low-text {
+    color: #ff0000; /* Dark red for low percentage */
+    font-weight: bold;
+}
+
+.medium-text {
+    color: #ff9900; /* Dark orange for medium percentage */
+    font-weight: bold;
+}
+
+.high-text {
+    color: #47eb47; /* Dark green for high percentage */
+    font-weight: bold;
+}

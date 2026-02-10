@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Display Tasks</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+</head>
+<body>
+<div class="welcome-message">
+    Welcome, <span class="username">{{ user.username }}</span>!
+</div>
+<div>
+    {% include 'navbar.html' %}
+    <h1>Done Tasks</h1>
+    <ul class="nav nav-tabs">
+        <li class="top-bar">
+            <a href="#">
+                <span>Title</span> <span>Due Time</span> <span>Status</span> <span>What Happened</span>
+            </a>
+        </li>
+        {% for task in expired_tasks %}
+
+        <li class="{% if task.status == 'onhold' %}onhold{% elif task.status == 'progress' %}progress{% elif task.status == 'done' %}done{% endif %}">
+            <a href="{% url 'edit tasks' task.pk %}">
+                <span>{{ task.title }}</span><span>{{ task.due_time }}</span> <span>{{ task.status }}</span> <span>{{ task.what_happened }}</span>
+                <button>Edit</button>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+</body>
+</html>
