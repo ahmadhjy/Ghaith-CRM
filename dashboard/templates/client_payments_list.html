@@ -26,6 +26,9 @@
                 <option value="paid" {% if paid_filter == 'paid' %}selected{% endif %}>Paid</option>
                 <option value="unpaid" {% if paid_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
             </select>
+            <label class="filter-form__checkbox">
+                <input type="checkbox" name="late" {% if late_filter %}checked{% endif %}> Late on payment (unpaid from past dates)
+            </label>
             <div class="filter-form__actions">
                 <button type="submit" class="btn btn--primary">Filter</button>
                 <a href="{% url 'client_payments_list' %}" class="btn btn--secondary">Clear</a>
@@ -33,7 +36,7 @@
         </form>
     </div>
 
-    <div class="table-wrapper table-wrapper--responsive">
+    <div class="table-wrapper table-wrapper--responsive table-wrapper--client-payments">
         <table class="list-table list-table--client">
             <thead>
                 <tr>
@@ -42,7 +45,7 @@
                     <th>Amount</th>
                     <th>Order</th>
                     <th>Paid</th>
-                    <th>Mark paid</th>
+                    <th class="list-table__th-mark-paid">Mark paid</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,7 +58,7 @@
                         <a href="{% url 'edit_lead_tasks' payment.leadtask_id %}" class="list-table__link">#{{ payment.leadtask_id }}</a>
                     </td>
                     <td data-label="Paid">{{ payment.is_checked|yesno:"Yes,No" }}</td>
-                    <td data-label="Mark paid">
+                    <td data-label="Mark paid" class="list-table__td-mark-paid">
                         <form method="post" action="{% url 'update_payment' payment.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
                             {% csrf_token %}
                             <label class="list-table__checkbox-label">

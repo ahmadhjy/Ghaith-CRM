@@ -13,7 +13,8 @@ from .utils import Calendar
 from .forms import EventForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from tasks.models import Task, LeadTask, Payment
+from tasks.models import Task, LeadTask, Payment, Service
+from tasks.constants import SUPPLIER_CHOICES
 from display.models import Lead
 from django.utils import timezone
 from tasks.forms import TaskForm, LeadTaskForm
@@ -193,57 +194,97 @@ def delete_event(request, event_id):
         return redirect('calendar')
 
 
+def _supplier_matches_predefined(supplier_value):
+    """Case-insensitive match against predefined supplier list."""
+    if not supplier_value:
+        return False
+    sup = (supplier_value or '').strip()
+    for choice_value, _ in SUPPLIER_CHOICES:
+        if choice_value and sup.lower() == choice_value.lower():
+            return True
+    return False
+
+
 @login_required(login_url="/login/")
 def supplier_payments_list(request):
-    """Calendar list: supplier payments (events with type followup), filter by date, month, paid/done."""
+    """Calendar list: supplier payments from Service model (unpaid services). Default: unpaid upcoming. Columns: Supplier, Service, lead name, amount, due time, Order ID."""
     user = request.user
+    today = timezone.now().date()
+
     if user.is_staff:
-        events = Event.objects.filter(event_type='followup').order_by('when')
+        services = Service.objects.filter(
+            due_time__isnull=False
+        ).select_related('leadtask', 'leadtask__lead').order_by('due_time')
     else:
-        events = Event.objects.filter(event_type='followup', user=user).order_by('when')
+        services = Service.objects.filter(
+            leadtask__assigned_to=user,
+            due_time__isnull=False
+        ).select_related('leadtask', 'leadtask__lead').order_by('due_time')
 
     month_str = request.GET.get('month', '').strip()
     date_str = request.GET.get('date', '').strip()
     paid_filter = request.GET.get('paid', '').strip()  # 'paid' | 'unpaid' | ''
+    late_filter = request.GET.get('late', '') == 'on'
+    supplier_filter = request.GET.get('supplier', '').strip()  # case-insensitive match
 
     if date_str:
         try:
             filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            events = events.filter(when=filter_date)
+            services = services.filter(due_time__date=filter_date)
         except ValueError:
             pass
     elif month_str:
         try:
             year, month = (int(x) for x in month_str.split('-'))
-            events = events.filter(when__year=year, when__month=month)
+            services = services.filter(due_time__year=year, due_time__month=month)
         except (ValueError, TypeError):
             pass
+    else:
+        # Default: unpaid upcoming (from today on)
+        if not late_filter:
+            services = services.filter(due_time__date__gte=today)
+            if paid_filter != 'paid':
+                services = services.filter(is_checked=False)
 
     if paid_filter == 'paid':
-        events = events.filter(done=True)
+        services = services.filter(is_checked=True)
     elif paid_filter == 'unpaid':
-        events = events.filter(done=False)
+        services = services.filter(is_checked=False)
 
+    if late_filter:
+        services = services.filter(is_checked=False, due_time__date__lt=today)
+
+    if supplier_filter:
+        services = services.filter(supplier__iexact=supplier_filter)
+
+    # Supplier filter dropdown: predefined list only (existing manual values not shown)
     return render(request, 'supplier_payments_list.html', {
-        'events': events,
+        'services': services,
         'month': month_str,
         'date_filter': date_str,
         'paid_filter': paid_filter,
+        'late_filter': late_filter,
+        'supplier_filter': supplier_filter,
+        'supplier_filter_options': SUPPLIER_CHOICES,
+        'supplier_choices': SUPPLIER_CHOICES,
     })
 
 
 @login_required(login_url="/login/")
 def client_payments_list(request):
-    """Calendar list: client payments (Payment model), filter by date, month, paid/unpaid."""
+    """Calendar list: client payments (Payment model). Default: unpaid from today on. Filter: late = unpaid in the past."""
     user = request.user
+    today = timezone.now().date()
+
     if user.is_staff:
-        payments = Payment.objects.all().order_by('date')
+        payments = Payment.objects.all().select_related('leadtask', 'leadtask__lead').order_by('date')
     else:
-        payments = Payment.objects.filter(leadtask__assigned_to=user).order_by('date')
+        payments = Payment.objects.filter(leadtask__assigned_to=user).select_related('leadtask', 'leadtask__lead').order_by('date')
 
     month_str = request.GET.get('month', '').strip()
     date_str = request.GET.get('date', '').strip()
     paid_filter = request.GET.get('paid', '').strip()  # 'paid' | 'unpaid' | ''
+    late_filter = request.GET.get('late', '') == 'on'   # unpaid from past dates
 
     if date_str:
         try:
@@ -261,15 +302,25 @@ def client_payments_list(request):
             payments = payments.filter(date__year=year, date__month=month)
         except (ValueError, TypeError):
             pass
+    else:
+        # Default: unpaid from current date onwards (do not show past payments)
+        if not late_filter:
+            payments = payments.filter(date__date__gte=today)
+            if paid_filter != 'paid':
+                payments = payments.filter(is_checked=False)
 
     if paid_filter == 'paid':
         payments = payments.filter(is_checked=True)
     elif paid_filter == 'unpaid':
         payments = payments.filter(is_checked=False)
 
+    if late_filter:
+        payments = payments.filter(is_checked=False, date__date__lt=today)
+
     return render(request, 'client_payments_list.html', {
         'payments': payments,
         'month': month_str,
         'date_filter': date_str,
         'paid_filter': paid_filter,
+        'late_filter': late_filter,
     })

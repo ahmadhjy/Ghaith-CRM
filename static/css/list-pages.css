@@ -209,6 +209,25 @@
   user-select: none;
 }
 
+/* Client payments: keep "Mark paid" column visible */
+.list-table--client .list-table__th-mark-paid,
+.list-table--client .list-table__td-mark-paid {
+  min-width: 7rem;
+  white-space: nowrap;
+}
+.table-wrapper--client-payments {
+  min-width: 100%;
+}
+
+.list-table--supplier .list-table__th-mark-paid,
+.list-table--supplier .list-table__td-mark-paid {
+  min-width: 7rem;
+  white-space: nowrap;
+}
+.table-wrapper--supplier-payments {
+  min-width: 100%;
+}
+
 /* Responsive: card-style rows on small screens */
 @media (max-width: 768px) {
   .list-page {

@@ -20,6 +20,7 @@ from reportlab.lib import colors
 from django.http import HttpResponse
 from datetime import datetime  # Make sure this line is included
 from dashboard.models import Event
+from .constants import SUPPLIER_CHOICES
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from reportlab.lib.units import inch 
@@ -346,10 +347,29 @@ def mark_service_processed(request, pk):
     return redirect('purchased_services')
 
 
+@login_required
+@require_POST
+def service_mark_done(request, pk):
+    """Mark a service as paid (is_checked=True) and linked calendar event as done. Redirect to next or supplier list."""
+    service = get_object_or_404(Service, pk=pk)
+    service.is_checked = True
+    service.save()
+    try:
+        event = service.calendar_event
+        event.done = True
+        event.save()
+    except Exception:
+        pass  # No linked calendar event
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('supplier_payments_list')
+
+
 @login_required(login_url="/login/")
 def edit_lead_task(request, pk):
     instance = get_object_or_404(LeadTask, pk=pk)
-    services = Service.objects.filter(leadtask=instance)    
+    services = Service.objects.filter(leadtask=instance)
     lead_task_payments = Payment.objects.filter(leadtask=instance)
     attachments = Attachment.objects.filter(parentleadtask=instance)
 
@@ -359,7 +379,29 @@ def edit_lead_task(request, pk):
             form.save()
     else:
         form = LeadTaskForm(instance=instance)
-    return render(request, 'edit_leadtask.html', {'form': form, 'leadid': pk, 'lead': instance.lead, 'services':services, 'lead_task_payments': lead_task_payments, 'attachments':attachments})
+
+    predefined_supplier_values = [v for v, _ in SUPPLIER_CHOICES]
+    return render(request, 'edit_leadtask.html', {
+        'form': form,
+        'leadid': pk,
+        'lead': instance.lead,
+        'services': services,
+        'lead_task_payments': lead_task_payments,
+        'attachments': attachments,
+        'predefined_suppliers': SUPPLIER_CHOICES,
+        'predefined_supplier_values': predefined_supplier_values,
+    })
+
+
+@login_required
+@require_POST
+def update_service_supplier(request, pk):
+    """Update only the supplier field of a service. Redirect back to edit leadtask."""
+    service = get_object_or_404(Service, pk=pk)
+    supplier = (request.POST.get('supplier') or '').strip()
+    service.supplier = supplier
+    service.save()
+    return redirect('edit_lead_tasks', pk=service.leadtask_id)
 
 
 
@@ -582,15 +624,14 @@ def client_payments(request):
 
 @login_required(login_url="/login/")
 def travellers_list(request):
-    """List leadtasks marked done with a travel date (travellers)."""
+    """List leadtasks with a travel date (travellers). Shows all orders with travel date, not only done."""
     now = timezone.now()
     today = now.date() if hasattr(now, 'date') else now
 
     if request.user.is_staff:
-        qs = LeadTask.objects.filter(status='done', travel_date__isnull=False).select_related('lead', 'assigned_to')
+        qs = LeadTask.objects.filter(travel_date__isnull=False).select_related('lead', 'assigned_to')
     else:
         qs = LeadTask.objects.filter(
-            status='done',
             travel_date__isnull=False,
             assigned_to=request.user,
         ).select_related('lead', 'assigned_to')

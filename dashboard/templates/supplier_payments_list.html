@@ -10,7 +10,7 @@
 <div class="container list-page list-page--supplier">
     <header class="list-page__header">
         <h2 class="list-page__title">Supplier Payments</h2>
-        <p class="list-page__desc">Events linked to supplier payments. Filter by date, month, or paid status.</p>
+        <p class="list-page__desc">Unpaid services (supplier payments). Default: unpaid upcoming. Filter by date, month, supplier, or paid status.</p>
         <a href="{% url 'purchased_services' %}" class="btn btn--link list-page__link">View purchased services</a>
     </header>
 
@@ -20,12 +20,22 @@
             <input type="month" name="month" id="month" value="{{ month }}" class="filter-input">
             <label for="date_filter">Or date:</label>
             <input type="date" name="date" id="date_filter" value="{{ date_filter }}" class="filter-input">
+            <label for="supplier">Supplier:</label>
+            <select name="supplier" id="supplier" class="filter-select">
+                <option value="">All</option>
+                {% for value, label in supplier_filter_options %}
+                <option value="{{ value }}" {% if supplier_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
             <label for="paid">Paid:</label>
             <select name="paid" id="paid" class="filter-select">
                 <option value="">All</option>
                 <option value="paid" {% if paid_filter == 'paid' %}selected{% endif %}>Paid</option>
                 <option value="unpaid" {% if paid_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
             </select>
+            <label class="filter-form__checkbox">
+                <input type="checkbox" name="late" {% if late_filter %}checked{% endif %}> Late on payment (unpaid from past dates)
+            </label>
             <div class="filter-form__actions">
                 <button type="submit" class="btn btn--primary">Filter</button>
                 <a href="{% url 'supplier_payments_list' %}" class="btn btn--secondary">Clear</a>
@@ -33,27 +43,36 @@
         </form>
     </div>
 
-    <div class="table-wrapper table-wrapper--responsive">
+    <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
         <table class="list-table list-table--supplier">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Title</th>
-                    <th>Assigned to</th>
-                    <th>Paid</th>
-                    <th>Mark paid</th>
+                    <th>Supplier</th>
+                    <th>Service</th>
+                    <th>Lead name</th>
+                    <th>Amount</th>
+                    <th>Due time</th>
+                    <th>Order ID</th>
+                    <th class="list-table__th-mark-paid">Mark paid</th>
                 </tr>
             </thead>
             <tbody>
-                {% for event in events %}
-                <tr class="list-table__row {% if event.done %}list-table__row--done{% endif %}">
-                    <td data-label="Date">{{ event.when|date:"Y-m-d" }}</td>
-                    <td data-label="Title">{{ event.title }}</td>
-                    <td data-label="Assigned to">{{ event.user.get_full_name|default:event.user.username }}</td>
-                    <td data-label="Paid">{{ event.done|yesno:"Yes,No" }}</td>
-                    <td data-label="Mark paid">
-                        {% if not event.done %}
-                        <a href="{% url 'event_done' event.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn--small btn--primary">Mark done</a>
+                {% for service in services %}
+                <tr class="list-table__row {% if service.is_checked %}list-table__row--done{% endif %}">
+                    <td data-label="Supplier">{{ service.supplier|default:"—" }}</td>
+                    <td data-label="Service">{{ service.service_name|default:"—" }}</td>
+                    <td data-label="Lead name">{{ service.leadtask.lead.name }}</td>
+                    <td data-label="Amount">{{ service.net|default:"—" }}</td>
+                    <td data-label="Due time">{{ service.due_time|date:"Y-m-d H:i" }}</td>
+                    <td data-label="Order ID">
+                        <a href="{% url 'edit_lead_tasks' service.leadtask_id %}" class="list-table__link">#{{ service.leadtask_id }}</a>
+                    </td>
+                    <td data-label="Mark paid" class="list-table__td-mark-paid">
+                        {% if not service.is_checked %}
+                        <form method="post" action="{% url 'service_mark_done' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--small btn--primary">Mark done</button>
+                        </form>
                         {% else %}
                         <span class="list-table__muted">—</span>
                         {% endif %}
@@ -61,7 +80,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="list-table__empty">No supplier payment events found.</td>
+                    <td colspan="7" class="list-table__empty">No supplier payments found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

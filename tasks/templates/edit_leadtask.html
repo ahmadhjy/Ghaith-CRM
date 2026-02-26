@@ -108,7 +108,20 @@
 {% for service in services %}
 <tr class="{{ service.is_checked|yesno:'checked,' }}">
     <td>{{ service.service_name }}</td>
-    <td>{{ service.supplier }}</td>
+    <td>
+        <form id="form_supplier_{{ service.pk }}" method="post" action="{% url 'update_service_supplier' service.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <select name="supplier" onchange="this.form.submit();" class="form-control supplier-select">
+                <option value="">—</option>
+                {% for value, label in predefined_suppliers %}
+                <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if service.supplier and service.supplier not in predefined_supplier_values %}
+            <span class="supplier-previous" title="Existing value (not in list)">({{ service.supplier }})</span>
+            {% endif %}
+        </form>
+    </td>
     <td>{{ service.details }}</td>
     <td>{{ service.net }}</td>
     <td>{{ service.selling }}</td>
@@ -206,14 +219,20 @@
 function addRow() {
         const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
         const newRow = table.insertRow();
+        var supplierOptions = '';
+        {% for value, label in predefined_suppliers %}
+        supplierOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
+        {% endfor %}
         newRow.innerHTML = `
             <td><input type="text" name="service_name[]" class="form-control"></td>
-            <td><input type="text" name="supplier[]" class="form-control"></td>
+            <td><select name="supplier[]" class="form-control">${supplierOptions}</select></td>
             <td><input type="text" name="details[]" class="form-control"></td>
             <td><input type="text" name="net[]" class="form-control"></td>
             <td><input type="text" name="selling[]" class="form-control"></td>
             <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
             <td><input type="text" name="voucher_id[]" class="form-control"></td>
+            <td></td>
+            <td></td>
         `;
     }
 function updateCheckboxStatus(checkbox) {
