@@ -14,7 +14,7 @@
     <div class="container list-page list-page--travellers">
         <header class="list-page__header">
             <h1 class="list-page__title">Travellers</h1>
-            <p class="list-page__desc">Orders marked done with a travel date.</p>
+            <p class="list-page__desc">Orders with a travel date. Filter by destination, month, return date range.</p>
         </header>
 
         <div class="list-page__filters">
@@ -24,7 +24,16 @@
                 <label for="travel_date">Travel date:</label>
                 <input type="date" name="travel_date" id="travel_date" value="{{ request_travel_date }}" class="filter-input">
                 <label for="destination">Destination:</label>
-                <input type="text" name="destination" id="destination" placeholder="Filter by destination" value="{{ request_destination }}" class="search-input">
+                <select name="destination" id="destination" class="filter-select">
+                    <option value="">All</option>
+                    {% for dest in destinations %}
+                    <option value="{{ dest }}" {% if request_destination == dest %}selected{% endif %}>{{ dest }}</option>
+                    {% endfor %}
+                </select>
+                <label for="return_from">Return date from:</label>
+                <input type="date" name="return_from" id="return_from" value="{{ return_from }}" class="filter-input">
+                <label for="return_to">Return date to:</label>
+                <input type="date" name="return_to" id="return_to" value="{{ return_to }}" class="filter-input">
                 <label class="filter-form__checkbox">
                     <input type="checkbox" name="show_past" value="on" {% if show_past %}checked{% endif %}> Include already traveled
                 </label>
@@ -42,6 +51,7 @@
                         <th>Client name</th>
                         <th>Destinations</th>
                         <th>Travel date</th>
+                        <th>Return date</th>
                         <th>Order ID</th>
                         <th>Assigned to</th>
                     </tr>
@@ -52,6 +62,7 @@
                         <td data-label="Client name">{{ lt.lead.name }}</td>
                         <td data-label="Destinations">{{ lt.lead.destination|default:"—" }}</td>
                         <td data-label="Travel date">{{ lt.travel_date|date:"Y-m-d" }}</td>
+                        <td data-label="Return date">{% if lt.return_date %}{{ lt.return_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                         <td data-label="Order ID">
                             <a href="{% url 'edit_lead_tasks' lt.pk %}" class="list-table__link">#{{ lt.pk }}</a>
                         </td>
@@ -59,7 +70,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="list-table__empty">No travellers found.</td>
+                        <td colspan="6" class="list-table__empty">No travellers found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

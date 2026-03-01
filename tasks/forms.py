@@ -29,9 +29,10 @@ class LeadTaskForm(forms.ModelForm):
 
     class Meta:
         model = LeadTask
-        fields = ['payment', 'status', 'notes', 'travel_date', 'date_of_birth', 'passport_expiry_date', 'service_checked', 'payment_checked','assigned_to']
+        fields = ['payment', 'status', 'notes', 'travel_date', 'return_date', 'date_of_birth', 'passport_expiry_date', 'service_checked', 'payment_checked', 'assigned_to']
         widgets = {
             'travel_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'return_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
             'passport_expiry_date': forms.DateInput(attrs={'type': 'date'}),
         }

@@ -176,12 +176,17 @@ def service_form(request):
 
 @login_required(login_url="/login/")
 def update_service(request, pk):
-    service = Service.objects.get(pk=pk)
-    leadtask = service.leadtask.id
+    """Full update of a service (all fields). Used by the Edit service form on edit leadtask page."""
+    service = get_object_or_404(Service, pk=pk)
+    leadtask_id = service.leadtask_id
     if request.method == 'POST':
-        service.is_checked = request.POST.get('is_checked', 'off') == 'on'
-        service.save()
-    return redirect('edit_lead_tasks', leadtask)  # Redirect to the main page
+        form = ServiceForm(request.POST, instance=service)
+        if form.is_valid():
+            form.save()
+        # Always redirect back; checkbox can be toggled via AJAX elsewhere
+        return redirect('edit_lead_tasks', pk=leadtask_id)
+    # GET: show edit form (handled by inline edit on page)
+    return redirect('edit_lead_tasks', pk=leadtask_id)
 
 
 @login_required(login_url="/login/")
@@ -245,6 +250,66 @@ def create_event_for_service(service):
         service=service,
     )
 
+
+
+@login_required(login_url="/login/")
+@require_POST
+def save_all_services(request, leadid):
+    """Update existing services from service_<pk>_* and create new ones from service_name[], etc. So 'Submit Services' saves edits and new rows."""
+    leadtask = get_object_or_404(LeadTask, pk=leadid)
+    prefix = 'service_'
+    # Collect existing service IDs we have in POST (from hidden or visible inputs)
+    seen_ids = set()
+    for key in request.POST:
+        if key.startswith(prefix) and '_' in key[len(prefix):]:
+            sid = key[len(prefix):].split('_')[0]
+            if sid.isdigit():
+                seen_ids.add(int(sid))
+    for pk in seen_ids:
+        try:
+            service = Service.objects.get(pk=pk, leadtask=leadtask)
+        except Service.DoesNotExist:
+            continue
+        form = ServiceForm({
+            'service_name': request.POST.get('service_%s_service_name' % pk, ''),
+            'supplier': request.POST.get('service_%s_supplier' % pk, ''),
+            'details': request.POST.get('service_%s_details' % pk, ''),
+            'net': request.POST.get('service_%s_net' % pk, ''),
+            'selling': request.POST.get('service_%s_selling' % pk, ''),
+            'due_time': request.POST.get('service_%s_due_time' % pk) or None,
+            'voucher_id': request.POST.get('service_%s_voucher_id' % pk, ''),
+            'is_checked': request.POST.get('service_%s_is_checked' % pk) == 'on',
+        }, instance=service)
+        if form.is_valid():
+            form.save()
+    # New rows: service_name[], supplier[], ...
+    names = request.POST.getlist('service_name[]')
+    suppliers = request.POST.getlist('supplier[]')
+    details = request.POST.getlist('details[]')
+    nets = request.POST.getlist('net[]')
+    sellings = request.POST.getlist('selling[]')
+    due_times = request.POST.getlist('due_time[]')
+    voucher_ids = request.POST.getlist('voucher_id[]')
+    new_services = []
+    for i in range(len(names)):
+        form = ServiceForm({
+            'service_name': names[i] if i < len(names) else '',
+            'supplier': suppliers[i] if i < len(suppliers) else '',
+            'details': details[i] if i < len(details) else '',
+            'net': nets[i] if i < len(nets) else '',
+            'selling': sellings[i] if i < len(sellings) else '',
+            'due_time': due_times[i] if i < len(due_times) else None,
+            'voucher_id': voucher_ids[i] if i < len(voucher_ids) else '',
+        })
+        if form.is_valid():
+            service = form.save(commit=False)
+            service.leadtask = leadtask
+            new_services.append(service)
+    if new_services:
+        Service.objects.bulk_create(new_services)
+        for service in new_services:
+            create_event_for_service(service)
+    return redirect('edit_lead_tasks', leadid)
 
 
 @require_POST
@@ -636,10 +701,10 @@ def travellers_list(request):
             assigned_to=request.user,
         ).select_related('lead', 'assigned_to')
 
-    # Filter: destination (from lead)
+    # Filter: destination (dropdown, exact match)
     destination = request.GET.get('destination', '').strip()
     if destination:
-        qs = qs.filter(lead__destination__icontains=destination)
+        qs = qs.filter(lead__destination=destination)
 
     # Filter: month (YYYY-MM)
     month_str = request.GET.get('month', '').strip()
@@ -665,23 +730,41 @@ def travellers_list(request):
     if not show_past:
         qs = qs.filter(travel_date__date__gte=today)
 
+    # Filter: return date from–to (date range)
+    return_from = request.GET.get('return_from', '').strip()
+    return_to = request.GET.get('return_to', '').strip()
+    if return_from:
+        try:
+            from datetime import datetime as dt
+            parsed = dt.strptime(return_from, '%Y-%m-%d').date()
+            qs = qs.filter(return_date__date__gte=parsed)
+        except ValueError:
+            pass
+    if return_to:
+        try:
+            from datetime import datetime as dt
+            parsed = dt.strptime(return_to, '%Y-%m-%d').date()
+            qs = qs.filter(return_date__date__lte=parsed)
+        except ValueError:
+            pass
+
     travellers = qs.order_by('travel_date')
 
-    # Unique destinations for filter dropdown (from Lead)
-    from display.models import Lead
-    destinations = Lead.objects.filter(
-        destination__isnull=False
-    ).exclude(destination='').values_list('destination', flat=True).distinct()[:200]
+    # Destination filter dropdown: use Destination model (admin panel) so new destinations appear without restart
+    from display.models import Destination
+    destinations = list(Destination.objects.all().order_by('name').values_list('name', flat=True))
 
     return render(request, 'travellers.html', {
         'travellers': travellers,
         'now': now,
         'today': today,
-        'destinations': sorted(set(destinations)),
+        'destinations': destinations,
         'request_destination': destination,
         'request_month': month_str,
         'request_travel_date': travel_date_str,
         'show_past': show_past,
+        'return_from': return_from,
+        'return_to': return_to,
     })
 
 
@@ -697,7 +780,8 @@ def mark_payment_processed(request, pk):
 # create attachment and upload
 @login_required(login_url="/login/")
 def add_attachment(request, pk):
-    leadtask = LeadTask.objects.get(pk=pk)
+    """Single-file upload (legacy): form with attachment_name + file. Redirects back to edit leadtask."""
+    leadtask = get_object_or_404(LeadTask, pk=pk)
     if request.method == 'POST':
         form = AttachmentForm(request.POST, request.FILES)
         if form.is_valid():
@@ -708,6 +792,30 @@ def add_attachment(request, pk):
     else:
         form = AttachmentForm()
     return render(request, 'add_attachment.html', {'form': form})
+
+
+@login_required(login_url="/login/")
+def add_attachments_multiple(request, pk):
+    """Upload multiple files at once; attachment_name = original file name. Keeps existing data unchanged."""
+    leadtask = get_object_or_404(LeadTask, pk=pk)
+    if request.method == 'POST':
+        files = request.FILES.getlist('files')
+        for f in files:
+            if not f.name:
+                continue
+            # Use original file name; sanitize for storage if needed
+            name = f.name
+            if len(name) > 120:
+                import os
+                base, ext = os.path.splitext(name)
+                name = base[: 120 - len(ext)] + ext
+            Attachment.objects.create(
+                parentleadtask=leadtask,
+                attachment_name=name,
+                file=f,
+            )
+        return redirect("edit_lead_tasks", pk=pk)
+    return redirect("edit_lead_tasks", pk=pk)
 
 
 @login_required(login_url="/login/")

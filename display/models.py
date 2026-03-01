@@ -18,18 +18,24 @@ class Destination(models.Model):
     def __str__(self):
         return self.name
 
+
+def get_destination_choices():
+    """Callable: loads destinations from DB when the field is rendered (e.g. add lead form). No server restart needed after adding in admin."""
+    choices = [('', 'Select Destination')]
+    try:
+        destinations = Destination.objects.all().order_by('name')
+        choices.extend([(d.name, d.name) for d in destinations])
+    except Exception:
+        pass
+    return choices
+
+
 class Lead(models.Model):
     reason_of_travel = models.TextField(blank=True, null=True)
     why_this_destination = models.TextField(blank=True, null=True)
     travel_dates_flexible = models.BooleanField(blank=True, default=False)
     budget_range_from = models.PositiveIntegerField(blank=True, null=True)
     budget_range_to = models.PositiveIntegerField(blank=True, null=True)
-
-    def get_destination_choices():
-        choices = [('', 'Select Destination')]
-        destinations = Destination.objects.all()
-        choices.extend([(destination.name, destination.name) for destination in destinations])
-        return choices
 
     name = models.CharField(max_length=100)
     # Optional email to store contact address coming from external systems/APIs
@@ -68,8 +74,7 @@ class Lead(models.Model):
     type_of_service = models.CharField(max_length=50, choices=SERVICE_CHOICES, blank=True, default='')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, blank=True, default='onhold')
     status_changed_at = models.DateTimeField(null=True, blank=True)
-    destination = models.CharField(max_length=200, blank=True, choices=get_destination_choices())
-    # destination = models.CharField(max_length=200, blank=True)
+    destination = models.CharField(max_length=200, blank=True, choices=get_destination_choices)
     pax = models.CharField(max_length=100, blank=True, default='')
     duration = models.CharField(max_length=200, blank=True, default='')
     travel_date_from = models.DateField(blank=True, null=True)

@@ -61,6 +61,11 @@
 </div>
 
 <div class="form-group">
+    <label for="id_return_date">Return Date:</label>
+    {{ form.return_date }}
+</div>
+
+<div class="form-group">
     <label for="id_date_of_birth">Date of Birth:</label>
     {{ form.date_of_birth }}
 </div>
@@ -87,9 +92,10 @@
 <hr/>
 <br><br>
 
-<form method="post" id="update_service_form" action="{% url 'add_multiple_services' leadid %}">
+<form method="post" id="update_service_form" action="{% url 'save_all_services' leadid %}">
     {% csrf_token %}
-<table id="servicesTable">
+<div class="services-table-scroll">
+<table id="servicesTable" class="services-table">
     <thead>
         <tr>
             <th>Service Type</th>
@@ -99,50 +105,97 @@
             <th>Selling</th>
             <th>Due Time</th>
             <th>Voucher ID</th>
-            <th> </th>  <!-- Add a new column for the checkbox -->
+            <th> </th>
             <th> </th>
         </tr>
     </thead>
     <tbody>
-        <!-- Display existing services -->
+        <!-- Existing services: view row (with hidden inputs for submit) + edit row -->
 {% for service in services %}
-<tr class="{{ service.is_checked|yesno:'checked,' }}">
-    <td>{{ service.service_name }}</td>
-    <td>
-        <form id="form_supplier_{{ service.pk }}" method="post" action="{% url 'update_service_supplier' service.pk %}" style="display:inline;">
-            {% csrf_token %}
-            <select name="supplier" onchange="this.form.submit();" class="form-control supplier-select">
-                <option value="">—</option>
-                {% for value, label in predefined_suppliers %}
-                <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-            {% if service.supplier and service.supplier not in predefined_supplier_values %}
-            <span class="supplier-previous" title="Existing value (not in list)">({{ service.supplier }})</span>
-            {% endif %}
-        </form>
+<tr class="service-view-row {{ service.is_checked|yesno:'checked,' }}" data-service-id="{{ service.pk }}">
+    <td class="service-name">
+        {{ service.service_name }}
+        <input type="hidden" name="service_{{ service.pk }}_service_name" value="{{ service.service_name|default:'' }}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_details" value="{{ service.details|default:'' }}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_net" value="{{ service.net|default:'' }}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_selling" value="{{ service.selling|default:'' }}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="update_service_form" data-service-inputs="view">
+        <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="update_service_form" data-service-inputs="view">
     </td>
-    <td>{{ service.details }}</td>
-    <td>{{ service.net }}</td>
-    <td>{{ service.selling }}</td>
-    <td>{{ service.due_time }}</td>
-    <td>{{ service.voucher_id }}</td>
-    <td>
-    <input type="checkbox" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %} checked {% endif %}
-       onchange="updateCheckboxStatus(this)">
+    <td class="service-supplier">
+        <select name="service_{{ service.pk }}_supplier" class="form-control supplier-select supplier-select--small" form="update_service_form" data-service-inputs="view">
+            <option value="">—</option>
+            {% for value, label in predefined_suppliers %}
+            <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if service.supplier and service.supplier not in predefined_supplier_values %}
+        <span class="supplier-previous" title="Existing value (not in list)">({{ service.supplier }})</span>
+        {% endif %}
     </td>
+    <td class="service-details-cell" title="{{ service.details|default:'' }}">
+        <span class="service-details-truncate">{{ service.details|truncatechars:20|default:"—" }}</span>
+    </td>
+    <td class="service-net">{{ service.net }}</td>
+    <td class="service-selling">{{ service.selling }}</td>
+    <td class="service-due-time">{{ service.due_time|date:"Y-m-d H:i" }}</td>
+    <td class="service-voucher">{{ service.voucher_id }}</td>
     <td>
-        <a href="{% url 'delete_service' service.pk %}">Delete</a>
+        <input type="checkbox" class="service-is-checked-cb" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %} checked {% endif %} onchange="updateCheckboxStatus(this); syncServiceIsCheckedHidden(this);">
+    </td>
+    <td class="service-actions">
+        <button type="button" class="btn-edit-service" data-service-id="{{ service.pk }}">Edit</button>
+        <a href="{% url 'delete_service' service.pk %}" class="service-delete-link" title="Delete">X</a>
     </td>
 </tr>
 {% endfor %}
     </tbody>
-    <!-- Button to add new row -->
 </table>
+</div>
 <button type="button" onclick="addRow()">Add New Service</button>
 <button type="submit">Submit Services</button>
 
 </form>
+
+<!-- Edit service modals (one per service) – hidden by default, shown on Edit -->
+{% for service in services %}
+<div id="modal-service-{{ service.pk }}" class="service-edit-modal" aria-hidden="true" style="display: none;">
+    <div class="service-edit-modal__overlay" data-close-modal="modal-service-{{ service.pk }}"></div>
+    <div class="service-edit-modal__box">
+        <h3 class="service-edit-modal__title">Edit service</h3>
+        <form method="post" action="{% url 'update_service' service.pk %}" class="service-edit-modal__form">
+            {% csrf_token %}
+            <div class="service-edit-modal__fields">
+                <label>Service type / Hotel</label>
+                <input type="text" name="service_name" value="{{ service.service_name|default:'' }}" class="form-control">
+                <label>Supplier</label>
+                <select name="supplier" class="form-control">
+                    <option value="">—</option>
+                    {% for value, label in predefined_suppliers %}
+                    <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <label>Details</label>
+                <input type="text" name="details" value="{{ service.details|default:'' }}" class="form-control">
+                <label>Net</label>
+                <input type="text" name="net" value="{{ service.net|default:'' }}" class="form-control">
+                <label>Selling</label>
+                <input type="text" name="selling" value="{{ service.selling|default:'' }}" class="form-control">
+                <label>Due time</label>
+                <input type="datetime-local" name="due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" class="form-control">
+                <label>Voucher ID</label>
+                <input type="text" name="voucher_id" value="{{ service.voucher_id|default:'' }}" class="form-control">
+                <input type="hidden" name="is_checked" value="{% if service.is_checked %}on{% endif %}">
+            </div>
+            <div class="service-edit-modal__actions">
+                <button type="submit" class="btn btn--primary">Save</button>
+                <button type="button" class="btn btn--secondary btn-close-service-modal" data-close-modal="modal-service-{{ service.pk }}">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
 
 <div class="payment-container">
     {% if lead_task_payments %}
@@ -201,7 +254,7 @@
                             <a href="{{ attachment.file.url }}" class="attach-link">{{ attachment.attachment_name }}</a>
                         </td>
                         <td>
-                            <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid%}" class="delete-attach">Delete</a>
+                            <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="delete-attach">Delete</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -210,7 +263,11 @@
     {% else %}
         <p>No attachments found.</p>
     {% endif %}
-    <a href="{% url 'add_leadtask_attachment' pk=leadid %}" class="add-payment-link button">Add Attachment</a>
+    <form method="post" action="{% url 'add_leadtask_attachments_multiple' leadid %}" enctype="multipart/form-data" class="attach-upload-form">
+        {% csrf_token %}
+        <input type="file" name="files" id="id_files" multiple class="attach-multiple-input">
+        <button type="submit" class="add-payment-link button">Upload</button>
+    </form>
 </div>
 <a href="{% url 'lead_task_pdf' pk=leadid %}">Download PDF</a>
 <script src="{% static 'JS/sidebar.js'%}"></script>
@@ -276,6 +333,41 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+function syncServiceIsCheckedHidden(checkbox) {
+    var sid = checkbox.getAttribute('data-service-id');
+    var hid = document.querySelector('input[name="service_' + sid + '_is_checked"][data-service-inputs="view"]');
+    if (hid) hid.value = checkbox.checked ? 'on' : '';
+}
+document.querySelectorAll('.service-is-checked-cb').forEach(function(cb) { syncServiceIsCheckedHidden(cb); });
+
+document.querySelectorAll('.btn-edit-service').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var mid = 'modal-service-' + this.getAttribute('data-service-id');
+        var modal = document.getElementById(mid);
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('service-edit-modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+    });
+});
+
+function closeServiceModal(modalId) {
+    var modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('service-edit-modal--open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+document.querySelectorAll('.service-edit-modal__overlay, .btn-close-service-modal').forEach(function(el) {
+    el.addEventListener('click', function() {
+        var modalId = this.getAttribute('data-close-modal');
+        if (modalId) closeServiceModal(modalId);
+    });
+});
 </script>
 </body>
 </html>

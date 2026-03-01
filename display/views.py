@@ -357,16 +357,6 @@ def display_data(request):
             Q(finalization_notes__icontains=search_query)
         )
 
-    now_time = now()
-    for lead in leads:
-        if lead.status_changed_at and lead.status not in ['onhold', 'finalized', 'done']:
-            end_time = lead.status_changed_at + timedelta(minutes=lead.period)
-            lead.end_time = end_time
-            lead.time_left = str(end_time - now_time) if now_time <= end_time else "-" + str(now_time - end_time)
-        else:
-            lead.end_time = now_time
-            lead.time_left = "N/A"
-
     paginator = Paginator(leads, 30)  # Show 30 leads per page
     page = request.GET.get('page')
     try:
@@ -414,16 +404,6 @@ def display_archived(request):
             Q(phone__icontains=search_query) |
             Q(finalization_notes__icontains=search_query)
         )
-
-    now_time = now()
-    for lead in leads:
-        if lead.status_changed_at and lead.status not in ['onhold', 'finalized', 'done']:
-            end_time = lead.status_changed_at + timedelta(minutes=lead.period)
-            lead.end_time = end_time
-            lead.time_left = str(end_time - now_time) if now_time <= end_time else "-" + str(now_time - end_time)
-        else:
-            lead.end_time = now_time
-            lead.time_left = "N/A"
 
     paginator = Paginator(leads, 30)  # Show 30 leads per page
     page = request.GET.get('page')

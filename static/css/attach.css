@@ -172,3 +172,152 @@ label[for="id_attachments"] {
     }
 }
 
+/* Services table: scrollable rows, small supplier dropdown, details tooltip, delete X */
+.services-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    margin-bottom: 1rem;
+}
+.services-table-scroll .services-table {
+    min-width: 800px;
+}
+.services-table .service-view-row td,
+.services-table .service-edit-row td {
+    vertical-align: middle;
+}
+
+/* Edit row: one wide cell – allow full width and show all fields (override input.css #servicesTable td) */
+.services-table .service-edit-row td {
+    max-width: none;
+    width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+}
+.supplier-select--small {
+    max-width: 95px;
+    min-width: 70px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    height: auto;
+    line-height: 1.2;
+}
+.service-details-cell {
+    max-width: 120px;
+    overflow: hidden;
+}
+.service-details-truncate {
+    cursor: help;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.service-delete-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #dc3545;
+    text-decoration: none;
+    font-weight: bold;
+    border: 1px solid #dc3545;
+    border-radius: 3px;
+}
+.service-delete-link:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+.service-edit-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    min-width: 0;
+}
+.service-edit-fields input,
+.service-edit-fields select {
+    max-width: 140px;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+.service-edit-fields .btn-cancel-edit {
+    flex-shrink: 0;
+}
+.attach-upload-form {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.attach-upload-form .attach-multiple-input {
+    max-width: 280px;
+}
+
+/* Edit service popup modal */
+.service-edit-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+.service-edit-modal.service-edit-modal--open {
+    display: flex;
+}
+.service-edit-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+.service-edit-modal__box {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    max-width: 420px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+.service-edit-modal__title {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+}
+.service-edit-modal__form {
+    display: block;
+}
+.service-edit-modal__fields {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.service-edit-modal__fields label {
+    margin: 0;
+    font-size: 0.9rem;
+}
+.service-edit-modal__fields .form-control {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.service-edit-modal__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.service-edit-modal__actions .btn {
+    cursor: pointer;
+}
+

@@ -76,8 +76,7 @@
                         <th>Destination</th>
                         <th>Status</th>
                         <th>What Happened</th>
-                        <th>Time Left</th>
-                        <th>Created At</th> <!-- Added Created At header -->
+                        <th>Created At</th>
                         <th>Action</th>
                         <th>Archive</th>
                     </tr>
@@ -89,9 +88,6 @@
                         <td data-label="Destination" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.destination }}</td>
                         <td data-label="Status" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.status }}</td>
                         <td data-label="What Happened" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.finalization_notes }}</td>
-                        <td data-label="Time Left" class="{% if d.is_overdue %}overdue-lead{% endif %}">
-                            <span class="time-left" data-end-time="{{ d.end_time.timestamp }}">{{ d.time_left }}</span>
-                        </td>
                         <td data-label="Created At" class="{% if d.is_overdue %}overdue-lead{% endif %}">{{ d.created_at }}</td>
                         <td data-label="Action" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'edit-model' d.pk %}" class="edit-link">Edit</a></td>
                         <td data-label="Archive" class="{% if d.is_overdue %}overdue-lead{% endif %}"><a href="{% url 'archive_lead' d.pk %}" class="archive-link">Archive</a></td>
@@ -123,40 +119,5 @@
             </table>        
 
 </body>
-<script>
-    function updateCountdowns() {
-        const elements = document.querySelectorAll('.time-left');
-        elements.forEach(element => {
-            const endTime = parseInt(element.getAttribute('data-end-time')) * 1000; // Convert to milliseconds
-            const currentTime = new Date().getTime();
-            const timeLeft = endTime - currentTime;
-            let displayText = "N/A";
-
-            if (element.closest('tr').classList.contains('onhold') || 
-                element.closest('tr').classList.contains('done') || 
-                element.closest('tr').classList.contains('finalized')) {
-                displayText = "N/A";
-            } else if (timeLeft > 0) {
-                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                displayText = days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
-            } else {
-                const overdueTime = currentTime - endTime;
-                const days = Math.floor(overdueTime / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((overdueTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((overdueTime % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((overdueTime % (1000 * 60)) / 1000);
-                displayText = "-" + days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
-            }
-
-            element.textContent = displayText;
-        });
-    }
-
-    setInterval(updateCountdowns, 1000);
-    updateCountdowns();
-</script>
 </html>
 
