@@ -290,14 +290,8 @@ def edit_model(request, pk):
 @login_required(login_url="/login/")
 def takeover_list(request):
     search_query = request.GET.get('search', '')
-    special_takeover_filter = request.GET.get('special_takeover', '') == 'on'
 
     leads = Lead.objects.filter(takeover=True).order_by('-created_at')
-
-    if special_takeover_filter:
-        leads = leads.filter(special_takeover=True)
-    else:
-        leads = leads.filter(special_takeover=False)
 
     if search_query:
         leads = leads.filter(
@@ -315,7 +309,6 @@ def takeover_list(request):
 
     return render(request, 'takeover_list.html', {
         'leads': leads,
-        'special_takeover': special_takeover_filter,
     })
 
 
