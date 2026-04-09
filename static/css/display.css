@@ -146,6 +146,25 @@ hr{
     border-left:8px solid green; /* Green */
 }
 
+.cancelled {
+    background-color: #f8d7da !important;
+    border-left: 8px solid #dc3545 !important;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: #e9ecef;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+.status-pill--cancelled {
+    background: #dc3545;
+    color: #fff;
+}
+
 .overdue-lead{
     background-color: rgb(226, 142, 142) !important;
 }

@@ -44,6 +44,7 @@ class LeadTask(models.Model):
         ('onhold', 'On Hold'),
         ('progress', 'In Progress'),
         ('done', 'Done'),
+        ('cancelled', 'Cancelled'),
     ]
     lead = models.ForeignKey('display.Lead', on_delete=models.CASCADE)
     assigned_to = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -57,6 +58,17 @@ class LeadTask(models.Model):
 
     def __str__(self):
         return self.lead.name
+
+
+class Supplier(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
 
 
 class Service(models.Model):

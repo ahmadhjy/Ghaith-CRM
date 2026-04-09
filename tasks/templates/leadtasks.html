@@ -42,6 +42,8 @@
                         <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
                     {% endfor %}
                 </select>
+                <label for="travel_date_only" class="filter-label">Travel Date Only:</label>
+                <input type="checkbox" id="travel_date_only" name="travel_date_only" {% if travel_date_only %}checked{% endif %}>
                 <button type="submit" class="filter-button">Apply Filter</button>
             </form>
             <!-- End of filter dropdown -->
@@ -73,7 +75,11 @@
                         <td data-label="Invoice ID">{{ lead_task.pk }}</td>
                         <td data-label="Lead Name">{{ lead_task.lead.name }}</td>
                         <td data-label="Destination">{{ lead_task.lead.destination }}</td>
-                        <td data-label="Status">{{ lead_task.status }}</td>
+                        <td data-label="Status">
+                            <span class="status-pill {% if lead_task.status == 'cancelled' %}status-pill--cancelled{% endif %}">
+                                {{ lead_task.status }}
+                            </span>
+                        </td>
                         <td data-label="Assigned To">{{ lead_task.assigned_to.username }}</td>
                         <td data-label="Finalization Notes">{{ lead_task.lead.finalization_notes }}</td>
                         <td data-label="Action"><a href="{% url 'edit_lead_tasks' lead_task.pk %}" class="edit-link">Edit</a></td>

@@ -11,4 +11,6 @@ urlpatterns = [
     path('event/done/<int:event_id>/', mark_event_done, name='event_done'),
     path('calendar/supplier-payments/', views.supplier_payments_list, name='supplier_payments_list'),
     path('calendar/client-payments/', views.client_payments_list, name='client_payments_list'),
+    path('calendar/supplier-payments/pdf/', views.supplier_payments_pdf, name='supplier_payments_pdf'),
+    path('calendar/client-payments/pdf/', views.client_payments_pdf, name='client_payments_pdf'),
 ]

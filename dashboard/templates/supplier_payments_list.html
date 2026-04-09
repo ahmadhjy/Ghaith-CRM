@@ -12,6 +12,7 @@
         <h2 class="list-page__title">Supplier Payments</h2>
         <p class="list-page__desc">Unpaid services (supplier payments). Default: unpaid upcoming. Filter by date, month, supplier, or paid status.</p>
         <a href="{% url 'purchased_services' %}" class="btn btn--link list-page__link">View purchased services</a>
+        <a href="{% url 'supplier_payments_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--secondary">Download PDF</a>
     </header>
 
     <div class="list-page__filters">
@@ -35,6 +36,9 @@
             </select>
             <label class="filter-form__checkbox">
                 <input type="checkbox" name="late" {% if late_filter %}checked{% endif %}> Late on payment (unpaid from past dates)
+            </label>
+            <label class="filter-form__checkbox">
+                <input type="checkbox" name="show_cancelled" {% if show_cancelled %}checked{% endif %}> Show cancelled orders
             </label>
             <div class="filter-form__actions">
                 <button type="submit" class="btn btn--primary">Filter</button>

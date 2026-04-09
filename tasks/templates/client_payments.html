@@ -24,6 +24,8 @@
                     <option value="processed" {% if request.GET.filter == 'processed' %}selected{% endif %}>Processed</option>
                     <option value="unprocessed" {% if request.GET.filter == 'unprocessed' %}selected{% endif %}>Unprocessed</option>
                 </select>
+                <label for="show_cancelled">Show cancelled orders</label>
+                <input type="checkbox" id="show_cancelled" name="show_cancelled" {% if show_cancelled %}checked{% endif %}>
                 <button type="submit" class="filter-button">Filter</button>
             </form>
         </div>

@@ -14,13 +14,68 @@ from .forms import EventForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task, LeadTask, Payment, Service
-from tasks.constants import SUPPLIER_CHOICES
+from tasks.constants import get_supplier_choices
 from display.models import Lead
 from django.utils import timezone
 from tasks.forms import TaskForm, LeadTaskForm
 from display.forms import LeadForm
 from collections import Counter
 from django.shortcuts import redirect
+from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+
+def _build_modern_pdf(title, headers, rows, filename):
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), leftMargin=28, rightMargin=28, topMargin=24, bottomMargin=24)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "ReportTitle",
+        parent=styles["Heading1"],
+        fontSize=16,
+        leading=19,
+        textColor=colors.HexColor("#102a43"),
+        spaceAfter=10,
+    )
+    subtitle_style = ParagraphStyle(
+        "ReportSub",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor=colors.HexColor("#627d98"),
+        spaceAfter=12,
+    )
+
+    data = [headers] + rows
+    table = Table(data, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f4c81")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8fbff")),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#bcccdc")),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("FONTSIZE", (0, 1), (-1, -1), 8),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+            ]
+        )
+    )
+
+    story = [
+        Paragraph(title, title_style),
+        Paragraph(timezone.now().strftime("Generated on %Y-%m-%d %H:%M"), subtitle_style),
+        table,
+        Spacer(1, 8),
+    ]
+    doc.build(story)
+    return response
 
 
 def index(request):
@@ -194,17 +249,6 @@ def delete_event(request, event_id):
         return redirect('calendar')
 
 
-def _supplier_matches_predefined(supplier_value):
-    """Case-insensitive match against predefined supplier list."""
-    if not supplier_value:
-        return False
-    sup = (supplier_value or '').strip()
-    for choice_value, _ in SUPPLIER_CHOICES:
-        if choice_value and sup.lower() == choice_value.lower():
-            return True
-    return False
-
-
 @login_required(login_url="/login/")
 def supplier_payments_list(request):
     """Calendar list: supplier payments from Service model (unpaid services). Default: unpaid upcoming. Columns: Supplier, Service, lead name, amount, due time, Order ID."""
@@ -226,6 +270,11 @@ def supplier_payments_list(request):
     paid_filter = request.GET.get('paid', '').strip()  # 'paid' | 'unpaid' | ''
     late_filter = request.GET.get('late', '') == 'on'
     supplier_filter = request.GET.get('supplier', '').strip()  # case-insensitive match
+    show_cancelled = request.GET.get('show_cancelled', '') == 'on'
+
+    # Hide cancelled orders by default.
+    if not show_cancelled:
+        services = services.exclude(leadtask__status='cancelled')
 
     if date_str:
         try:
@@ -257,7 +306,8 @@ def supplier_payments_list(request):
     if supplier_filter:
         services = services.filter(supplier__iexact=supplier_filter)
 
-    # Supplier filter dropdown: predefined list only (existing manual values not shown)
+    supplier_choices = get_supplier_choices()
+    # Supplier filter dropdown from admin-managed suppliers
     return render(request, 'supplier_payments_list.html', {
         'services': services,
         'month': month_str,
@@ -265,9 +315,75 @@ def supplier_payments_list(request):
         'paid_filter': paid_filter,
         'late_filter': late_filter,
         'supplier_filter': supplier_filter,
-        'supplier_filter_options': SUPPLIER_CHOICES,
-        'supplier_choices': SUPPLIER_CHOICES,
+        'supplier_filter_options': supplier_choices,
+        'supplier_choices': supplier_choices,
+        'show_cancelled': show_cancelled,
     })
+
+
+@login_required(login_url="/login/")
+def supplier_payments_pdf(request):
+    user = request.user
+    today = timezone.now().date()
+    if user.is_staff:
+        services = Service.objects.filter(due_time__isnull=False).select_related("leadtask", "leadtask__lead").order_by("due_time")
+    else:
+        services = Service.objects.filter(leadtask__assigned_to=user, due_time__isnull=False).select_related("leadtask", "leadtask__lead").order_by("due_time")
+
+    month_str = request.GET.get("month", "").strip()
+    date_str = request.GET.get("date", "").strip()
+    paid_filter = request.GET.get("paid", "").strip()
+    late_filter = request.GET.get("late", "") == "on"
+    supplier_filter = request.GET.get("supplier", "").strip()
+    show_cancelled = request.GET.get("show_cancelled", "") == "on"
+
+    if not show_cancelled:
+        services = services.exclude(leadtask__status="cancelled")
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            services = services.filter(due_time__date=filter_date)
+        except ValueError:
+            pass
+    elif month_str:
+        try:
+            year, month = (int(x) for x in month_str.split("-"))
+            services = services.filter(due_time__year=year, due_time__month=month)
+        except (ValueError, TypeError):
+            pass
+    else:
+        if not late_filter:
+            services = services.filter(due_time__date__gte=today)
+            if paid_filter != "paid":
+                services = services.filter(is_checked=False)
+    if paid_filter == "paid":
+        services = services.filter(is_checked=True)
+    elif paid_filter == "unpaid":
+        services = services.filter(is_checked=False)
+    if late_filter:
+        services = services.filter(is_checked=False, due_time__date__lt=today)
+    if supplier_filter:
+        services = services.filter(supplier__iexact=supplier_filter)
+
+    rows = [
+        [
+            s.supplier or "—",
+            s.service_name or "—",
+            s.leadtask.lead.name,
+            s.net or "—",
+            s.due_time.strftime("%Y-%m-%d %H:%M") if s.due_time else "—",
+            str(s.leadtask_id),
+            "Yes" if s.is_checked else "No",
+            s.leadtask.status,
+        ]
+        for s in services
+    ]
+    return _build_modern_pdf(
+        "Supplier Payments Report",
+        ["Supplier", "Service", "Lead name", "Amount", "Due time", "Order ID", "Paid", "Order status"],
+        rows,
+        "supplier-payments-report.pdf",
+    )
 
 
 @login_required(login_url="/login/")
@@ -285,6 +401,11 @@ def client_payments_list(request):
     date_str = request.GET.get('date', '').strip()
     paid_filter = request.GET.get('paid', '').strip()  # 'paid' | 'unpaid' | ''
     late_filter = request.GET.get('late', '') == 'on'   # unpaid from past dates
+    show_cancelled = request.GET.get('show_cancelled', '') == 'on'
+
+    # Hide cancelled orders by default.
+    if not show_cancelled:
+        payments = payments.exclude(leadtask__status='cancelled')
 
     if date_str:
         try:
@@ -323,4 +444,65 @@ def client_payments_list(request):
         'date_filter': date_str,
         'paid_filter': paid_filter,
         'late_filter': late_filter,
+        'show_cancelled': show_cancelled,
     })
+
+
+@login_required(login_url="/login/")
+def client_payments_pdf(request):
+    user = request.user
+    today = timezone.now().date()
+    if user.is_staff:
+        payments = Payment.objects.all().select_related("leadtask", "leadtask__lead").order_by("date")
+    else:
+        payments = Payment.objects.filter(leadtask__assigned_to=user).select_related("leadtask", "leadtask__lead").order_by("date")
+
+    month_str = request.GET.get("month", "").strip()
+    date_str = request.GET.get("date", "").strip()
+    paid_filter = request.GET.get("paid", "").strip()
+    late_filter = request.GET.get("late", "") == "on"
+    show_cancelled = request.GET.get("show_cancelled", "") == "on"
+
+    if not show_cancelled:
+        payments = payments.exclude(leadtask__status="cancelled")
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            payments = payments.filter(date__year=filter_date.year, date__month=filter_date.month, date__day=filter_date.day)
+        except ValueError:
+            pass
+    elif month_str:
+        try:
+            year, month = (int(x) for x in month_str.split("-"))
+            payments = payments.filter(date__year=year, date__month=month)
+        except (ValueError, TypeError):
+            pass
+    else:
+        if not late_filter:
+            payments = payments.filter(date__date__gte=today)
+            if paid_filter != "paid":
+                payments = payments.filter(is_checked=False)
+    if paid_filter == "paid":
+        payments = payments.filter(is_checked=True)
+    elif paid_filter == "unpaid":
+        payments = payments.filter(is_checked=False)
+    if late_filter:
+        payments = payments.filter(is_checked=False, date__date__lt=today)
+
+    rows = [
+        [
+            p.date.strftime("%Y-%m-%d"),
+            p.leadtask.lead.name,
+            str(p.amount),
+            str(p.leadtask_id),
+            "Yes" if p.is_checked else "No",
+            p.leadtask.status,
+        ]
+        for p in payments
+    ]
+    return _build_modern_pdf(
+        "Client Payments Report",
+        ["Date", "Client", "Amount", "Order ID", "Paid", "Order status"],
+        rows,
+        "client-payments-report.pdf",
+    )

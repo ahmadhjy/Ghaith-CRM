@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from collections import Counter
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
@@ -20,7 +20,7 @@ from reportlab.lib import colors
 from django.http import HttpResponse
 from datetime import datetime  # Make sure this line is included
 from dashboard.models import Event
-from .constants import SUPPLIER_CHOICES
+from .constants import get_supplier_choices
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from reportlab.lib.units import inch 
@@ -439,13 +439,18 @@ def edit_lead_task(request, pk):
     attachments = Attachment.objects.filter(parentleadtask=instance)
 
     if request.method == 'POST':
+        old_status = instance.status
         form = LeadTaskForm(request.POST, instance=instance)
         if form.is_valid():
-            form.save()
+            updated = form.save()
+            if old_status != 'cancelled' and updated.status == 'cancelled':
+                # Delete related supplier payment events when order is cancelled.
+                Event.objects.filter(service__leadtask=updated).delete()
     else:
         form = LeadTaskForm(instance=instance)
 
-    predefined_supplier_values = [v for v, _ in SUPPLIER_CHOICES]
+    supplier_choices = get_supplier_choices()
+    predefined_supplier_values = [v for v, _ in supplier_choices]
     return render(request, 'edit_leadtask.html', {
         'form': form,
         'leadid': pk,
@@ -453,7 +458,7 @@ def edit_lead_task(request, pk):
         'services': services,
         'lead_task_payments': lead_task_payments,
         'attachments': attachments,
-        'predefined_suppliers': SUPPLIER_CHOICES,
+        'predefined_suppliers': supplier_choices,
         'predefined_supplier_values': predefined_supplier_values,
     })
 
@@ -477,14 +482,14 @@ def generate_pdf(request, pk):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Invoice - {lead_task.lead.name}.pdf"'
 
-    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4), rightMargin=28, leftMargin=28, topMargin=24, bottomMargin=24)
     styles = getSampleStyleSheet()
-    custom_colors = {'blue': '#0A317C', 'light_blue': '#E7EFF6', 'grey': '#505050'}
+    custom_colors = {'blue': '#0f4c81', 'light_blue': '#f5f7fa', 'grey': '#334e68'}
 
     # Custom styles
-    styles.add(ParagraphStyle(name='MyTitleStyle', parent=styles['Title'], fontSize=18, leading=22, alignment=TA_CENTER, textColor=colors.HexColor(custom_colors['blue'])))
-    styles.add(ParagraphStyle(name='MyHeading2', parent=styles['Heading2'], fontSize=14, leading=18, spaceBefore=12, spaceAfter=6, textColor=colors.HexColor(custom_colors['grey'])))
-    styles.add(ParagraphStyle(name='MyBodyText', parent=styles['BodyText'], fontSize=10, leading=12, textColor=colors.HexColor(custom_colors['grey'])))
+    styles.add(ParagraphStyle(name='MyTitleStyle', parent=styles['Title'], fontSize=16, leading=20, alignment=TA_CENTER, textColor=colors.HexColor(custom_colors['blue'])))
+    styles.add(ParagraphStyle(name='MyHeading2', parent=styles['Heading2'], fontSize=12, leading=16, spaceBefore=10, spaceAfter=6, textColor=colors.HexColor(custom_colors['grey'])))
+    styles.add(ParagraphStyle(name='MyBodyText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=colors.HexColor(custom_colors['grey'])))
 
     story = []
 
@@ -551,9 +556,12 @@ def generate_pdf(request, pk):
             ])
         services_table = Table(services_data, spaceBefore=6)
         services_table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['light_blue'])),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['blue'])),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(custom_colors['light_blue'])]),
         ]))
         story.append(services_table)
         story.append(Spacer(1, 12))
@@ -569,9 +577,12 @@ def generate_pdf(request, pk):
             ])
         payments_table = Table(payments_data, spaceBefore=6)
         payments_table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['light_blue'])),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['blue'])),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(custom_colors['light_blue'])]),
         ]))
         story.append(payments_table)
         story.append(Spacer(1, 12))
@@ -589,6 +600,7 @@ def current_leadtasks(request):
     status_choices = LeadTask.STATUS_CHOICES
     selected_status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
+    travel_date_only = request.GET.get('travel_date_only', '') == 'on'
 
     if request.user.is_staff:
         lead_tasks = LeadTask.objects.all()
@@ -601,6 +613,9 @@ def current_leadtasks(request):
 
     if selected_status:
         lead_tasks = lead_tasks.filter(status=selected_status)
+
+    if travel_date_only:
+        lead_tasks = lead_tasks.filter(travel_date__isnull=False)
 
     if search_query:
         lead_tasks = lead_tasks.filter(
@@ -627,7 +642,8 @@ def current_leadtasks(request):
         'status_choices': status_choices,
         'selected_status': selected_status,
         'search_query': search_query,  # Pass the search query to the template
-        'status_counts': status_counts
+        'status_counts': status_counts,
+        'travel_date_only': travel_date_only,
     })
 
 @login_required(login_url="/login/")
@@ -661,6 +677,11 @@ def client_payments(request):
 
     search_query = request.GET.get('search', '')
     filter_status = request.GET.get('filter', '')
+    show_cancelled = request.GET.get('show_cancelled', '') == 'on'
+
+    # Hide cancelled orders by default.
+    if not show_cancelled:
+        payments = payments.exclude(leadtask__status='cancelled')
 
     if search_query:
         payments = payments.filter(
@@ -684,7 +705,11 @@ def client_payments(request):
         # Hide processed if no filter
         payments = payments.filter(processed=False)
 
-    return render(request, 'client_payments.html', {'payments': payments, 'now': timezone.now()})
+    return render(request, 'client_payments.html', {
+        'payments': payments,
+        'now': timezone.now(),
+        'show_cancelled': show_cancelled,
+    })
 
 
 @login_required(login_url="/login/")
@@ -700,6 +725,10 @@ def travellers_list(request):
             travel_date__isnull=False,
             assigned_to=request.user,
         ).select_related('lead', 'assigned_to')
+
+    show_cancellations = request.GET.get('show_cancellations', '') == 'on'
+    if not show_cancellations:
+        qs = qs.exclude(status='cancelled')
 
     # Filter: destination (dropdown, exact match)
     destination = request.GET.get('destination', '').strip()
@@ -765,6 +794,7 @@ def travellers_list(request):
         'show_past': show_past,
         'return_from': return_from,
         'return_to': return_to,
+        'show_cancellations': show_cancellations,
     })
 
 

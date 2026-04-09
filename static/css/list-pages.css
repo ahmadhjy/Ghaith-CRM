@@ -171,6 +171,11 @@
   color: #666;
 }
 
+.list-table__row--cancelled {
+  background: #fff1f2;
+  border-left: 4px solid #dc3545;
+}
+
 .list-table__link {
   color: #007bff;
   text-decoration: none;
@@ -212,7 +217,7 @@
 /* Client payments: keep "Mark paid" column visible */
 .list-table--client .list-table__th-mark-paid,
 .list-table--client .list-table__td-mark-paid {
-  min-width: 7rem;
+  min-width: 8.5rem;
   white-space: nowrap;
 }
 .table-wrapper--client-payments {
@@ -221,11 +226,39 @@
 
 .list-table--supplier .list-table__th-mark-paid,
 .list-table--supplier .list-table__td-mark-paid {
-  min-width: 7rem;
+  min-width: 8.5rem;
   white-space: nowrap;
 }
 .table-wrapper--supplier-payments {
   min-width: 100%;
+}
+
+/* Prevent action column clipping: keep table wide, scroll wrapper horizontally */
+.table-wrapper--client-payments .list-table--client {
+  min-width: 860px;
+}
+
+.table-wrapper--supplier-payments .list-table--supplier {
+  min-width: 1120px;
+}
+
+.list-table__td-mark-paid {
+  text-align: center;
+}
+
+.list-table__td-mark-paid .list-table__inline-form {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.list-table__td-mark-paid .btn {
+  white-space: nowrap;
+}
+
+.list-table__checkbox-label {
+  white-space: nowrap;
 }
 
 /* Responsive: card-style rows on small screens */
