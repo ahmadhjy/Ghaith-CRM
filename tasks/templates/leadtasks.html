@@ -9,13 +9,8 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
 </head>
 <body>
+{% include 'navbar.html' %}
 <div class="container">
-    <div class="sidebar">
-        <div class="welcome-message">
-            Welcome, <span class="username">{{ user.username }}</span>!
-        </div>
-        {% include 'navbar.html' %}
-    </div>
     <div class="content">
         <div class="header">
             <h2>My Invoices</h2>
@@ -57,6 +52,7 @@
             <!-- End of Smart Search form -->
         </div>            
 
+        <div class="table-responsive">
         <table class="data-table">
             <thead>
                 <tr>
@@ -87,6 +83,7 @@
                 {% endfor %}
             </tbody>
         </table>        
+        </div>
     </div>
 </div>
 </body>

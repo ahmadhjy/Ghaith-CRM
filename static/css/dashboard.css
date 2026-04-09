@@ -1,41 +1,29 @@
 body{
-    padding-bottom: 100px;
-    padding-left: 50px !important;
-    padding-top: 50px;
-    padding-right: 50px;
-}
-
-/* Desktop styles */
-@media (min-width: 769px) {
-    body {
-        margin-left: 250px;
-    }
+    padding-bottom: 24px;
+    padding-left: 0 !important;
+    padding-top: 0;
+    padding-right: 0;
 }
 
 .welcome-message {
     font-size: 24px;
     font-family: 'Roboto', Arial, sans-serif; /* Using Roboto for its clean and modern look */
-    color: #fff; /* White text for high contrast on the gradient background */
-    background: linear-gradient(135deg, #ff5858, #f09819); /* Updated gradient for warmth and energy */
-    padding: 25px 40px; /* Adjusted padding for better proportion */
-    border-radius: 15px; /* Smoothed corners for a softer appearance */
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Subtle, soft shadow for depth */
-    margin-bottom: 30px; /* Ample space below the title */
+    color: #0f172a;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px 18px;
+    border-radius: 10px;
+    box-shadow: none;
+    margin-bottom: 16px;
     text-align: center; /* Center alignment for the text */
-    transition: transform 0.3s ease-in-out; /* Smooth transition for interactions */
     font-weight: 600;
-}
-
-.welcome-message:hover {
-    transform: scale(1.1); /* Slightly larger scale on hover for an interactive feel */
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); /* More pronounced shadow on hover for depth */
 }
 
 .username {
     font-family: 'Merriweather', serif; /* Using a serif font for contrast and emphasis */
     font-weight: 700; /* Bold weight for the username to make it stand out */
-    color: #fff; /* Maintaining white for readability */
-    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3); /* Stronger text shadow for better legibility over the bright background */
+    color: #0f172a;
+    text-shadow: none;
 }
 
 .form-event-type {
@@ -279,14 +267,7 @@ select:focus {
         max-width: 100vw;
     }
 
-    body {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-        padding-top: 70px !important;
-        box-sizing: border-box;
-    }
+    body { box-sizing: border-box; }
 
     * {
         box-sizing: border-box;
@@ -298,9 +279,6 @@ select:focus {
         margin-bottom: 20px;
     }
 
-    .welcome-message:hover {
-        transform: scale(1.05);
-    }
 
     .status-counts-container {
         flex-direction: column;
@@ -478,5 +456,149 @@ select:focus {
         color: #555;
         margin-right: 10px;
         flex-shrink: 0;
+    }
+}
+
+/* Dashboard UX polish overrides */
+.content .btn {
+    color: #fff;
+}
+
+.dashboard-filter-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem !important;
+    margin: 0 auto;
+    max-width: 960px;
+}
+
+.dashboard-filter-form label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+}
+
+.dashboard-filter-form select {
+    min-width: 220px;
+}
+
+.dashboard-filter-form__check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-counts-container {
+    gap: 0.75rem;
+}
+
+.status-counts-box {
+    margin: 0;
+}
+
+.calendar-nav-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+}
+
+.calendar-nav-actions .left,
+.calendar-nav-actions .right {
+    float: none;
+    margin: 0;
+}
+
+.calendar-shell {
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.5rem;
+}
+
+.calendar {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.calendar td {
+    vertical-align: top;
+    padding: 0.5rem;
+    min-height: 120px;
+}
+
+.calendar td ul {
+    margin: 0;
+}
+
+.event-item {
+    border-radius: 8px;
+    padding: 0.5rem !important;
+}
+
+.event-page__nav .btn {
+    color: #fff;
+}
+
+.event-form-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+    padding: 1rem !important;
+}
+
+.event-form-card input,
+.event-form-card textarea,
+.event-form-card select {
+    width: 100%;
+}
+
+.list-page .filter-form {
+    background: transparent;
+    padding: 0 !important;
+    border-radius: 0;
+}
+
+.container .list-table__inline-form {
+    padding: 0 !important;
+    background: transparent;
+    border-radius: 0;
+}
+
+@media (max-width: 768px) {
+    .dashboard-filter-form {
+        align-items: stretch;
+        padding: 0.75rem !important;
+    }
+
+    .dashboard-filter-form select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dashboard-filter-form__check {
+        width: 100%;
+    }
+
+    .calendar-nav-actions .btn,
+    .calendar-lists-links .btn {
+        flex: 1 1 100%;
+        text-align: center;
+    }
+
+    .calendar td {
+        min-width: 180px;
+        min-height: 90px;
+    }
+
+    .event-form-card {
+        padding: 0.875rem !important;
     }
 }

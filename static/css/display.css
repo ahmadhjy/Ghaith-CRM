@@ -449,18 +449,22 @@ hr{
     }
 
     .data-table td {
-        text-align: right;
-        padding: 8px 10px;
+        display: grid;
+        grid-template-columns: minmax(100px, 40%) 1fr;
+        gap: 10px;
+        align-items: start;
+        text-align: left;
+        padding: 8px 0;
         border-bottom: 1px solid #eee;
-        position: relative;
-        padding-left: 50%;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     .data-table td:before {
         content: attr(data-label);
-        position: absolute;
-        left: 10px;
-        width: 45%;
+        position: static;
+        width: auto;
         text-align: left;
         font-weight: bold;
         color: #333;

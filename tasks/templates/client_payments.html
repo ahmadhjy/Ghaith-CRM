@@ -7,14 +7,16 @@
     <title>Client Payments</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
 </head>
 <body>
     {% include 'navbar.html' %}
-    <div class="container">
-        <h1>Client Payments</h1>
+    <div class="container list-page list-page--client">
+        <div class="content">
+        <h1 class="list-page__title">Client Payments</h1>
 
-        <div class="filter-container">
-            <form method="GET" action="{% url 'client_payments' %}" class="filter-form">
+        <div class="list-page__filters">
+            <form method="GET" action="{% url 'client_payments' %}" class="filter-form filter-form--stack">
                 <input type="text" name="search" placeholder="Search payments" value="{{ request.GET.search }}" class="search-input">
                 <select name="filter" class="filter-select">
                     <option value="">All</option>
@@ -30,7 +32,8 @@
             </form>
         </div>
 
-        <table id="servicesTable">
+        <div class="table-wrapper table-wrapper--responsive table-wrapper--client-payments">
+        <table class="list-table list-table--client">
             <thead>
                 <tr>
                     <th>Client Name</th>
@@ -53,7 +56,7 @@
                     <td data-label="Processed">{{ payment.processed|yesno:"Yes,No" }}</td>
                     <td data-label="Actions">
                         {% if not payment.processed %}
-                        <form method="POST" action="{% url 'mark_payment_processed' payment.pk %}">
+                        <form method="POST" action="{% url 'mark_payment_processed' payment.pk %}" class="list-table__inline-form">
                             {% csrf_token %}
                             <button type="submit" class="process-button">Mark Processed</button>
                         </form>
@@ -63,6 +66,8 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+        </div>
     </div>
 </body>
 </html>

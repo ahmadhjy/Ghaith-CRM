@@ -11,9 +11,17 @@
     </head>
     <body>
         {% include 'navbar.html' %}
-        <h1>Dashboard</h1>
- 
-        {% include 'calendar.html' %}
+        <div class="container">
+            <div class="content">
+                <h1>Dashboard</h1>
+                <p class="list-page__desc">Quick access to calendar and payment tracking.</p>
+                <div class="calendar-lists-links">
+                    <a class="btn btn-info" href="{% url 'calendar' %}">Open Calendar</a>
+                    <a class="btn btn-info" href="{% url 'supplier_payments_list' %}">Supplier Payments</a>
+                    <a class="btn btn-info" href="{% url 'client_payments_list' %}">Client Payments</a>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
 

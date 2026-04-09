@@ -10,9 +10,9 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
 </head>
 <body>
-    
+    {% include 'navbar.html' %}
     <div class="container">
-        {% include 'navbar.html' %}
+        <div class="content">
         <h2>Send Offer</h2>
         <hr/>
         <div class="container-assist">
@@ -65,6 +65,7 @@
             <button type="submit" class="btn btn-primary" name="submit_next">Submit & Next ></button>
             <button type="submit" class="btn btn-secondary" name="submit_exit">Submit & Exit</button>
         </form>
+        </div>
     </div>
     <a href="{% url 'qualify_lead' lead.pk %}" class="btn btn-secondary mt-3">< Previous Page</a>
 </body>

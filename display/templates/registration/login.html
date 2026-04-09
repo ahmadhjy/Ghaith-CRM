@@ -11,15 +11,18 @@
     <title>Login</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/login.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/display-modern.css' %}">
 </head>
 <body>
     <div class="container">
-        <img src="{% static 'images/logo.png' %}" alt="logo" class="logo">
-        <form method="post" class="login-form">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="login-button">Login</button>
-        </form>
+        <div class="content" style="max-width:420px; margin: 8vh auto;">
+            <img src="{% static 'images/logo.png' %}" alt="logo" class="logo">
+            <form method="post" class="login-form">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="login-button">Login</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>

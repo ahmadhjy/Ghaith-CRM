@@ -8,13 +8,8 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
 </head>
 <body>
+{% include 'navbar.html' %}
 <div class="container">
-    <div class="sidebar">
-        <div class="welcome-message">
-            Welcome, <span class="username">{{ user.username }}</span>!
-        </div>
-        {% include 'navbar.html' %}
-    </div>
     <div class="content">
         <div class="header">
             <h2>My Tasks</h2>
@@ -55,6 +50,7 @@
             <!-- End of Smart Search form -->
         </div>            
 
+        <div class="table-responsive">
         <table class="data-table">
             <thead>
                 <tr>
@@ -68,15 +64,16 @@
             <tbody>
                 {% for task in data %}
                     <tr class="{{task.status}}">
-                        <td>{{ task.title }}</td>
-                        <td>{{ task.due_time }}</td>
-                        <td>{{ task.status }}</td>
-                        <td>{{ task.what_happened }}</td>
-                        <td><a href="{% url 'edit_task' task.pk %}" class="edit-link">Edit</a></td>
+                        <td data-label="Title">{{ task.title }}</td>
+                        <td data-label="Due Time">{{ task.due_time }}</td>
+                        <td data-label="Status">{{ task.status }}</td>
+                        <td data-label="What Happened">{{ task.what_happened }}</td>
+                        <td data-label="Action"><a href="{% url 'edit_task' task.pk %}" class="edit-link">Edit</a></td>
                     </tr>
                 {% endfor %}
             </tbody>
-        </table>        
+        </table>
+        </div>
     </div>
 </div>
 </body>

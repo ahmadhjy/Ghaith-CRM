@@ -200,6 +200,9 @@
 .list-table__inline-form {
   margin: 0;
   display: inline;
+  background: transparent;
+  padding: 0 !important;
+  border-radius: 0;
 }
 
 .list-table__checkbox-label {
@@ -330,4 +333,46 @@
   .table-wrapper--responsive .list-table .list-table__empty::before {
     content: none;
   }
+
+  /* Keep supplier/client payment lists as scrollable tables on mobile */
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table thead,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table thead {
+    display: table-header-group;
+  }
+
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table tbody,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table tbody {
+    display: table-row-group;
+  }
+
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table tr,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table tr {
+    display: table-row;
+    margin-bottom: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table td,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table td {
+    display: table-cell;
+    border-bottom: 1px solid #eee;
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .table-wrapper--client-payments.table-wrapper--responsive .list-table td::before,
+  .table-wrapper--supplier-payments.table-wrapper--responsive .list-table td::before {
+    content: none;
+  }
+
 }

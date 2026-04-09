@@ -10,13 +10,8 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
 </head>
 <body>
+    {% include 'navbar.html' %}
     <div class="container">
-        <div class="sidebar">
-            <div class="welcome-message">
-                Welcome, <span class="username">{{ user.username }}</span>!
-            </div>
-            {% include 'navbar.html' %}
-        </div>
         <div class="content">
             <div class="header">
                 <h2>Archived Leads</h2>
@@ -63,6 +58,7 @@
                 </form>
             </div>
 
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -87,6 +83,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
 
             <div class="pagination">
                 <div class="step-links">
@@ -106,7 +103,7 @@
                 </div>
             </div>
 
-        </div>
+    </div>
     </div>
 </body>
 </html>

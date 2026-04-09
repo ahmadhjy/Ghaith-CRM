@@ -7,14 +7,16 @@
     <title>Purchased Services</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
 </head>
 <body>
     {% include 'navbar.html' %}
-    <div class="container">
-        <h1>Purchased Services</h1>
+    <div class="container list-page list-page--supplier">
+        <div class="content">
+        <h1 class="list-page__title">Purchased Services</h1>
 
-        <div class="filter-container">
-            <form method="GET" action="{% url 'purchased_services' %}" class="filter-form">
+        <div class="list-page__filters">
+            <form method="GET" action="{% url 'purchased_services' %}" class="filter-form filter-form--stack">
                 <input type="text" name="search" placeholder="Search services" value="{{ request.GET.search }}" class="search-input">
                 <select name="filter" class="filter-select">
                     <option value="">All</option>
@@ -28,7 +30,8 @@
             </form>
         </div>
 
-        <table id="servicesTable">
+        <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
+        <table id="servicesTable" class="list-table list-table--supplier">
             <thead>
                 <tr>
                     <th>Lead Name</th>
@@ -77,7 +80,7 @@
                     <td data-label="Processed">{{ service.processed|yesno:"Yes,No" }}</td>
                     <td data-label="Actions">
                         {% if not service.processed %}
-                        <form method="POST" action="{% url 'mark_service_processed' service.pk %}">
+                        <form method="POST" action="{% url 'mark_service_processed' service.pk %}" class="list-table__inline-form">
                             {% csrf_token %}
                             <button type="submit" class="process-button">Mark Processed</button>
                         </form>
@@ -87,6 +90,8 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+        </div>
     </div>
 </body>
 </html>

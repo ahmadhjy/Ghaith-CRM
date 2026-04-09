@@ -1,16 +1,13 @@
 {% extends 'base.html' %}
 
 {% block title %}
-<div class="welcome-message">
-    Welcome, <span class="username">{{ user.username }}</span>!
-</div>
+Dashboard Calendar
 {% endblock %}
 
 {% block content %}
-{% include 'navbar.html' %}
-
 <div class="form-event-type">
-    <form method="get" action="{% url 'calendar' %}">
+    <form method="get" action="{% url 'calendar' %}" class="dashboard-filter-form">
+        <label for="event_type">Event type</label>
         <select name="event_type" onchange="this.form.submit()">
             <option value="">All Types</option>
             {% for type_value, type_name in type_choices %}
@@ -19,7 +16,7 @@
         </select>
         <!-- Keep the current month in the form to maintain context -->
         <input type="hidden" name="month" value="{{ request.GET.month }}">
-        <label>
+        <label class="dashboard-filter-form__check">
             <input
             type="checkbox"
             name="show_done"
@@ -72,13 +69,15 @@
     <a class="btn btn-info" href="{% url 'client_payments_list' %}">Client Payments List</a>
 </div>
 
-<div class="clearfix">
+<div class="calendar-nav-actions">
     <a class="btn btn-info left" href="{% url 'calendar' %}?{{ prev_month }}"> Previous Month </a>
     <a class="btn btn-info right" href="{% url 'calendar' %}?{{ next_month }}"> Next Month </a>
     <a class="btn btn-info right" href="{% url 'event_new' %}"> New Event </a>
 </div>
 
-{{ calendar }}
+<div class="calendar-shell table-responsive">
+    {{ calendar }}
+</div>
 
 <script>
 

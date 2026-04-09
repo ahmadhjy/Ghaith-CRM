@@ -10,6 +10,8 @@
 </head>
 <body>
     {% include 'navbar.html' %}
+<div class="container">
+<div class="content">
 <h1>New Task</h1>
 <form method="post" enctype="multipart/form-data" id="inputForm">
     {% csrf_token %}
@@ -56,6 +58,8 @@
     <!-- Button to submit form -->
     <button type="submit">Save</button>
 </form>
+</div>
+</div>
 
 <script src="{% static 'JS/sidebar.js'%}"></script>
 <script>

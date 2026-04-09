@@ -9,13 +9,8 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
 </head>
 <body>
+    {% include 'navbar.html' %}
     <div class="container">
-        <div class="sidebar">
-            <div class="welcome-message">
-                Welcome, <span class="username">{{ user.username }}</span>!
-            </div>
-            {% include 'navbar.html' %}
-        </div>
         <div class="content">
             <div class="header">
                 <h2>All Requests</h2>
@@ -69,6 +64,7 @@
                 <!-- End of Smart Search form -->
             </div>            
 
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -94,30 +90,26 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-
-                <!-- pagination -->
-                <div class="pagination">
-                    <div class="step-links">
-                        {% if data.has_previous %}
-                            <a href="?page=1&status={{ selected_status }}&search={{ search_query }}" class="button first"><< First</a>
-                            <a href="?page={{ data.previous_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button previous">< Previous</a>
-                        {% endif %}
-                        
-                        <span class="current">
-                            Page {{ data.number }} of {{ data.paginator.num_pages }}
-                        </span>
-                
-                        {% if data.has_next %}
-                            <a href="?page={{ data.next_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button next">Next ></a>
-                            <a href="?page={{ data.paginator.num_pages }}&status={{ selected_status }}&search={{ search_query }}" class="button last">Last >></a>
-                        {% endif %}
-                    </div>
-                </div>                      
-
+            </table>        
+            </div>
+            <!-- pagination -->
+            <div class="pagination">
+                <div class="step-links">
+                    {% if data.has_previous %}
+                        <a href="?page=1&status={{ selected_status }}&search={{ search_query }}" class="button first">&lt;&lt; First</a>
+                        <a href="?page={{ data.previous_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button previous">&lt; Previous</a>
+                    {% endif %}
+                    <span class="current">
+                        Page {{ data.number }} of {{ data.paginator.num_pages }}
+                    </span>
+                    {% if data.has_next %}
+                        <a href="?page={{ data.next_page_number }}&status={{ selected_status }}&search={{ search_query }}" class="button next">Next &gt;</a>
+                        <a href="?page={{ data.paginator.num_pages }}&status={{ selected_status }}&search={{ search_query }}" class="button last">Last &gt;&gt;</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-            </table>        
-
 </body>
 </html>
 

@@ -9,10 +9,15 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
 </head>
 <body>
+    {% include 'navbar.html' %}
+    <div class="container">
+    <div class="content">
     <form method="post" enctype="multipart/form-data" class="attachment-form">
         {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" value="Submit" class="submit-button">
     </form>
+    </div>
+    </div>
 </body>
 </html>

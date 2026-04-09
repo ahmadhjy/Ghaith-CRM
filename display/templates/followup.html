@@ -8,11 +8,9 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
 </head>
 <body>
-  <div class="welcome-message">
-    Welcome, <span class="username">{{ user.username }}</span>!
-</div>
     {% include 'navbar.html' %}
-      <div>
+    <div class="container">
+    <div class="content">
     <h1>All Requests</h1>
     <a class="add-more" href="{% url 'input_data' %}">+Add New Request</a>
     <ul class="nav nav-tabs">
@@ -24,7 +22,9 @@
                 </li>
         {% endfor %}  
     <script src="{% static 'JS/sidebar.js'%}"></script>
-    </ul></div>
+    </ul>
+    </div>
+    </div>
 </body>
 </html>
 

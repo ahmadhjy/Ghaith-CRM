@@ -1,0 +1,68 @@
+{% load static %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="{% static 'css/navbar-unified.css' %}">
+
+<button class="app-nav__toggle" id="appNavToggle" aria-label="Open menu" aria-expanded="false">
+  <i class="fas fa-bars"></i>
+</button>
+<div class="app-nav__backdrop" id="appNavBackdrop"></div>
+
+<aside class="app-nav" id="appNav">
+  <div class="app-nav__header">
+    <strong>Ghaith CRM</strong>
+    <button class="app-nav__close" id="appNavClose" aria-label="Close menu">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <nav class="app-nav__menu" aria-label="Main">
+    <a class="app-nav__item" href="{% url 'stats_dashboard' %}">
+      <i class="fas fa-chart-line"></i><span>Ghaith Dashboard</span>
+    </a>
+    <a class="app-nav__item" href="{% url 'calendar' %}">
+      <i class="fas fa-home"></i><span>User Dashboard</span>
+    </a>
+
+    <details class="app-nav__group">
+      <summary><i class="fas fa-list-alt"></i><span>Requests</span></summary>
+      <a href="{% url 'display_data' %}">All</a>
+      <a href="{% url 'create_lead' %}">Add New</a>
+      <a href="{% url 'archived_leads' %}">Archived Leads</a>
+      <a href="{% url 'list_offers' %}">Offers List</a>
+      <a href="https://drive.google.com/drive/folders/15yQzuXd18pgXV9YXH3fi4TE6DyeTYcp7?usp=sharing" target="_blank" rel="noopener noreferrer">Ghaith Offer</a>
+    </details>
+
+    <a class="app-nav__item" href="{% url 'takeover_list' %}">
+      <i class="fas fa-handshake"></i><span>Take Over List</span>
+    </a>
+
+    <details class="app-nav__group">
+      <summary><i class="fas fa-tasks"></i><span>Tasks</span></summary>
+      <a href="{% url 'current tasks' %}">My Tasks</a>
+      <a href="{% url 'expired_tasks' %}">Overdue</a>
+      <a href="{% url 'input_task' %}">Add New</a>
+    </details>
+
+    <details class="app-nav__group">
+      <summary><i class="far fa-file-alt"></i><span>Orders</span></summary>
+      <a href="{% url 'current_lead_tasks' %}">All Orders</a>
+      <a href="{% url 'travellers_list' %}">Travellers</a>
+      <a href="{% url 'purchased_services' %}">Purchased Services</a>
+      <a href="{% url 'client_payments' %}">Client Payments</a>
+      <a href="{% url 'supplier_payments_list' %}">Supplier Payments (Calendar)</a>
+      <a href="{% url 'client_payments_list' %}">Client Payments (Calendar)</a>
+    </details>
+
+    <a class="app-nav__item" href="{% url 'event_new' %}" target="_blank" rel="noopener noreferrer">
+      <i class="far fa-calendar-plus"></i><span>Create Reminder</span>
+    </a>
+    <a class="app-nav__item" href="{% url 'list_daily_reports' %}">
+      <i class="far fa-file-alt"></i><span>Daily Reports</span>
+    </a>
+    <a class="app-nav__item app-nav__item--danger" href="{% url 'logout-user' %}">
+      <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+    </a>
+  </nav>
+</aside>
+
+<script src="{% static 'JS/navbar-unified.js' %}"></script>

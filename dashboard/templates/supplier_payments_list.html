@@ -1,13 +1,10 @@
 {% extends 'base.html' %}
 
 {% block title %}
-<div class="welcome-message">Supplier Payments (Calendar)</div>
 {% endblock %}
 
 {% block content %}
-{% include 'navbar.html' %}
-
-<div class="container list-page list-page--supplier">
+<div class="list-page list-page--supplier">
     <header class="list-page__header">
         <h2 class="list-page__title">Supplier Payments</h2>
         <p class="list-page__desc">Unpaid services (supplier payments). Default: unpaid upcoming. Filter by date, month, supplier, or paid status.</p>
@@ -75,7 +72,7 @@
                         {% if not service.is_checked %}
                         <form method="post" action="{% url 'service_mark_done' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn--small btn--primary">Mark done</button>
+                            <button type="submit" class="btn btn--small btn--primary">Paid</button>
                         </form>
                         {% else %}
                         <span class="list-table__muted">—</span>

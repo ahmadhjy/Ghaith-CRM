@@ -12,6 +12,7 @@
 <body>
     {% include 'navbar.html' %}
     <div class="container mt-4">
+        <div class="content">
 
         <!-- First Section: Leads Count Chart -->
         <div class="section">
@@ -148,6 +149,7 @@
         <!-- Fourth Section: Employee Stats -->
         <div class="section">
             <h3 class="section-title">Ghaith Employee Stats for {{ selected_month }}</h3>
+            <div class="table-responsive">
             <table class="table table-striped table-bordered shadow-sm">
                 <thead class="thead-custom">
                     <tr>
@@ -180,11 +182,13 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- Fifth Section: Most Wanted Locations -->
         <div class="section">
             <h3 class="section-title">Most Wanted Locations for {{ selected_month }}</h3>
+            <div class="table-responsive">
             <table class="table table-striped table-bordered shadow-sm">
                 <thead class="thead-yellow">
                     <tr>
@@ -203,7 +207,9 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
+    </div>
     </div>
 </body>
 </html>

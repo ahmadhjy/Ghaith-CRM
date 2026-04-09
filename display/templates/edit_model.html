@@ -10,7 +10,9 @@
 </head>
 <body>
     {% include 'navbar.html' %}
-  <h1>Edit Request Info:</h1>
+  <div class="container">
+  <div class="content">
+  <h1>Edit Request Info</h1>
   <form method="post" enctype="multipart/form-data" id="inputForm">
       {% csrf_token %}
       <!-- Assigned to and Status fields -->
@@ -151,7 +153,7 @@
   
     {% if attachments.all %}
         <table class="attachment-table">
- sdfg           <tbody>
+           <tbody>
                 {% for attachment in attachments.all %}
                     <tr>
                         <td>
@@ -168,6 +170,8 @@
         <p>No attachments found.</p>
     {% endif %}
 </div>
+  </div>
+  </div>
 </body>
 </html>
 

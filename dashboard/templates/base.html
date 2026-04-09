@@ -15,15 +15,18 @@
   <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'css/display-modern.css' %}">
   <title>Django Calendar App</title>
 </head>
 <body>
-
-  <h1 class="title">{% block title %}{% endblock %}</h1>
-  <hr>
-
-  {% block content %}
-  {% endblock %}
+  {% include 'navbar.html' %}
+  <div class="container">
+    <div class="content">
+      <div class="title">{% block title %}{% endblock %}</div>
+      {% block content %}
+      {% endblock %}
+    </div>
+  </div>
 
   <!-- Optional JavaScript -->
   <!-- jQuery first, then Popper.js, then Bootstrap JS -->

@@ -11,6 +11,8 @@
 </head>
 <body>
     {% include 'navbar.html' %}
+<div class="container">
+<div class="content">
 <h1>Edit Invoice</h1>
 <form method="post" enctype="multipart/form-data" id="inputForm">
     {% csrf_token %}
@@ -270,26 +272,29 @@
     </form>
 </div>
 <a href="{% url 'lead_task_pdf' pk=leadid %}">Download PDF</a>
+</div>
+</div>
 <script src="{% static 'JS/sidebar.js'%}"></script>
 <script>
 
 function addRow() {
         const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
         const newRow = table.insertRow();
+        newRow.className = 'service-edit-row';
         var supplierOptions = '';
         {% for value, label in predefined_suppliers %}
         supplierOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
         {% endfor %}
         newRow.innerHTML = `
-            <td><input type="text" name="service_name[]" class="form-control"></td>
+            <td><input type="text" name="service_name[]" class="form-control" placeholder="Service Type"></td>
             <td><select name="supplier[]" class="form-control">${supplierOptions}</select></td>
-            <td><input type="text" name="details[]" class="form-control"></td>
-            <td><input type="text" name="net[]" class="form-control"></td>
-            <td><input type="text" name="selling[]" class="form-control"></td>
+            <td><input type="text" name="details[]" class="form-control" placeholder="Details"></td>
+            <td><input type="text" name="net[]" class="form-control" placeholder="Net"></td>
+            <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
             <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
-            <td><input type="text" name="voucher_id[]" class="form-control"></td>
+            <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher ID"></td>
             <td></td>
-            <td></td>
+            <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove()">X</button></td>
         `;
     }
 function updateCheckboxStatus(checkbox) {

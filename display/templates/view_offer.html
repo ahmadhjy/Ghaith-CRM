@@ -11,6 +11,7 @@
 <body>
     {% include 'navbar.html' %}
     <div class="container mt-5">
+        <div class="content">
         <h2>{{ offer.title }}</h2>
         <p><strong>Lead:</strong> <a href="{% url 'edit-model' offer.lead.pk %}">{{ offer.lead.name }}</a></p>
         <form method="post">
@@ -63,6 +64,7 @@
             <button type="submit" class="btn btn-primary mt-3">Update Offer</button>
         </form>
         <a href="{% url 'download_offer_pdf' offer.pk %}" class="btn btn-secondary mt-3">Download PDF</a>
+        </div>
     </div>
 </body>
 </html>

@@ -1,0 +1,142 @@
+.app-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: #0f172a;
+  color: #e2e8f0;
+  z-index: 1001;
+  overflow-y: auto;
+  box-shadow: 2px 0 18px rgba(15, 23, 42, 0.3);
+}
+
+.app-nav__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+}
+
+.app-nav__close {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 1rem;
+}
+
+.app-nav__menu {
+  padding: 10px 8px 16px;
+}
+
+.app-nav__item,
+.app-nav__group > summary,
+.app-nav__group > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.app-nav__item i,
+.app-nav__group > summary i {
+  width: 18px;
+  text-align: center;
+}
+
+.app-nav__item:hover,
+.app-nav__group > summary:hover,
+.app-nav__group > a:hover {
+  background: #1e293b;
+  color: #fff;
+}
+
+.app-nav__item--danger:hover {
+  background: #7f1d1d;
+}
+
+.app-nav__group {
+  margin-bottom: 6px;
+}
+
+.app-nav__group > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.app-nav__group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-nav__group[open] > summary {
+  background: #1e293b;
+  color: #fff;
+}
+
+.app-nav__group > a {
+  padding-left: 40px;
+  font-size: 0.9rem;
+}
+
+.app-nav__toggle {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  z-index: 1002;
+  display: none;
+}
+
+.app-nav__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.app-nav__backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+  .app-nav {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .app-nav.is-open {
+    transform: translateX(0);
+  }
+
+  .app-nav__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .app-nav__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

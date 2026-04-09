@@ -7,11 +7,10 @@ Reminder
 {% endblock %}
 
 {% block content %}
-{% include 'navbar.html' %}
-<div class="container">
+<div class="event-page">
     <div class="row">
         <div class="col-md-6 offset-md-3">
-            <div class="clearfix mb-3">
+            <div class="event-page__nav mb-3">
                 <a class="btn btn-info left" href="{% url 'calendar' %}"> < Calendar </a>
             </div>
 
@@ -30,7 +29,7 @@ Reminder
                 {% endfor %}
             {% endif %}
 
-            <form method="post">
+            <form method="post" class="event-form-card">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="event_type">Event Type</label>
@@ -48,7 +47,7 @@ Reminder
                     <label for="when">When</label>
                     {{ form.when }}
                 </div>
-                <button type="submit" class="submit-event">Submit</button>
+                <button type="submit" class="submit-event btn btn-info">Submit</button>
             </form>
         </div>
     </div>
