@@ -29,6 +29,7 @@ urlpatterns = [
     path('task/attachment/add/<int:pk>/', views.add_task_attachment, name='add_task_attachment'),
     path('task/attachment/delete/<int:attachment_id>/<int:pk>/', views.delete_task_attachment, name='delete_task_attachment'),
     path('lead_task/<int:pk>/pdf/', views.generate_pdf, name='lead_task_pdf'),
+    path('lead_task/<int:pk>/client-pdf/', views.generate_client_pdf, name='lead_task_client_pdf'),
     path('services/purchased/', views.purchased_services, name='purchased_services'),
     path('services/mark_processed/<int:pk>/', views.mark_service_processed, name='mark_service_processed'),
     path('client_payments/', views.client_payments, name='client_payments'),

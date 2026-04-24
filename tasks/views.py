@@ -595,6 +595,237 @@ def generate_pdf(request, pk):
     return response
 
 
+@login_required
+def generate_client_pdf(request, pk):
+    lead_task = get_object_or_404(LeadTask, pk=pk)
+    services = Service.objects.filter(leadtask=lead_task)
+    payments = Payment.objects.filter(leadtask=lead_task).order_by("date")
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Client Invoice - {lead_task.lead.name}.pdf"'
+
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=landscape(A4),
+        rightMargin=28,
+        leftMargin=28,
+        topMargin=24,
+        bottomMargin=24
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name='ClientTitleStyle',
+        parent=styles['Title'],
+        fontSize=16,
+        leading=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#0f4c81')
+    ))
+    styles.add(ParagraphStyle(
+        name='ClientHeading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        leading=16,
+        spaceBefore=10,
+        spaceAfter=6,
+        textColor=colors.HexColor('#334e68')
+    ))
+    styles.add(ParagraphStyle(
+        name='ClientBody',
+        parent=styles['BodyText'],
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor('#334e68')
+    ))
+    styles.add(ParagraphStyle(
+        name='PolicyBody',
+        parent=styles['BodyText'],
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#334e68')
+    ))
+
+    story = []
+    logo_path = 'ghaithleads/static/images/logo.png'
+    story.append(Image(logo_path, width=100, height=100))
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph(f'Invoice for {lead_task.lead.name}', styles['ClientTitleStyle']))
+    story.append(Spacer(1, 10))
+
+    created_by = lead_task.assigned_to.get_full_name() or lead_task.assigned_to.username
+    issue_date = timezone.now().strftime("%Y-%m-%d")
+    exact_travel_date = lead_task.travel_date.strftime('%Y-%m-%d') if lead_task.travel_date else 'N/A'
+
+    summary_data = [
+        ['Invoice ID', str(lead_task.pk)],
+        ['Created By', created_by],
+        ['Issue Date', issue_date],
+        ['Exact Travel Date', exact_travel_date],
+    ]
+    summary_table = Table(summary_data, colWidths=[160, 420], hAlign='LEFT')
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f7fa')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#334e68')),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph('Client Details', styles['ClientHeading']))
+    client_fields = [
+        ('Name', lead_task.lead.name),
+        ('Phone', lead_task.lead.phone),
+        ('Email', getattr(lead_task.lead, 'email', None)),
+        ('Channel', lead_task.lead.channel),
+        ('Destination', lead_task.lead.destination),
+        ('Request Details', lead_task.lead.special_request),
+        ('Finalization Notes', lead_task.lead.finalization_notes),
+        ('Invoice Notes', lead_task.notes),
+        ('Return Date', lead_task.return_date.strftime('%Y-%m-%d') if lead_task.return_date else None),
+        ('Date of Birth', lead_task.date_of_birth.strftime('%Y-%m-%d') if lead_task.date_of_birth else None),
+        ('Passport Expiry Date', lead_task.passport_expiry_date.strftime('%Y-%m-%d') if lead_task.passport_expiry_date else None),
+        ('Payment Type', lead_task.payment),
+    ]
+    client_data = [[label, str(value)] for label, value in client_fields if value not in [None, '']]
+    if client_data:
+        client_table = Table(client_data, colWidths=[180, 560], hAlign='LEFT')
+        client_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f7fa')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#334e68')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        story.append(client_table)
+        story.append(Spacer(1, 10))
+
+    story.append(Paragraph('Services', styles['ClientHeading']))
+    if services.exists():
+        service_data = [['#', 'Service Type', 'Service Details']]
+        for idx, service in enumerate(services, 1):
+            service_data.append([str(idx), service.service_name or '—', service.details or '—'])
+        service_table = Table(service_data, colWidths=[40, 220, 480], hAlign='LEFT')
+        service_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f4c81')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7fa')]),
+        ]))
+        story.append(service_table)
+    else:
+        story.append(Paragraph('No services added.', styles['ClientBody']))
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph('Payments', styles['ClientHeading']))
+    if payments.exists():
+        payment_data = [['Date', 'Amount', 'Paid']]
+        for payment in payments:
+            payment_data.append([
+                payment.date.strftime('%Y-%m-%d'),
+                f"${payment.amount}",
+                'Yes' if payment.is_checked else 'No',
+            ])
+        payment_table = Table(payment_data, colWidths=[180, 180, 120], hAlign='LEFT')
+        payment_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f4c81')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7fa')]),
+        ]))
+        story.append(payment_table)
+    else:
+        story.append(Paragraph('No payments added.', styles['ClientBody']))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(f'Total Selling Price: {lead_task.lead.selling_price or "N/A"}', styles['ClientBody']))
+
+    story.append(PageBreak())
+    story.append(Paragraph('GHAITH TRAVEL - BOOKING TERMS & TRAVEL POLICY', styles['ClientHeading']))
+    policy_lines = [
+        "Dear Valued Client,",
+        "Thank you for choosing Ghaith Travel to plan your vacation.",
+        "We are honored to be part of your travel journey, and our priority is always to provide you with a smooth, secure, and enjoyable experience.",
+        "To ensure complete clarity and transparency, we kindly ask you to review the following booking terms.",
+        "These policies are designed not to worry you, but to help you clearly understand how your travel arrangements are protected and managed with professionalism and care.",
+        "Our team is always here to guide you, support you, and provide the best possible solutions whenever changes arise.",
+        "",
+        "1. Booking Types: Refundable & Non-Refundable",
+        "Travel services vary depending on airline, hotel, destination, and supplier conditions.",
+        "Flights:",
+        "- Charter flights, low-cost airlines, promotional fares, and special offers are generally non-refundable",
+        "- Regular international airline tickets may be refundable depending on airline fare rules",
+        "Hotels:",
+        "- Hotel cancellation and refund conditions depend on each hotel's own policy",
+        "Visa Fees:",
+        "- Visa fees become non-refundable once the application has been submitted",
+        "Tours & Activities:",
+        "- Usually refundable up to 15 days before travel date",
+        "- Some online or third-party booked activities may be non-refundable",
+        "Before confirming your booking, our travel consultants will always explain the applicable conditions clearly.",
+        "",
+        "2. If an Airline Cancels Your Flight",
+        "In case of airline cancellation, we work immediately to protect your travel plans and offer the best available solutions.",
+        "Option 1: Alternative Travel Route",
+        "- New routing depends on airline availability",
+        "- Any fare difference will be communicated clearly before confirmation",
+        "Option 2: Reschedule Your Trip",
+        "- Within the same travel season, usually without extra charges",
+        "- Voucher may be issued valid for up to 1 year",
+        "Important: If new travel dates fall into high season (July, August, December), fare differences may apply.",
+        "Option 3: Refund",
+        "- Refund will be processed with a deduction of $250 total (office fees + international processing charges)",
+        "Conditions:",
+        "- Visa refundable only if not yet applied",
+        "- Hotels refunded according to hotel booking rules",
+        "- Non-refundable hotel rates remain non-refundable",
+        "- Tours & transfers refunded where applicable",
+        "",
+        "3. If You Decide to Cancel Your Trip",
+        "Flights: Airline cancellation rules apply; cancellation charges depend on fare type and airline conditions.",
+        "Hotels: Hotel cancellation policy applies based on booking terms.",
+        "Visa: Non-refundable once applied.",
+        "Tours & Activities: Subject to supplier cancellation rules.",
+        "A full booking invoice including payment deadlines and cancellation conditions will always be sent to you after confirmation.",
+        "",
+        "4. Charter & Low-Cost Packages (Including Sharm, Turkey, Georgia & Similar Destinations)",
+        "These bookings are non-refundable, non-changeable, non-transferable, and non-voidable once confirmed.",
+        "If Airline Cancels Charter Flight:",
+        "Option A: Refund - deduction of $50 per person, remaining balance refunded.",
+        "Option B: Reschedule - to another available date if possible, subject to airline approval and availability.",
+        "",
+        "5. Payment Commitment & Reservation Guarantee",
+        "Payments must be completed according to agreed deadlines to secure reservation exactly as requested.",
+        "Delayed payments may affect price and availability; we will always do our best to assist with alternatives.",
+        "",
+        "6. Refund Processing Timeline",
+        "Approved refunds usually take between 60 to 90 days depending on airlines, hotels, embassies, and suppliers.",
+        "Our Accounting Department will contact you with refund amount confirmation and expected refund timeline.",
+        "",
+        "7. Confirmation of Agreement",
+        "Once payment is made, this confirms acceptance of all booking terms, cancellation and refund policies, and authorization for Ghaith Travel to proceed with reservations on your behalf.",
+        "",
+        "Our Commitment to You",
+        "At Ghaith Travel, our role is not only to book your trip - it is to stand by your side before, during, and after your journey.",
+        "We are committed to full transparency, honest guidance, fast support when changes happen, and protecting your travel investment as much as possible.",
+        "",
+        "Thank you for trusting us.",
+        "Warm regards,",
+        "Ghaith Travel Team",
+    ]
+
+    for line in policy_lines:
+        safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        story.append(Paragraph(safe_line if safe_line else "&nbsp;", styles['PolicyBody']))
+
+    doc.build(story)
+    return response
+
+
 @login_required(login_url="/login/")
 def current_leadtasks(request):
     status_choices = LeadTask.STATUS_CHOICES
