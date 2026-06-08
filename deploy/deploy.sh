@@ -132,8 +132,24 @@ if [[ "$SKIP_BACKUP" -eq 0 ]]; then
         mkdir -p "$BACKUP_DIR"
     fi
 
-    backup_file "${PROJECT_DIR}/db.sqlite3" "$BACKUP_DIR"
-    backup_file "${MEDIA_DIR:-${PROJECT_DIR}/media}" "$BACKUP_DIR"
+    # PostgreSQL or SQLite — via Django settings
+    if [[ "$DRY_RUN" -eq 0 && -f "${SCRIPT_DIR}/backup_database.py" ]]; then
+        log "Backing up database (PostgreSQL/SQLite)..."
+        BACKUP_FILE="$("$PYTHON" "${SCRIPT_DIR}/backup_database.py" "$BACKUP_DIR" "deploy_${TIMESTAMP}")"
+        log "DB backup: ${BACKUP_FILE}"
+    else
+        backup_file "${PROJECT_DIR}/db.sqlite3" "$BACKUP_DIR"
+    fi
+
+    MEDIA_PATH="${MEDIA_DIR:-${PROJECT_DIR}/media}"
+    if [[ "${BACKUP_MEDIA:-yes}" == "yes" && -d "$MEDIA_PATH" ]]; then
+        MEDIA_SIZE="$(du -sh "$MEDIA_PATH" 2>/dev/null | cut -f1 || echo '?')"
+        log "Backing up media (${MEDIA_SIZE}) — can take several minutes, please wait..."
+        backup_file "$MEDIA_PATH" "$BACKUP_DIR"
+    else
+        log "Skip media backup (BACKUP_MEDIA=${BACKUP_MEDIA:-no} or folder missing)"
+    fi
+
     backup_file "${PROJECT_DIR}/${PROD_SETTINGS_PACKAGE}/settings.py" "$BACKUP_DIR"
     backup_file "${PROJECT_DIR}/local_settings.py" "$BACKUP_DIR"
 
