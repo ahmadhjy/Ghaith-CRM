@@ -19,6 +19,12 @@ DATABASES = {
     }
 }
 
+# Static: PythonAnywhere Web tab maps /static/ → BASE_DIR/static/
+# Do NOT run collectstatic --clear — it wipes theme CSS from this folder.
+STATIC_ROOT = BASE_DIR / 'static'
+STATIC_URL = '/static/'
+# Do not set STATICFILES_STORAGE to ManifestStaticFilesStorage on production.
+
 # Optional: import local overrides
 # try:
 #     from .local_settings import *  # noqa: F403

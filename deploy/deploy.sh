@@ -61,7 +61,7 @@ source "$CONFIG_FILE"
 : "${PROD_SETTINGS_PACKAGE:=ghaithleads}"
 : "${RELOAD_METHOD:=touch}"
 : "${REQUIRE_CLEAN_GIT:=no}"
-: "${RUN_COLLECTSTATIC:=yes}"
+: "${RUN_COLLECTSTATIC:=no}"
 
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 LOG_DIR="${BACKUP_ROOT}/logs"
@@ -244,11 +244,32 @@ else
 fi
 
 # ── Static files ────────────────────────────────────────────────────────────
+# PythonAnywhere serves /static/ directly from PROJECT_DIR/static/.
+# NEVER run collectstatic --clear here — STATIC_ROOT equals that folder and
+# --clear deletes all theme CSS/JS (only Django admin files get re-collected).
+verify_theme_static() {
+    local missing=0
+    local f
+    for f in css/navbar-unified.css css/requests-modern.css css/app-modern-global.css JS/navbar-unified.js; do
+        if [[ ! -f "${PROJECT_DIR}/static/${f}" ]]; then
+            log "WARNING: Missing static/${f}"
+            missing=1
+        fi
+    done
+    if [[ "$missing" -eq 1 && "$DRY_RUN" -eq 0 ]]; then
+        log "Restoring static/ from git..."
+        git -C "$PROJECT_DIR" checkout HEAD -- static/ 2>/dev/null || true
+    fi
+}
+
+verify_theme_static
+
 if [[ "$RUN_COLLECTSTATIC" == "yes" ]]; then
-    log "--- Collecting static files ---"
-    run "$PYTHON" "$MANAGE_PY" collectstatic --noinput --clear
+    log "WARNING: RUN_COLLECTSTATIC=yes can wipe theme CSS on PythonAnywhere."
+    log "Collecting static files (without --clear)..."
+    run "$PYTHON" "$MANAGE_PY" collectstatic --noinput
 else
-    log "Skipping collectstatic (RUN_COLLECTSTATIC=no)"
+    log "Static files: served from ${PROJECT_DIR}/static/ (collectstatic skipped)"
 fi
 
 # ── Reload web app ──────────────────────────────────────────────────────────

@@ -126,8 +126,10 @@ log "Running Django checks..."
 log "Applying migrations..."
 "$PYTHON" "${PROJECT_DIR}/manage.py" migrate --noinput
 
-log "Collecting static files..."
-"$PYTHON" "${PROJECT_DIR}/manage.py" collectstatic --noinput
+log "Verifying theme static files (skipping collectstatic on PythonAnywhere)..."
+for f in css/navbar-unified.css css/requests-modern.css css/app-modern-global.css; do
+    [[ -f "${PROJECT_DIR}/static/${f}" ]] || fail "Missing static/${f}"
+done
 
 log "Reloading web app..."
 touch /var/www/ghaithtravel_pythonanywhere_com_wsgi.py
