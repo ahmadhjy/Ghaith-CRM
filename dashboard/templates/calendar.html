@@ -105,6 +105,14 @@
     <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ next_month }}">Next <i class="fas fa-chevron-right"></i></a>
 </div>
 
+<div class="calendar-legend" aria-label="Event type colors">
+    <span class="calendar-legend__item calendar-legend__item--user">Travel date</span>
+    <span class="calendar-legend__item calendar-legend__item--invoice">Follow-up</span>
+    <span class="calendar-legend__item calendar-legend__item--task">Payment due</span>
+    <span class="calendar-legend__item calendar-legend__item--followup">Supplier payment</span>
+    <span class="calendar-legend__item calendar-legend__item--anniversary">Birthday</span>
+</div>
+
 <div class="calendar-shell table-responsive">
     {{ calendar }}
 </div>
