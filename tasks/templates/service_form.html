@@ -1,32 +1,75 @@
-<form method="post">
-  {% csrf_token %}
-  <table>
-    <tr>
-      <th>Service Name</th>
-      <th>Supplier</th>
-      <!-- Add other fields as needed -->
-      <th>Actions</th>
-    </tr>
-    {% for service in services %}
-    <tr>
-      <td>{{ service.service_name }}</td>
-      <td>{{ service.supplier }}</td>
-      <!-- Add other fields as needed -->
-      <td>
-        <a href="{% url 'delete_service' pk=service.pk %}">Delete</a>
-    <form method="post" action="{% url 'update_service' service.pk %}">
-      {% csrf_token %}
-      <input type="checkbox" name="is_checked" onchange="this.form.submit();" {% if service.is_checked %} checked {% endif %}>
-    </form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services — Ghaith CRM</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">Services</h1>
+            <p class="req-hero__sub">Manage service rows and payment status.</p>
+        </div>
+    </header>
 
-      </td>
-    </tr>
-    {% endfor %}
-    <tr>
-      {{ form }}
-    </tr>
-  </table>
-  <button type="submit">Add Row</button>
-</form>
-
-
+    <div class="req-card">
+        <form method="post">
+            {% csrf_token %}
+            <div class="req-table-wrap">
+                <table class="req-table data-table">
+                    <thead>
+                        <tr>
+                            <th>Service Name</th>
+                            <th>Supplier</th>
+                            <th>Paid</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for service in services %}
+                        <tr>
+                            <td data-label="Service Name">{{ service.service_name }}</td>
+                            <td data-label="Supplier">{{ service.supplier }}</td>
+                            <td data-label="Paid">
+                                <form method="post" action="{% url 'update_service' service.pk %}" class="list-table__inline-form">
+                                    {% csrf_token %}
+                                    <label class="list-table__checkbox-label">
+                                        <input type="checkbox" name="is_checked" onchange="this.form.submit();" {% if service.is_checked %}checked{% endif %}>
+                                        <span class="list-table__checkbox-text">Paid</span>
+                                    </label>
+                                </form>
+                            </td>
+                            <td data-label="Actions">
+                                <a href="{% url 'delete_service' pk=service.pk %}" class="req-link req-link--danger">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4"><div class="req-empty"><i class="fas fa-concierge-bell"></i>No services yet.</div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="req-card__body">
+                <h3 class="req-card__title" style="margin:0 0 12px;font-size:1rem">Add Service</h3>
+                <div class="req-grid req-grid--2">
+                    {% for field in form %}
+                    <div class="req-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--accent"><i class="fas fa-plus"></i> Add Row</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -2,176 +2,147 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Model</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Request — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-  <div class="container">
-  <div class="content">
-  <h1>Edit Request Info</h1>
-  <form method="post" enctype="multipart/form-data" id="inputForm">
-      {% csrf_token %}
-      <!-- Assigned to and Status fields -->
-      <div class="form-group">
-        <label for="id_status">Status:</label>
-        {{ form.status }}
-    </div>
+{% include 'navbar.html' %}
 
-      <div class="accordion">
-        <h2 class="accordion-header">Assign Request</h2>
-        <div class="accordion-content">
-          <div class="form-group">
-            <label for="id_assigned_to">Assigned To:</label>
-            {{ form.assigned_to }}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Request</div>
+            <h1 class="req-hero__title">Edit Request Info</h1>
+            <p class="req-hero__sub">Full request details and sales information.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'display_data' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> All Requests</a>
             </div>
-        <!-- Assignment Notes field -->
+        </div>
+    </header>
+
+    <form method="post" enctype="multipart/form-data" id="inputForm">
+        {% csrf_token %}
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--blue"><i class="fas fa-sliders-h"></i></div>
+                    <div><h2 class="req-card__title">Status &amp; Assignment</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field">
+                        <label for="id_status">Status</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_assigned_to">Assigned To</label>
+                        {{ form.assigned_to }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--teal"><i class="fas fa-user"></i></div>
+                    <div><h2 class="req-card__title">Basic Information</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field"><label for="id_name">Name</label>{{ form.name }}</div>
+                    <div class="req-field"><label for="id_phone">Phone</label>{{ form.phone }}</div>
+                    <div class="req-field"><label for="id_channel">Channel</label>{{ form.channel }}</div>
+                    <div class="req-field"><label for="id_destination">Destination</label>{{ form.destination }}</div>
+                    <div class="req-field req-field--full"><label for="id_special_request">Request Details</label>{{ form.special_request }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--purple"><i class="fas fa-plane"></i></div>
+                    <div><h2 class="req-card__title">Travel Details</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field"><label for="id_type_of_service">Type of Service</label>{{ form.type_of_service }}</div>
+                    <div class="req-field"><label for="id_pax">Pax</label>{{ form.pax }}</div>
+                    <div class="req-field"><label for="id_duration">Duration</label>{{ form.duration }}</div>
+                    <div class="req-field"><label for="id_urgent">Urgent?</label>{{ form.urgent }}</div>
+                    <div class="req-field"><label for="id_travel_date_from">Travel From</label>{{ form.travel_date_from }}</div>
+                    <div class="req-field"><label for="id_travel_date_to">Travel To</label>{{ form.travel_date_to }}</div>
+                    <div class="req-field req-field--full"><label for="id_date_notes">Date Notes</label>{{ form.date_notes }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--amber"><i class="fas fa-comments"></i></div>
+                    <div><h2 class="req-card__title">Finalization &amp; Follow-up</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid">
+                    <div class="req-field req-field--full"><label for="id_finalization_notes">What Happened</label>{{ form.finalization_notes }}</div>
+                    <div class="req-field"><label for="id_follow_up">Follow-up</label>{{ form.follow_up }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--rose"><i class="fas fa-dollar-sign"></i></div>
+                    <div><h2 class="req-card__title">Sales Information</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field"><label for="id_selling_price">Selling Price</label>{{ form.selling_price }}</div>
+                    <div class="req-field"><label for="id_supplier">Supplier</label>{{ form.supplier }}</div>
+                    <div class="req-field"><label for="id_profit">Profit</label>{{ form.profit }}</div>
+                    <div class="req-field"><label for="id_sold">Sold?</label>{{ form.sold }}</div>
+                    <div class="req-field"><label for="id_lost">Lost?</label>{{ form.lost }}</div>
+                </div>
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--primary"><i class="fas fa-save"></i> Save Request</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="req-card">
+        <div class="req-card__head">
+            <div class="req-card__head-left">
+                <div class="req-card__icon req-card__icon--indigo"><i class="fas fa-paperclip"></i></div>
+                <div><h2 class="req-card__title">Attachments</h2></div>
+            </div>
+            <a href="{% url 'add_attachment' pk=leadid %}" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-plus"></i> Add</a>
+        </div>
+        <div class="req-card__body">
+            {% if attachments.all %}
+            <ul class="req-attach-list">
+                {% for attachment in attachments.all %}
+                <li class="req-attach-item">
+                    <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-file"></i> {{ attachment.attachment_name }}</a>
+                    <a href="{% url 'delete_attachment' lead_id=leadid attachment_id=attachment.pk %}" class="req-link--danger">Delete</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="req-empty" style="padding:24px"><i class="fas fa-folder-open"></i>No attachments.</div>
+            {% endif %}
         </div>
     </div>
-  
-      <!-- Accordion Group 1: Name, Phone, Channel, Destination, Special Requests -->
-      <div class="accordion">
-          <h2 class="accordion-header">Basic Information</h2>
-          <div class="accordion-content">
-              <div class="form-group">
-                  <label for="id_name">Name:</label>
-                  {{ form.name }}
-              </div>
-              <div class="form-group">
-                  <label for="id_phone">Phone:</label>
-                  {{ form.phone }}
-              </div>
-              <div class="form-group">
-                  <label for="id_channel">Channel:</label>
-                  {{ form.channel }}
-              </div>
-              <div class="form-group">
-                  <label for="id_destination">Destination:</label>
-                  {{ form.destination }}
-              </div>
-              <div class="form-group">
-                  <label for="id_special_request">Request Details</label>
-                  {{ form.special_request }}
-              </div>
-          </div>
-      </div>
-  
-      <!-- Accordion Group 2: Pax, Duration, Travel Dates, Date Notes -->
-      <div class="accordion">
-          <h2 class="accordion-header">Travel Details</h2>
-          <div class="accordion-content">
-            <div class="form-group">
-              <label for="id_type_of_service">Type Of Service:</label>
-              {{ form.type_of_service }}
-          </div>
-              <div class="form-group">
-                  <label for="id_pax">Pax:</label>
-                  {{ form.pax }}
-              </div>
-              <div class="form-group">
-                  <label for="id_duration">Duration:</label>
-                  {{ form.duration }}
-              </div>
-              <div class="form-group">
-                  <label for="id_travel_date_from">Travel Date From:</label>
-                  {{ form.travel_date_from }}
-              </div>
-              <div class="form-group">
-                  <label for="id_travel_date_to">Travel Date To:</label>
-                  {{ form.travel_date_to }}
-              </div>
-              <div class="form-group">
-                  <label for="id_date_notes">Notes:</label>
-                  {{ form.date_notes }}
-              </div>
-              <div class="form-group">
-                <label for="id_urgent">Urgent ?</label>
-                {{ form.urgent }}
-            </div>
-          </div>
-      </div>
-  
-      <!-- Accordion Group 3: Finalization Notes, Follow-up -->
-      <div class="accordion">
-          <h2 class="accordion-header">Finalization and Follow-up</h2>
-          <div class="accordion-content">
-              <div class="form-group">
-                  <label for="id_finalization_notes">What Happened:</label>
-                  {{ form.finalization_notes }}
-              </div>
-              <div class="form-group">
-                  <label for="id_follow_up">Follow-up:</label>
-                  {{ form.follow_up }}
-              </div>
-          </div>
-      </div>
-  
-      <!-- Accordion Group 4: Selling Price, Supplier, Sold -->
-      <div class="accordion">
-          <h2 class="accordion-header">Sales Information</h2>
-          <div class="accordion-content">
-              <div class="form-group">
-                  <label for="id_selling_price">Selling Price:</label>
-                  {{ form.selling_price }}
-              </div>
-              <div class="form-group">
-                  <label for="id_supplier">Supplier:</label>
-                  {{ form.supplier }}
-              </div>
-              <div class="form-group">
-                <label for="id_profit">Profit:</label>
-                {{ form.profit }}
-            </div>
-              <div class="form-group">
-                  <label for="id_sold">Sold?</label>
-                  {{ form.sold }}
-                  <label for="id_lost">Lost?</label>
-                  {{ form.lost }}
-              </div>
-          </div>
-      </div>
-  
-      <button type="submit">Save</button>
-  </form>
-  
-  <script src="{% static 'JS/sidebar.js'%}"></script>
-  <script>
-      // Add event listeners to accordion headers
-      const accordionHeaders = document.querySelectorAll('.accordion-header');
-      accordionHeaders.forEach(header => {
-          header.addEventListener('click', () => {
-              header.nextElementSibling.classList.toggle('active');
-          });
-      });
-  </script>
-
-<div class="attach-container">
-    <a href="{% url 'add_attachment' pk=leadid %}" class="button">Add Attachment</a>
-  
-    {% if attachments.all %}
-        <table class="attachment-table">
-           <tbody>
-                {% for attachment in attachments.all %}
-                    <tr>
-                        <td>
-                            <a href="{{ attachment.file.url }}" class="attachment-link">{{ attachment.attachment_name }}</a>
-                        </td>
-                        <td>
-                            <a href="{% url 'delete_attachment' lead_id=leadid attachment_id=attachment.pk %}" class="delete-link" >Delete</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No attachments found.</p>
-    {% endif %}
 </div>
-  </div>
-  </div>
 </body>
 </html>
-

@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -82,6 +84,7 @@ class Service(models.Model):
     voucher_id = models.CharField(max_length=300, blank=True)
     is_checked = models.BooleanField(default=False)
     processed = models.BooleanField(default=False)
+    send_to_client = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, null=True)  # Add this line
 
     def __str__(self):
@@ -122,4 +125,42 @@ class TaskAttachment(models.Model):
 
     def __str__(self):
         return self.attachment_name
+
+
+class ClientMediaUploadLink(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    leadtask = models.ForeignKey(LeadTask, on_delete=models.CASCADE, related_name='media_upload_links')
+    client_name = models.CharField(max_length=200)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.client_name} ({self.token})'
+
+    @property
+    def is_submitted(self):
+        return self.submitted_at is not None
+
+
+class ClientMediaFile(models.Model):
+    upload_link = models.ForeignKey(
+        ClientMediaUploadLink, on_delete=models.CASCADE, related_name='files'
+    )
+    file = models.FileField(upload_to='static/client_media/%Y/%m/%d/')
+    original_name = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.original_name
+
+    @property
+    def is_video(self):
+        return self.original_name.lower().endswith(
+            ('.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v')
+        )
 

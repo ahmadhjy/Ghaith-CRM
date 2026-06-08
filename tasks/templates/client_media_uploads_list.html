@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Media — Ghaith CRM</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Media</div>
+            <h1 class="req-hero__title">Client Media Uploads</h1>
+            <p class="req-hero__sub">All client upload links and submitted media.</p>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-table-wrap">
+            <table class="req-table data-table">
+                <thead>
+                    <tr><th>Client</th><th>Invoice</th><th>Created</th><th>Status</th><th>Files</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for link in links %}
+                    <tr>
+                        <td data-label="Client"><strong>{{ link.client_name }}</strong></td>
+                        <td data-label="Invoice"><a href="{% url 'edit_lead_tasks' link.leadtask.pk %}" class="req-link">#{{ link.leadtask.pk }}</a></td>
+                        <td data-label="Created">{{ link.created_at|date:"M d, Y H:i" }}</td>
+                        <td data-label="Status">
+                            {% if link.is_submitted %}<span class="req-pill req-pill--submitted">Submitted</span>
+                            {% else %}<span class="req-pill req-pill--open">Open</span>{% endif %}
+                        </td>
+                        <td data-label="Files">{{ link.files.count }}</td>
+                        <td data-label="Action"><a href="{% url 'client_media_upload_detail' link.token %}" class="req-btn req-btn--outline req-btn--sm">View</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6"><div class="req-empty"><i class="fas fa-photo-video"></i>No uploads yet.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

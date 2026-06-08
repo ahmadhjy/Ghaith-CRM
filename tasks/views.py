@@ -1,7 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Task, LeadTask, Attachment, Service, Payment, TaskAttachment
-from .forms import TaskForm, LeadTaskForm, PaymentForm, AttachmentForm, ServiceForm, TaskAttachmentForm
+import os
+
+from .models import (
+    Task, LeadTask, Attachment, Service, Payment, TaskAttachment,
+    Supplier, ClientMediaUploadLink, ClientMediaFile,
+)
+from .forms import (
+    TaskForm, LeadTaskForm, PaymentForm, AttachmentForm, ServiceForm,
+    TaskAttachmentForm, SupplierForm,
+)
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseRedirect
 from django.forms import inlineformset_factory, formset_factory
@@ -279,6 +287,7 @@ def save_all_services(request, leadid):
             'due_time': request.POST.get('service_%s_due_time' % pk) or None,
             'voucher_id': request.POST.get('service_%s_voucher_id' % pk, ''),
             'is_checked': request.POST.get('service_%s_is_checked' % pk) == 'on',
+            'send_to_client': request.POST.get('service_%s_send_to_client' % pk) == 'on',
         }, instance=service)
         if form.is_valid():
             form.save()
@@ -290,6 +299,7 @@ def save_all_services(request, leadid):
     sellings = request.POST.getlist('selling[]')
     due_times = request.POST.getlist('due_time[]')
     voucher_ids = request.POST.getlist('voucher_id[]')
+    send_to_clients = request.POST.getlist('send_to_client[]')
     new_services = []
     for i in range(len(names)):
         form = ServiceForm({
@@ -300,6 +310,7 @@ def save_all_services(request, leadid):
             'selling': sellings[i] if i < len(sellings) else '',
             'due_time': due_times[i] if i < len(due_times) else None,
             'voucher_id': voucher_ids[i] if i < len(voucher_ids) else '',
+            'send_to_client': (send_to_clients[i] if i < len(send_to_clients) else '') == 'on',
         })
         if form.is_valid():
             service = form.save(commit=False)
@@ -354,6 +365,29 @@ def update_checked_status(request, service_id):
     service.is_checked = request.POST.get('is_checked', 'off') == 'on'
     service.save()
     return JsonResponse({'status': 'success'}, status=200)
+
+
+@login_required(login_url="/login/")
+@require_POST
+def update_send_to_client(request, service_id):
+    service = get_object_or_404(Service, pk=service_id)
+    service.send_to_client = request.POST.get('send_to_client', 'off') == 'on'
+    service.save()
+    return JsonResponse({'status': 'success'}, status=200)
+
+
+@login_required(login_url="/login/")
+@require_POST
+def create_supplier(request):
+    form = SupplierForm(request.POST)
+    if form.is_valid():
+        supplier = form.save()
+        return JsonResponse({
+            'status': 'success',
+            'name': supplier.name,
+            'is_active': supplier.is_active,
+        })
+    return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 # views.py
 from django.utils import timezone
@@ -443,6 +477,9 @@ def edit_lead_task(request, pk):
         form = LeadTaskForm(request.POST, instance=instance)
         if form.is_valid():
             updated = form.save()
+            lead = updated.lead
+            lead.finalization_notes = form.cleaned_data.get('finalization_notes', '') or ''
+            lead.save(update_fields=['finalization_notes'])
             if old_status != 'cancelled' and updated.status == 'cancelled':
                 # Delete related supplier payment events when order is cancelled.
                 Event.objects.filter(service__leadtask=updated).delete()
@@ -451,6 +488,7 @@ def edit_lead_task(request, pk):
 
     supplier_choices = get_supplier_choices()
     predefined_supplier_values = [v for v, _ in supplier_choices]
+    media_upload_links = ClientMediaUploadLink.objects.filter(leadtask=instance)
     return render(request, 'edit_leadtask.html', {
         'form': form,
         'leadid': pk,
@@ -460,6 +498,8 @@ def edit_lead_task(request, pk):
         'attachments': attachments,
         'predefined_suppliers': supplier_choices,
         'predefined_supplier_values': predefined_supplier_values,
+        'media_upload_links': media_upload_links,
+        'supplier_form': SupplierForm(),
     })
 
 
@@ -598,7 +638,7 @@ def generate_pdf(request, pk):
 @login_required
 def generate_client_pdf(request, pk):
     lead_task = get_object_or_404(LeadTask, pk=pk)
-    services = Service.objects.filter(leadtask=lead_task)
+    services = Service.objects.filter(leadtask=lead_task, send_to_client=True)
     payments = Payment.objects.filter(leadtask=lead_task).order_by("date")
 
     response = HttpResponse(content_type='application/pdf')
@@ -683,7 +723,6 @@ def generate_client_pdf(request, pk):
         ('Channel', lead_task.lead.channel),
         ('Destination', lead_task.lead.destination),
         ('Request Details', lead_task.lead.special_request),
-        ('Finalization Notes', lead_task.lead.finalization_notes),
         ('Invoice Notes', lead_task.notes),
         ('Return Date', lead_task.return_date.strftime('%Y-%m-%d') if lead_task.return_date else None),
         ('Date of Birth', lead_task.date_of_birth.strftime('%Y-%m-%d') if lead_task.date_of_birth else None),
@@ -832,8 +871,9 @@ def current_leadtasks(request):
     selected_status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
     travel_date_only = request.GET.get('travel_date_only', '') == 'on'
+    assigned_to_me = request.GET.get('assigned_to_me', '') == 'on'
 
-    if request.user.is_staff:
+    if request.user.is_staff and not assigned_to_me:
         lead_tasks = LeadTask.objects.all()
     else:
         lead_tasks = LeadTask.objects.filter(assigned_to=request.user)
@@ -862,7 +902,7 @@ def current_leadtasks(request):
     lead_tasks = lead_tasks.order_by('-pk')
 
     # Calculate counts for each status (include all tasks for counts)
-    if request.user.is_staff:
+    if request.user.is_staff and not assigned_to_me:
         all_lead_tasks = LeadTask.objects.all()
     else:
         all_lead_tasks = LeadTask.objects.filter(assigned_to=request.user)
@@ -875,6 +915,8 @@ def current_leadtasks(request):
         'search_query': search_query,  # Pass the search query to the template
         'status_counts': status_counts,
         'travel_date_only': travel_date_only,
+        'assigned_to_me': assigned_to_me,
+        'is_staff': request.user.is_staff,
     })
 
 @login_required(login_url="/login/")
@@ -1095,3 +1137,123 @@ def delete_attachment(request, attachment_id, pk):
 def attachment_list(request, invoiceid):
     attachments = Attachment.objects.filter(parentleadtask=invoiceid)
     return render(request, 'attachment_list.html', {'attachments': attachments})
+
+
+def _get_active_upload_link(token):
+    return get_object_or_404(
+        ClientMediaUploadLink,
+        token=token,
+        is_active=True,
+    )
+
+
+def _sanitize_filename(name, max_len=255):
+    if len(name) <= max_len:
+        return name
+    base, ext = os.path.splitext(name)
+    return base[: max_len - len(ext)] + ext
+
+
+@login_required(login_url="/login/")
+@require_POST
+def create_client_media_link(request, pk):
+    leadtask = get_object_or_404(LeadTask, pk=pk)
+    upload_link = ClientMediaUploadLink.objects.create(
+        leadtask=leadtask,
+        client_name=leadtask.lead.name,
+        created_by=request.user,
+    )
+    upload_url = request.build_absolute_uri(
+        f'/tasks/client-media/{upload_link.token}/'
+    )
+    return JsonResponse({
+        'status': 'success',
+        'token': str(upload_link.token),
+        'url': upload_url,
+    })
+
+
+def client_media_upload_page(request, token):
+    upload_link = _get_active_upload_link(token)
+    files = upload_link.files.all().order_by('-uploaded_at')
+    return render(request, 'client_media_upload.html', {
+        'upload_link': upload_link,
+        'files': files,
+        'is_submitted': upload_link.is_submitted,
+    })
+
+
+@require_POST
+def client_media_upload_files(request, token):
+    upload_link = _get_active_upload_link(token)
+    if upload_link.is_submitted:
+        return JsonResponse({'status': 'error', 'message': 'Uploads are closed.'}, status=403)
+
+    uploaded = []
+    for f in request.FILES.getlist('files'):
+        if not f.name:
+            continue
+        media_file = ClientMediaFile.objects.create(
+            upload_link=upload_link,
+            file=f,
+            original_name=_sanitize_filename(f.name),
+        )
+        uploaded.append({
+            'id': media_file.pk,
+            'name': media_file.original_name,
+            'url': media_file.file.url,
+            'is_video': media_file.original_name.lower().endswith(
+                ('.mp4', '.mov', '.avi', '.webm', '.mkv')
+            ),
+        })
+    return JsonResponse({'status': 'success', 'files': uploaded})
+
+
+@require_POST
+def client_media_delete_file(request, token, file_id):
+    upload_link = _get_active_upload_link(token)
+    if upload_link.is_submitted:
+        return JsonResponse({'status': 'error', 'message': 'Uploads are closed.'}, status=403)
+
+    media_file = get_object_or_404(ClientMediaFile, pk=file_id, upload_link=upload_link)
+    media_file.file.delete(save=False)
+    media_file.delete()
+    return JsonResponse({'status': 'success'})
+
+
+@require_POST
+def client_media_submit(request, token):
+    upload_link = _get_active_upload_link(token)
+    if upload_link.is_submitted:
+        return JsonResponse({'status': 'error', 'message': 'Already submitted.'}, status=400)
+
+    if not upload_link.files.exists():
+        return JsonResponse(
+            {'status': 'error', 'message': 'Please upload at least one file.'},
+            status=400,
+        )
+
+    upload_link.submitted_at = timezone.now()
+    upload_link.save(update_fields=['submitted_at'])
+    return JsonResponse({'status': 'success'})
+
+
+@login_required(login_url="/login/")
+def client_media_uploads_list(request):
+    links = ClientMediaUploadLink.objects.select_related(
+        'leadtask', 'leadtask__lead', 'created_by'
+    ).prefetch_related('files')
+    return render(request, 'client_media_uploads_list.html', {'links': links})
+
+
+@login_required(login_url="/login/")
+def client_media_upload_detail(request, token):
+    upload_link = get_object_or_404(
+        ClientMediaUploadLink.objects.select_related('leadtask', 'leadtask__lead'),
+        token=token,
+    )
+    files = upload_link.files.all().order_by('-uploaded_at')
+    return render(request, 'client_media_upload_detail.html', {
+        'upload_link': upload_link,
+        'files': files,
+    })

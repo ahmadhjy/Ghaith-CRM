@@ -1,24 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Add Attachment</title>
     <meta charset="UTF-8">
-    {% load static %}
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display-modern.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Attachment — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container">
-      <div class="content">
-        <h2>Add Attachment</h2>
+{% include 'navbar.html' %}
+
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Attachments</div>
+            <h1 class="req-hero__title">Add Attachment</h1>
+            <p class="req-hero__sub">Upload a file to this request.</p>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-card__head">
+            <div class="req-card__head-left">
+                <div class="req-card__icon req-card__icon--indigo"><i class="fas fa-paperclip"></i></div>
+                <div>
+                    <h2 class="req-card__title">Upload File</h2>
+                    <p class="req-card__sub">Name your attachment and select a file</p>
+                </div>
+            </div>
+        </div>
         <form method="post" enctype="multipart/form-data" class="attachment-form">
-          {% csrf_token %}
-          {{ form.as_p }}
-          <input type="submit" value="Submit" class="submit-button">
+            {% csrf_token %}
+            <div class="req-card__body">
+                <div class="req-grid">
+                    <div class="req-field">
+                        <label for="id_attachment_name">Attachment Name</label>
+                        {{ form.attachment_name }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_file">File</label>
+                        {{ form.file }}
+                    </div>
+                </div>
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--accent"><i class="fas fa-upload"></i> Upload</button>
+                <button type="button" class="req-btn req-btn--outline" onclick="history.back()">Cancel</button>
+            </div>
         </form>
-      </div>
     </div>
+</div>
 </body>
 </html>

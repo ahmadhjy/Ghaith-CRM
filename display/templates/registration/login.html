@@ -1,30 +1,20 @@
-<!-- <h2>Log In</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form }}
-  <button type="submit">Log In</button>
-</form> -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/login.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display-modern.css' %}">
+    {% include 'shared/app_head.html' %}
+    <title>Login — Ghaith CRM</title>
 </head>
-<body>
-    <div class="container">
-        <div class="content" style="max-width:420px; margin: 8vh auto;">
-            <img src="{% static 'images/logo.png' %}" alt="logo" class="logo">
-            <form method="post" class="login-form">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="login-button">Login</button>
-            </form>
-        </div>
+<body class="login-page">
+    {% load static %}
+    <div class="login-wrap">
+        <img src="{% static 'images/logo.png' %}" alt="Ghaith Travel" class="logo">
+        <h1 style="margin:0 0 6px;font-size:1.35rem;font-weight:800">Ghaith CRM</h1>
+        <p style="margin:0 0 24px;color:var(--req-muted);font-size:.9rem">Sign in to continue</p>
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="login-button"><i class="fas fa-sign-in-alt"></i> Login</button>
+        </form>
     </div>
 </body>
 </html>
-
-

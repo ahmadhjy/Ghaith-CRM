@@ -2,77 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Display Tasks</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tasks — Ghaith CRM</title>
 </head>
 <body>
 {% include 'navbar.html' %}
-<div class="container">
-    <div class="content">
-        <div class="header">
-            <h2>My Tasks</h2>
-            <a class="add-more fancy-link" href="{% url 'input_task' %}">New Task</a>
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Tasks</div>
+            <h1 class="req-hero__title">My Tasks</h1>
+            <p class="req-hero__sub">Your assigned tasks and follow-ups.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'input_task' %}" class="req-btn-ghost"><i class="fas fa-plus"></i> New Task</a>
+                <a href="{% url 'expired_tasks' %}" class="req-btn-ghost"><i class="fas fa-clock"></i> Overdue</a>
+            </div>
         </div>
-        <hr/>
-        <div class="status-counts-box">
-            <ul class="status-list">
-                {% for status, count in status_counts.items %}
-                <li>
-                    <span class="status">{{ status }}</span>
-                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="filter-container">
-            <!-- Filter dropdown -->
-            <form method="GET" action="{% url 'current tasks' %}" class="filter-form">
-                <label for="status" class="filter-label">Filter by Status:</label>
-                <select id="status" name="status" class="filter-select">
-                    <option value="">All</option>
-                    {% for choice in status_choices %}
-                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="filter-button">Apply Filter</button>
-            </form>
-            <!-- End of filter dropdown -->
-        
-            <!-- Smart Search form -->
-            <form method="GET" action="{% url 'current tasks' %}" class="smart-search-form">
-                <label for="search" class="filter-label">Search:</label>
-                <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
-                <button type="submit" class="filter-button">Search</button>
-            </form>
-            <!-- End of Smart Search form -->
-        </div>            
+    </header>
 
-        <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Due Time</th>
-                    <th>Status</th>
-                    <th>What Happened</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in data %}
-                    <tr class="{{task.status}}">
-                        <td data-label="Title">{{ task.title }}</td>
-                        <td data-label="Due Time">{{ task.due_time }}</td>
-                        <td data-label="Status">{{ task.status }}</td>
-                        <td data-label="What Happened">{{ task.what_happened }}</td>
-                        <td data-label="Action"><a href="{% url 'edit_task' task.pk %}" class="edit-link">Edit</a></td>
+    <div class="req-stats">
+        {% for status, count in status_counts.items %}
+        <div class="req-stat req-stat--{{ status }}">
+            <span class="req-stat__label">{{ status }}</span>
+            <span class="req-stat__value">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="req-card">
+        <div class="req-filters">
+            <form method="GET" action="{% url 'current tasks' %}">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Status</span>
+                    <select name="status" class="req-select">
+                        <option value="">All</option>
+                        {% for choice in status_choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="req-btn req-btn--primary req-btn--sm">Filter</button>
+            </form>
+            <form method="GET" action="{% url 'current tasks' %}">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Search</span>
+                    <input type="text" name="search" placeholder="Keywords…" class="req-input">
+                </div>
+                <button type="submit" class="req-btn req-btn--outline req-btn--sm">Search</button>
+            </form>
+        </div>
+        <div class="req-table-wrap">
+            <table class="req-table data-table">
+                <thead>
+                    <tr><th>Title</th><th>Due</th><th>Status</th><th>What Happened</th><th>Edit</th></tr>
+                </thead>
+                <tbody>
+                    {% for task in data %}
+                    <tr class="{{ task.status }}">
+                        <td data-label="Title"><strong>{{ task.title }}</strong></td>
+                        <td data-label="Due">{{ task.due_time|default:"—" }}</td>
+                        <td data-label="Status"><span class="req-status-pill">{{ task.status }}</span></td>
+                        <td data-label="What Happened">{{ task.what_happened|truncatechars:30|default:"—" }}</td>
+                        <td data-label="Edit"><a href="{% url 'edit_task' task.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    {% empty %}
+                    <tr><td colspan="5"><div class="req-empty"><i class="fas fa-tasks"></i>No tasks found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

@@ -3,82 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travellers</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/dashboard.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
+    <title>Travellers — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container list-page list-page--travellers">
-        <header class="list-page__header">
-            <h1 class="list-page__title">Travellers</h1>
-            <p class="list-page__desc">Orders with a travel date. Filter by destination, month, return date range.</p>
-        </header>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">Travellers</h1>
+            <p class="req-hero__sub">Upcoming and past travellers by destination and date.</p>
+        </div>
+    </header>
 
-        <div class="list-page__filters">
-            <form method="GET" action="{% url 'travellers_list' %}" class="filter-form filter-form--stack">
-                <label for="month">Month:</label>
-                <input type="month" name="month" id="month" value="{{ request_month }}" class="filter-input">
-                <label for="travel_date">Travel date:</label>
-                <input type="date" name="travel_date" id="travel_date" value="{{ request_travel_date }}" class="filter-input">
-                <label for="destination">Destination:</label>
-                <select name="destination" id="destination" class="filter-select">
-                    <option value="">All</option>
-                    {% for dest in destinations %}
-                    <option value="{{ dest }}" {% if request_destination == dest %}selected{% endif %}>{{ dest }}</option>
-                    {% endfor %}
-                </select>
-                <label for="return_from">Return date from:</label>
-                <input type="date" name="return_from" id="return_from" value="{{ return_from }}" class="filter-input">
-                <label for="return_to">Return date to:</label>
-                <input type="date" name="return_to" id="return_to" value="{{ return_to }}" class="filter-input">
-                <label class="filter-form__checkbox">
-                    <input type="checkbox" name="show_past" value="on" {% if show_past %}checked{% endif %}> Include already traveled
-                </label>
-                <label class="filter-form__checkbox">
-                    <input type="checkbox" name="show_cancellations" value="on" {% if show_cancellations %}checked{% endif %}> Show cancellations
-                </label>
-                <div class="filter-form__actions">
-                    <button type="submit" class="btn btn--primary">Filter</button>
-                    <a href="{% url 'travellers_list' %}" class="btn btn--secondary">Clear</a>
+    <div class="req-card">
+        <div class="req-filters">
+            <form method="GET" action="{% url 'travellers_list' %}" class="filter-form--stack">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Month</span>
+                    <input type="month" name="month" value="{{ request_month }}" class="req-input">
                 </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Travel Date</span>
+                    <input type="date" name="travel_date" value="{{ request_travel_date }}" class="req-input">
+                </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Destination</span>
+                    <select name="destination" class="req-select">
+                        <option value="">All</option>
+                        {% for dest in destinations %}
+                        <option value="{{ dest }}" {% if request_destination == dest %}selected{% endif %}>{{ dest }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Return From</span>
+                    <input type="date" name="return_from" value="{{ return_from }}" class="req-input">
+                </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Return To</span>
+                    <input type="date" name="return_to" value="{{ return_to }}" class="req-input">
+                </div>
+                <label class="filter-form__checkbox"><input type="checkbox" name="show_past" value="on" {% if show_past %}checked{% endif %}> Include past</label>
+                <label class="filter-form__checkbox"><input type="checkbox" name="show_cancellations" value="on" {% if show_cancellations %}checked{% endif %}> Cancellations</label>
+                <button type="submit" class="req-btn req-btn--primary req-btn--sm">Filter</button>
+                <a href="{% url 'travellers_list' %}" class="req-btn req-btn--outline req-btn--sm">Clear</a>
             </form>
         </div>
-
-        <div class="table-wrapper table-wrapper--responsive">
-            <table class="list-table list-table--travellers">
+        <div class="req-table-wrap">
+            <table class="req-table list-table">
                 <thead>
-                    <tr>
-                        <th>Client name</th>
-                        <th>Destinations</th>
-                        <th>Travel date</th>
-                        <th>Return date</th>
-                        <th>Order ID</th>
-                        <th>Assigned to</th>
-                    </tr>
+                    <tr><th>Client</th><th>Destination</th><th>Travel</th><th>Return</th><th>Order</th><th>Assigned</th></tr>
                 </thead>
                 <tbody>
                     {% for lt in travellers %}
-                    <tr class="list-table__row {% if lt.status == 'cancelled' %}list-table__row--cancelled{% endif %} {% if lt.travel_date %}{% if lt.travel_date|date:'Y-m-d' < today|date:'Y-m-d' %}list-table__row--past{% endif %}{% endif %}">
-                        <td data-label="Client name">{{ lt.lead.name }}</td>
-                        <td data-label="Destinations">{{ lt.lead.destination|default:"—" }}</td>
-                        <td data-label="Travel date">{{ lt.travel_date|date:"Y-m-d" }}</td>
-                        <td data-label="Return date">{% if lt.return_date %}{{ lt.return_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
-                        <td data-label="Order ID">
-                            <a href="{% url 'edit_lead_tasks' lt.pk %}" class="list-table__link">#{{ lt.pk }}</a>
-                        </td>
-                        <td data-label="Assigned to">{{ lt.assigned_to.get_full_name|default:lt.assigned_to.username }}</td>
+                    <tr class="{% if lt.status == 'cancelled' %}lost{% endif %}">
+                        <td data-label="Client"><strong>{{ lt.lead.name }}</strong></td>
+                        <td data-label="Destination">{{ lt.lead.destination|default:"—" }}</td>
+                        <td data-label="Travel">{{ lt.travel_date|date:"Y-m-d" }}</td>
+                        <td data-label="Return">{% if lt.return_date %}{{ lt.return_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                        <td data-label="Order"><a href="{% url 'edit_lead_tasks' lt.pk %}" class="req-link">#{{ lt.pk }}</a></td>
+                        <td data-label="Assigned">{{ lt.assigned_to.get_full_name|default:lt.assigned_to.username }}</td>
                     </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="6" class="list-table__empty">No travellers found.</td>
-                    </tr>
+                    <tr><td colspan="6"><div class="req-empty"><i class="fas fa-plane"></i>No travellers found.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+</div>
 </body>
 </html>

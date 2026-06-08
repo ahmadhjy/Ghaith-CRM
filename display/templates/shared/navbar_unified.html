@@ -1,6 +1,8 @@
 {% load static %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" type="text/css" href="{% static 'css/navbar-unified.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/requests-modern.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/app-modern-global.css' %}">
 
 <button class="app-nav__toggle" id="appNavToggle" aria-label="Open menu" aria-expanded="false">
   <i class="fas fa-bars"></i>
@@ -47,14 +49,15 @@
       <summary><i class="far fa-file-alt"></i><span>Orders</span></summary>
       <a href="{% url 'current_lead_tasks' %}">All Orders</a>
       <a href="{% url 'travellers_list' %}">Travellers</a>
-      <a href="{% url 'purchased_services' %}">Purchased Services</a>
-      <a href="{% url 'client_payments' %}">Client Payments</a>
       <a href="{% url 'supplier_payments_list' %}">Supplier Payments (Calendar)</a>
       <a href="{% url 'client_payments_list' %}">Client Payments (Calendar)</a>
     </details>
 
     <a class="app-nav__item" href="{% url 'event_new' %}" target="_blank" rel="noopener noreferrer">
       <i class="far fa-calendar-plus"></i><span>Create Reminder</span>
+    </a>
+    <a class="app-nav__item" href="{% url 'client_media_uploads_list' %}">
+      <i class="fas fa-photo-video"></i><span>Client Media</span>
     </a>
     <a class="app-nav__item" href="{% url 'list_daily_reports' %}">
       <i class="far fa-file-alt"></i><span>Daily Reports</span>

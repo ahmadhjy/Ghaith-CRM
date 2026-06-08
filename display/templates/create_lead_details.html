@@ -1,28 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-    {% load static %}
-    <head>
-        <title></title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="css/style.css" rel="stylesheet">
-        <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-        <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
-    </head>
-    <body>
-        {% include 'navbar.html' %}
-        <div class="container">
-        <div class="content">
-        <h2>Create Lead</h2>
-        <hr/>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" name="create_next">Create and Next ></button>
-        <button type="submit" name="submit_exit">Submit and Exit</button>
-    </form>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Lead — Ghaith CRM</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Requests</div>
+            <h1 class="req-hero__title">Create Lead</h1>
+            <p class="req-hero__sub">Quick lead entry form.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'create_lead' %}" class="req-btn-ghost">Use Workflow Form</a>
+            </div>
         </div>
-        </div>
+    </header>
 
-    </body>
+    <div class="req-card">
+        <form method="post">
+            {% csrf_token %}
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    {% for field in form %}
+                    <div class="req-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" name="create_next" class="req-btn req-btn--accent">Create and Next</button>
+                <button type="submit" name="submit_exit" class="req-btn req-btn--outline">Submit and Exit</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
 </html>

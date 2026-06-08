@@ -3,195 +3,437 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit LeadTask</title>
+    <title>Invoice #{{ leadid }} — {{ lead.name }}</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/edit-leadtask.css' %}">
 </head>
-<body>
-    {% include 'navbar.html' %}
-<div class="container">
-<div class="content">
-<h1>Edit Invoice</h1>
-<form method="post" enctype="multipart/form-data" id="inputForm">
-    {% csrf_token %}
-    <!-- Status field -->
-    <div class="form-group">
-        <label for="id_status">Status:</label>
-        {{ form.status }}
-    </div>
+<body class="edit-invoice-page">
+{% include 'navbar.html' %}
 
-<!-- Accordion Group 1: Name, Phone, Channel, Destination, Special Requests -->
-<div class="accordion">
-    <h2 class="accordion-header">Customer Details</h2>
-    <div class="accordion-content">
-        <div class="form-group">
-            <label for="id_name">Name:</label>
-            {{ lead.name }}
+<div class="inv-page">
+
+    <!-- Hero -->
+    <header class="inv-hero">
+        <div class="inv-hero__bg"></div>
+        <div class="inv-hero__content">
+            <div class="inv-hero__eyebrow">Invoice #{{ leadid }}</div>
+            <h1 class="inv-hero__title">{{ lead.name }}</h1>
+            <div class="inv-hero__meta">
+                <span><i class="fas fa-map-marker-alt"></i> {{ lead.destination|default:"—" }}</span>
+                <span><i class="fas fa-phone"></i> {{ lead.phone|default:"—" }}</span>
+                <span><i class="fas fa-broadcast-tower"></i> {{ lead.channel|default:"—" }}</span>
+            </div>
+            <div class="inv-hero__footer">
+                <span class="inv-badge inv-badge--{{ form.instance.status }}">
+                    <i class="fas fa-circle" style="font-size:.45rem"></i>
+                    {{ form.instance.get_status_display|default:form.instance.status }}
+                </span>
+                <div class="inv-hero__actions">
+                    <a href="{% url 'lead_task_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-pdf"></i> Internal PDF</a>
+                    <a href="{% url 'lead_task_client_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-export"></i> Client PDF</a>
+                    <a href="{% url 'current_lead_tasks' %}" class="inv-btn-ghost"><i class="fas fa-arrow-left"></i> All Orders</a>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="id_phone">Phone:</label>
-            {{ lead.phone }}
-        </div>
-        <div class="form-group">
-            <label for="id_channel">Channel:</label>
-            {{ lead.channel }}
-        </div>
-        <div class="form-group">
-            <label for="id_destination">Destination:</label>
-            {{ lead.destination }}
-        </div>
-        <div class="form-group">
-            <label for="id_special_request">Request Details</label>
-            {{ lead.special_request }}
-        </div>
-        <div class="form-group">
-            <label for="id_finalization_notes">What Happened:</label>
-            {{ lead.finalization_notes }}
-        </div>
-    </div>
-</div>
-<div class="form-group">
-<h1>Notes:</h1>
-{{ form.notes }}
+    </header>
+
+    <!-- Section navigation -->
+    <nav class="inv-section-nav" aria-label="Page sections">
+        <a href="#section-details"><i class="fas fa-sliders-h"></i> Details</a>
+        <a href="#section-customer"><i class="fas fa-user"></i> Customer</a>
+        <a href="#section-services"><i class="fas fa-concierge-bell"></i> Services</a>
+        <a href="#section-payments"><i class="fas fa-credit-card"></i> Payments</a>
+        <a href="#section-attachments"><i class="fas fa-paperclip"></i> Files</a>
+        <a href="#section-media"><i class="fas fa-photo-video"></i> Client Media</a>
+    </nav>
+
+    <main class="inv-main">
+
+        <!-- Invoice details form -->
+        <section id="section-details" class="inv-card">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--blue"><i class="fas fa-edit"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Invoice Details</h2>
+                        <p class="inv-card__subtitle">Status, dates, assignment &amp; notes</p>
+                    </div>
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data" id="inputForm">
+                {% csrf_token %}
+                <div class="inv-card__body">
+                    <div class="inv-grid inv-grid--2">
+                        <div class="inv-field">
+                            <label for="id_status">Status</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_assigned_to">Assign To</label>
+                            {{ form.assigned_to }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_payment">Payment Type</label>
+                            {{ form.payment }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_travel_date">Exact Travel Date</label>
+                            {{ form.travel_date }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_return_date">Return Date</label>
+                            {{ form.return_date }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_date_of_birth">Date of Birth</label>
+                            {{ form.date_of_birth }}
+                        </div>
+                        <div class="inv-field">
+                            <label for="id_passport_expiry_date">Passport Expiry</label>
+                            {{ form.passport_expiry_date }}
+                        </div>
+                        <div class="inv-field inv-field--full">
+                            <label for="id_finalization_notes">What Happened</label>
+                            {{ form.finalization_notes }}
+                        </div>
+                        <div class="inv-field inv-field--full">
+                            <label for="id_notes">Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-card__foot">
+                    <button type="submit" class="inv-btn inv-btn--primary"><i class="fas fa-save"></i> Save Invoice</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Customer details -->
+        <section id="section-customer" class="inv-card">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--teal"><i class="fas fa-user-circle"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Customer Details</h2>
+                        <p class="inv-card__subtitle">Read-only lead information</p>
+                    </div>
+                </div>
+                <button type="button" class="inv-collapse-toggle is-open" id="customerToggle" aria-label="Toggle customer details">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="inv-card__body inv-collapse-body is-open" id="customerBody">
+                <div class="inv-info-grid">
+                    <div class="inv-info-item">
+                        <div class="inv-info-item__label">Name</div>
+                        <div class="inv-info-item__value">{{ lead.name }}</div>
+                    </div>
+                    <div class="inv-info-item">
+                        <div class="inv-info-item__label">Phone</div>
+                        <div class="inv-info-item__value">{{ lead.phone|default:"—" }}</div>
+                    </div>
+                    <div class="inv-info-item">
+                        <div class="inv-info-item__label">Channel</div>
+                        <div class="inv-info-item__value">{{ lead.channel|default:"—" }}</div>
+                    </div>
+                    <div class="inv-info-item">
+                        <div class="inv-info-item__label">Destination</div>
+                        <div class="inv-info-item__value">{{ lead.destination|default:"—" }}</div>
+                    </div>
+                    <div class="inv-info-item" style="grid-column:1/-1">
+                        <div class="inv-info-item__label">Request Details</div>
+                        <div class="inv-info-item__value">{{ lead.special_request|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services -->
+        <section id="section-services" class="inv-card">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--purple"><i class="fas fa-concierge-bell"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Services</h2>
+                        <p class="inv-card__subtitle">{{ services|length }} service{{ services|length|pluralize }} on this invoice</p>
+                    </div>
+                </div>
+            </div>
+            <form method="post" id="update_service_form" action="{% url 'save_all_services' leadid %}">
+                {% csrf_token %}
+                <div class="inv-card__body" style="padding-top:0">
+                    <div class="services-table-scroll">
+                        <table id="servicesTable" class="services-table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Supplier</th>
+                                    <th>Details</th>
+                                    <th>Net</th>
+                                    <th>Selling</th>
+                                    <th>Due</th>
+                                    <th>Voucher</th>
+                                    <th>Send to Client</th>
+                                    <th>Paid</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for service in services %}
+                            <tr class="service-view-row {{ service.is_checked|yesno:'checked,' }}" data-service-id="{{ service.pk }}">
+                                <td class="service-name">
+                                    <strong>{{ service.service_name|default:"—" }}</strong>
+                                    <input type="hidden" name="service_{{ service.pk }}_service_name" value="{{ service.service_name|default:'' }}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_details" value="{{ service.details|default:'' }}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_net" value="{{ service.net|default:'' }}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_selling" value="{{ service.selling|default:'' }}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_send_to_client" value="{% if service.send_to_client %}on{% endif %}" form="update_service_form" data-service-inputs="view">
+                                </td>
+                                <td class="service-supplier">
+                                    <div class="supplier-field-wrap">
+                                        <select name="service_{{ service.pk }}_supplier" class="form-control supplier-select supplier-select--small" form="update_service_form" data-service-inputs="view">
+                                            <option value="">—</option>
+                                            {% for value, label in predefined_suppliers %}
+                                            <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                    {% if service.supplier and service.supplier not in predefined_supplier_values %}
+                                    <span class="supplier-previous" title="Existing value (not in list)">({{ service.supplier }})</span>
+                                    {% endif %}
+                                </td>
+                                <td class="service-details-cell" title="{{ service.details|default:'' }}">
+                                    <span class="service-details-truncate">{{ service.details|truncatechars:24|default:"—" }}</span>
+                                </td>
+                                <td class="service-net">{{ service.net|default:"—" }}</td>
+                                <td class="service-selling">{{ service.selling|default:"—" }}</td>
+                                <td class="service-due-time">{{ service.due_time|date:"M d, H:i"|default:"—" }}</td>
+                                <td class="service-voucher">{{ service.voucher_id|default:"—" }}</td>
+                                <td>
+                                    <label class="inv-toggle-label">
+                                        <span class="inv-toggle">
+                                            <input type="checkbox" class="service-send-to-client-cb" data-service-id="{{ service.pk }}" {% if service.send_to_client %}checked{% endif %} onchange="updateSendToClientStatus(this); syncServiceSendToClientHidden(this);">
+                                            <span class="inv-toggle__slider"></span>
+                                        </span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <label class="inv-toggle-label">
+                                        <span class="inv-toggle">
+                                            <input type="checkbox" class="service-is-checked-cb" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %}checked{% endif %} onchange="updateCheckboxStatus(this); syncServiceIsCheckedHidden(this);">
+                                            <span class="inv-toggle__slider"></span>
+                                        </span>
+                                    </label>
+                                </td>
+                                <td class="service-actions">
+                                    <button type="button" class="btn-edit-service" data-service-id="{{ service.pk }}"><i class="fas fa-pen"></i> Edit</button>
+                                    <a href="{% url 'delete_service' service.pk %}" class="service-delete-link" title="Delete"><i class="fas fa-times"></i></a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10">
+                                    <div class="inv-empty"><i class="fas fa-inbox"></i>No services yet — add one below.</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="inv-card__foot">
+                    <button type="button" class="inv-btn inv-btn--outline" onclick="addRow()"><i class="fas fa-plus"></i> Add Service</button>
+                    <button type="submit" class="inv-btn inv-btn--accent"><i class="fas fa-check"></i> Submit Services</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Payments -->
+        <section id="section-payments" class="inv-card">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--amber"><i class="fas fa-credit-card"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Payments</h2>
+                        <p class="inv-card__subtitle">Client payment schedule</p>
+                    </div>
+                </div>
+                <a href="{% url 'add_payment' pk=leadid %}" class="inv-btn inv-btn--primary inv-btn--sm"><i class="fas fa-plus"></i> Add Payment</a>
+            </div>
+            <div class="inv-card__body" style="padding-top:0">
+                {% if lead_task_payments %}
+                <table class="payment-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Paid</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for payment in lead_task_payments %}
+                    <tr class="{{ payment.is_checked|yesno:'checked,' }}">
+                        <td>{{ payment.date|date:"M d, Y" }}</td>
+                        <td class="payment-amount">${{ payment.amount }}</td>
+                        <td>
+                            <form method="post" action="{% url 'update_payment' payment.pk %}" style="display:inline">
+                                {% csrf_token %}
+                                <label class="inv-toggle">
+                                    <input type="checkbox" name="payment_checked" onchange="this.form.submit();" {% if payment.is_checked %}checked{% endif %}>
+                                    <span class="inv-toggle__slider"></span>
+                                </label>
+                            </form>
+                        </td>
+                        <td>
+                            <a href="{% url 'delete_payment' payment.pk %}" class="inv-btn inv-btn--danger inv-btn--sm"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="inv-empty">
+                    <i class="fas fa-wallet"></i>
+                    No payments recorded yet.
+                    <br><br>
+                    <a href="{% url 'add_payment' pk=leadid %}" class="inv-btn inv-btn--primary inv-btn--sm">Add First Payment</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Attachments -->
+        <section id="section-attachments" class="inv-card">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--indigo"><i class="fas fa-paperclip"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Attachments</h2>
+                        <p class="inv-card__subtitle">Internal files for this invoice</p>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-card__body" style="padding-top:0">
+                {% if attachments %}
+                <table class="attach-table">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for attachment in attachments %}
+                    <tr>
+                        <td>
+                            <a href="{{ attachment.file.url }}" class="attach-link" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-file"></i> {{ attachment.attachment_name }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="delete-attach"><i class="fas fa-trash"></i> Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="inv-empty"><i class="fas fa-folder-open"></i>No attachments uploaded yet.</div>
+                {% endif %}
+                <form method="post" action="{% url 'add_leadtask_attachments_multiple' leadid %}" enctype="multipart/form-data" class="attach-upload-form">
+                    {% csrf_token %}
+                    <i class="fas fa-cloud-upload-alt" style="color:var(--inv-muted);font-size:1.2rem"></i>
+                    <input type="file" name="files" id="id_files" multiple class="attach-multiple-input">
+                    <button type="submit" class="inv-btn inv-btn--accent inv-btn--sm"><i class="fas fa-upload"></i> Upload Files</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Client media -->
+        <section id="section-media" class="inv-card client-media-section">
+            <div class="inv-card__head">
+                <div class="inv-card__head-left">
+                    <div class="inv-card__icon inv-card__icon--rose"><i class="fas fa-photo-video"></i></div>
+                    <div>
+                        <h2 class="inv-card__title">Client Media Upload</h2>
+                        <p class="inv-card__subtitle">Share a unique link for clients to upload tour photos &amp; videos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-card__body">
+                <div class="client-media-link-row">
+                    <button type="button" class="inv-btn inv-btn--primary" id="btnCreateMediaLink"><i class="fas fa-link"></i> Create Upload Link</button>
+                    <input type="text" id="clientMediaLinkInput" class="client-media-link-input" readonly placeholder="Generated link appears here…">
+                    <button type="button" class="inv-btn inv-btn--outline" id="btnCopyMediaLink" disabled><i class="fas fa-copy"></i> Copy</button>
+                </div>
+                {% if media_upload_links %}
+                <ul class="inv-media-links">
+                    {% for link in media_upload_links %}
+                    <li>
+                        <strong>{{ link.client_name }}</strong>
+                        <span style="color:var(--inv-muted)">{{ link.created_at|date:"M d, Y H:i" }}</span>
+                        {% if link.is_submitted %}
+                        <span class="inv-pill inv-pill--submitted">Submitted</span>
+                        {% else %}
+                        <span class="inv-pill inv-pill--open">Open</span>
+                        {% endif %}
+                        <a href="{% url 'client_media_upload' link.token %}" target="_blank" rel="noopener noreferrer" class="inv-btn inv-btn--outline inv-btn--sm">Open Page</a>
+                        <a href="{% url 'client_media_upload_detail' link.token %}" class="inv-btn inv-btn--outline inv-btn--sm">View Uploads</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </section>
+
+    </main>
 </div>
 
-<div class="form-group">
-    <label for="id_travel_date">Exact Travel Date:</label>
-    {{ form.travel_date }}
-</div>
-
-<div class="form-group">
-    <label for="id_return_date">Return Date:</label>
-    {{ form.return_date }}
-</div>
-
-<div class="form-group">
-    <label for="id_date_of_birth">Date of Birth:</label>
-    {{ form.date_of_birth }}
-</div>
-
-<div class="form-group">
-    <label for="id_passport_expiry_date">Passport Expiry Date:</label>
-    {{ form.passport_expiry_date }}
-</div>
-
-<div class="form-group">
-    <label for="id_payment">Payment Type:</label>
-    {{ form.payment }}
-</div>
-
-<div class="form-group">
-    <label for="id_travel_date">Assign to:</label>
-    {{ form.assigned_to }}
-</div>
-
-<!-- Button to submit form -->
-<button type="submit">Save</button>
-</form>
-<br><br>
-<hr/>
-<br><br>
-
-<form method="post" id="update_service_form" action="{% url 'save_all_services' leadid %}">
-    {% csrf_token %}
-<div class="services-table-scroll">
-<table id="servicesTable" class="services-table">
-    <thead>
-        <tr>
-            <th>Service Type</th>
-            <th>Supplier</th>
-            <th>Details</th>
-            <th>Net</th>
-            <th>Selling</th>
-            <th>Due Time</th>
-            <th>Voucher ID</th>
-            <th> </th>
-            <th> </th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Existing services: view row (with hidden inputs for submit) + edit row -->
+<!-- Edit service modals -->
 {% for service in services %}
-<tr class="service-view-row {{ service.is_checked|yesno:'checked,' }}" data-service-id="{{ service.pk }}">
-    <td class="service-name">
-        {{ service.service_name }}
-        <input type="hidden" name="service_{{ service.pk }}_service_name" value="{{ service.service_name|default:'' }}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_details" value="{{ service.details|default:'' }}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_net" value="{{ service.net|default:'' }}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_selling" value="{{ service.selling|default:'' }}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="update_service_form" data-service-inputs="view">
-        <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="update_service_form" data-service-inputs="view">
-    </td>
-    <td class="service-supplier">
-        <select name="service_{{ service.pk }}_supplier" class="form-control supplier-select supplier-select--small" form="update_service_form" data-service-inputs="view">
-            <option value="">—</option>
-            {% for value, label in predefined_suppliers %}
-            <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        {% if service.supplier and service.supplier not in predefined_supplier_values %}
-        <span class="supplier-previous" title="Existing value (not in list)">({{ service.supplier }})</span>
-        {% endif %}
-    </td>
-    <td class="service-details-cell" title="{{ service.details|default:'' }}">
-        <span class="service-details-truncate">{{ service.details|truncatechars:20|default:"—" }}</span>
-    </td>
-    <td class="service-net">{{ service.net }}</td>
-    <td class="service-selling">{{ service.selling }}</td>
-    <td class="service-due-time">{{ service.due_time|date:"Y-m-d H:i" }}</td>
-    <td class="service-voucher">{{ service.voucher_id }}</td>
-    <td>
-        <input type="checkbox" class="service-is-checked-cb" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %} checked {% endif %} onchange="updateCheckboxStatus(this); syncServiceIsCheckedHidden(this);">
-    </td>
-    <td class="service-actions">
-        <button type="button" class="btn-edit-service" data-service-id="{{ service.pk }}">Edit</button>
-        <a href="{% url 'delete_service' service.pk %}" class="service-delete-link" title="Delete">X</a>
-    </td>
-</tr>
-{% endfor %}
-    </tbody>
-</table>
-</div>
-<button type="button" onclick="addRow()">Add New Service</button>
-<button type="submit">Submit Services</button>
-
-</form>
-
-<!-- Edit service modals (one per service) – hidden by default, shown on Edit -->
-{% for service in services %}
-<div id="modal-service-{{ service.pk }}" class="service-edit-modal" aria-hidden="true" style="display: none;">
+<div id="modal-service-{{ service.pk }}" class="service-edit-modal" aria-hidden="true" style="display:none">
     <div class="service-edit-modal__overlay" data-close-modal="modal-service-{{ service.pk }}"></div>
     <div class="service-edit-modal__box">
-        <h3 class="service-edit-modal__title">Edit service</h3>
+        <h3 class="service-edit-modal__title"><i class="fas fa-pen"></i> Edit Service</h3>
         <form method="post" action="{% url 'update_service' service.pk %}" class="service-edit-modal__form">
             {% csrf_token %}
             <div class="service-edit-modal__fields">
-                <label>Service type / Hotel</label>
+                <label>Service Type / Hotel</label>
                 <input type="text" name="service_name" value="{{ service.service_name|default:'' }}" class="form-control">
                 <label>Supplier</label>
-                <select name="supplier" class="form-control">
-                    <option value="">—</option>
-                    {% for value, label in predefined_suppliers %}
-                    <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+                <div class="supplier-field-wrap">
+                    <select name="supplier" class="form-control supplier-select">
+                        <option value="">—</option>
+                        {% for value, label in predefined_suppliers %}
+                        <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button>
+                </div>
+                <label>Send to Client</label>
+                <label class="inv-toggle">
+                    <input type="checkbox" name="send_to_client" {% if service.send_to_client %}checked{% endif %}>
+                    <span class="inv-toggle__slider"></span>
+                </label>
                 <label>Details</label>
                 <input type="text" name="details" value="{{ service.details|default:'' }}" class="form-control">
                 <label>Net</label>
                 <input type="text" name="net" value="{{ service.net|default:'' }}" class="form-control">
                 <label>Selling</label>
                 <input type="text" name="selling" value="{{ service.selling|default:'' }}" class="form-control">
-                <label>Due time</label>
+                <label>Due Time</label>
                 <input type="datetime-local" name="due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" class="form-control">
                 <label>Voucher ID</label>
                 <input type="text" name="voucher_id" value="{{ service.voucher_id|default:'' }}" class="form-control">
                 <input type="hidden" name="is_checked" value="{% if service.is_checked %}on{% endif %}">
             </div>
             <div class="service-edit-modal__actions">
-                <button type="submit" class="btn btn--primary">Save</button>
+                <button type="submit" class="btn btn--primary"><i class="fas fa-save"></i> Save</button>
                 <button type="button" class="btn btn--secondary btn-close-service-modal" data-close-modal="modal-service-{{ service.pk }}">Cancel</button>
             </div>
         </form>
@@ -199,133 +441,116 @@
 </div>
 {% endfor %}
 
-<div class="payment-container">
-    {% if lead_task_payments %}
-    <h1>Payments</h1>
-        <table class="payment-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Payed?</th>
-                    <th>Delete</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for payment in lead_task_payments %}
-
-            <tr class="{{ payment.is_checked|yesno:'checked,' }}">
-                <td>{{ payment.date }}</td>
-                <td>{{ payment.amount }}$</td>
-                <td>
-                    <form method="post" action="{% url 'update_payment' payment.pk %}">
-                        {% csrf_token %}
-                        <input type="checkbox" name="payment_checked" onchange="this.form.submit();" {% if payment.is_checked %} checked {% endif %}>
-                    </form>
-                </td>
-                <td>
-                    <a href="{% url 'delete_payment' payment.pk %}">Delete</a>
-                </td>
-            </tr>
-
-            {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No payments found for this lead task.</p>
-    {% endif %}
-    <a href="{% url 'add_payment' pk=leadid %}" class="add-payment-link button">Add Payment</a>
+<!-- Supplier modal -->
+<div id="supplierModal" class="supplier-modal" aria-hidden="true">
+    <div class="supplier-modal__overlay" onclick="closeSupplierModal()"></div>
+    <div class="supplier-modal__box">
+        <h3><i class="fas fa-building"></i> Add Supplier</h3>
+        <form id="supplierCreateForm">
+            {% csrf_token %}
+            <label for="id_supplier_name">Name *</label>
+            <input type="text" name="name" id="id_supplier_name" class="form-control" required maxlength="120">
+            <label for="id_supplier_is_active">Active</label>
+            <label class="inv-toggle" style="margin-top:4px">
+                <input type="checkbox" name="is_active" id="id_supplier_is_active" checked>
+                <span class="inv-toggle__slider"></span>
+            </label>
+            <div class="supplier-modal__actions">
+                <button type="submit" class="inv-btn inv-btn--primary">Save Supplier</button>
+                <button type="button" class="inv-btn inv-btn--outline" onclick="closeSupplierModal()">Cancel</button>
+            </div>
+            <p id="supplierFormError" style="display:none"></p>
+        </form>
+    </div>
 </div>
 
-<!-- attachment_list.html -->
-
-<div class="attach-container">  
-    {% if attachments %}
-    <h1>Attachments</h1>
-        <table class="attach-table">
-            <thead>
-                <tr>
-                    <th>Attachment</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for attachment in attachments %}
-                    <tr>
-                        <td>
-                            <a href="{{ attachment.file.url }}" class="attach-link">{{ attachment.attachment_name }}</a>
-                        </td>
-                        <td>
-                            <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="delete-attach">Delete</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No attachments found.</p>
-    {% endif %}
-    <form method="post" action="{% url 'add_leadtask_attachments_multiple' leadid %}" enctype="multipart/form-data" class="attach-upload-form">
-        {% csrf_token %}
-        <input type="file" name="files" id="id_files" multiple class="attach-multiple-input">
-        <button type="submit" class="add-payment-link button">Upload</button>
-    </form>
-</div>
-<a href="{% url 'lead_task_pdf' pk=leadid %}">Download PDF</a>
-<br>
-<a href="{% url 'lead_task_client_pdf' pk=leadid %}">Download Client PDF</a>
-</div>
-</div>
-<script src="{% static 'JS/sidebar.js'%}"></script>
 <script>
+/* ── Customer collapse ── */
+document.getElementById('customerToggle').addEventListener('click', function() {
+    var body = document.getElementById('customerBody');
+    body.classList.toggle('is-open');
+    this.classList.toggle('is-open');
+});
+
+/* ── Smooth scroll for section nav ── */
+document.querySelectorAll('.inv-section-nav a').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+        var target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
+
+/* ── Section nav highlight ── */
+(function() {
+    var links = document.querySelectorAll('.inv-section-nav a');
+    var sections = [];
+    links.forEach(function(a) {
+        var id = a.getAttribute('href').slice(1);
+        var el = document.getElementById(id);
+        if (el) sections.push({ link: a, el: el });
+    });
+    function onScroll() {
+        var scrollY = window.scrollY + 120;
+        var current = sections[0];
+        sections.forEach(function(s) {
+            if (s.el.offsetTop <= scrollY) current = s;
+        });
+        links.forEach(function(a) { a.classList.remove('is-active'); });
+        if (current) current.link.classList.add('is-active');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+})();
 
 function addRow() {
-        const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
-        const newRow = table.insertRow();
-        newRow.className = 'service-edit-row';
-        var supplierOptions = '';
-        {% for value, label in predefined_suppliers %}
-        supplierOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
-        {% endfor %}
-        newRow.innerHTML = `
-            <td><input type="text" name="service_name[]" class="form-control" placeholder="Service Type"></td>
-            <td><select name="supplier[]" class="form-control">${supplierOptions}</select></td>
-            <td><input type="text" name="details[]" class="form-control" placeholder="Details"></td>
-            <td><input type="text" name="net[]" class="form-control" placeholder="Net"></td>
-            <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
-            <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
-            <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher ID"></td>
-            <td></td>
-            <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove()">X</button></td>
-        `;
-    }
+    const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
+    const emptyRow = table.querySelector('td[colspan]');
+    if (emptyRow) emptyRow.closest('tr').remove();
+    const newRow = table.insertRow();
+    newRow.className = 'service-edit-row';
+    var supplierOptions = '<option value="">—</option>';
+    {% for value, label in predefined_suppliers %}
+    supplierOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
+    {% endfor %}
+    newRow.innerHTML = `
+        <td><input type="text" name="service_name[]" class="form-control" placeholder="Service type"></td>
+        <td><div class="supplier-field-wrap"><select name="supplier[]" class="form-control supplier-select">${supplierOptions}</select><button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button></div></td>
+        <td><input type="text" name="details[]" class="form-control" placeholder="Details"></td>
+        <td><input type="text" name="net[]" class="form-control" placeholder="Net"></td>
+        <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
+        <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
+        <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher"></td>
+        <td><label class="inv-toggle-label"><span class="inv-toggle"><input type="checkbox" name="send_to_client[]" value="on"><span class="inv-toggle__slider"></span></span></label></td>
+        <td></td>
+        <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>
+    `;
+}
+
 function updateCheckboxStatus(checkbox) {
     const serviceId = checkbox.getAttribute('data-service-id');
     const isChecked = checkbox.checked ? 'on' : 'off';
-
-    fetch(`/tasks/service/update_checked_status/${serviceId}/`, {
+    const row = checkbox.closest('tr');
+    fetch('/tasks/service/update_checked_status/' + serviceId + '/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'), // Ensure CSRF token is correctly retrieved
+            'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `is_checked=${isChecked}`
+        body: 'is_checked=' + isChecked
     })
-    .then(response => {
+    .then(function(response) {
         if (response.ok) {
-            console.log('Update successful');
+            if (row) row.classList.toggle('checked', checkbox.checked);
         } else {
-            console.error('Failed to update');
-            checkbox.checked = !checkbox.checked; // Revert checkbox if update fails
+            checkbox.checked = !checkbox.checked;
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        checkbox.checked = !checkbox.checked; // Revert checkbox on network error
-    });
+    .catch(function() { checkbox.checked = !checkbox.checked; });
 }
 
-// Function to get the CSRF token from cookies
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -373,6 +598,131 @@ document.querySelectorAll('.service-edit-modal__overlay, .btn-close-service-moda
     el.addEventListener('click', function() {
         var modalId = this.getAttribute('data-close-modal');
         if (modalId) closeServiceModal(modalId);
+    });
+});
+
+var supplierModalTrigger = null;
+
+function openSupplierModal(btn) {
+    supplierModalTrigger = btn;
+    var modal = document.getElementById('supplierModal');
+    modal.classList.add('supplier-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('supplierFormError').style.display = 'none';
+}
+
+function closeSupplierModal() {
+    var modal = document.getElementById('supplierModal');
+    modal.classList.remove('supplier-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
+    supplierModalTrigger = null;
+}
+
+function appendSupplierToSelects(name) {
+    document.querySelectorAll('.supplier-select').forEach(function(sel) {
+        var exists = Array.from(sel.options).some(function(opt) { return opt.value === name; });
+        if (!exists) {
+            var opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        }
+    });
+}
+
+function selectSupplierInContext(name) {
+    if (supplierModalTrigger) {
+        var wrap = supplierModalTrigger.closest('.supplier-field-wrap');
+        if (wrap) {
+            var sel = wrap.querySelector('.supplier-select');
+            if (sel) sel.value = name;
+        }
+    }
+}
+
+document.getElementById('supplierCreateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var errEl = document.getElementById('supplierFormError');
+    errEl.style.display = 'none';
+    var formData = new FormData(this);
+    if (!formData.has('is_active')) formData.append('is_active', 'off');
+
+    fetch('{% url "create_supplier" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+    })
+    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    .then(function(res) {
+        if (res.ok && res.data.status === 'success') {
+            appendSupplierToSelects(res.data.name);
+            selectSupplierInContext(res.data.name);
+            document.getElementById('id_supplier_name').value = '';
+            closeSupplierModal();
+        } else {
+            var msg = 'Could not save supplier.';
+            if (res.data.errors) msg = Object.values(res.data.errors).flat().join(' ');
+            errEl.textContent = msg;
+            errEl.style.display = 'block';
+        }
+    })
+    .catch(function() {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+    });
+});
+
+function updateSendToClientStatus(checkbox) {
+    var serviceId = checkbox.getAttribute('data-service-id');
+    var isChecked = checkbox.checked ? 'on' : 'off';
+    fetch('/tasks/service/update_send_to_client/' + serviceId + '/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'send_to_client=' + isChecked
+    }).then(function(response) {
+        if (!response.ok) checkbox.checked = !checkbox.checked;
+    }).catch(function() { checkbox.checked = !checkbox.checked; });
+}
+
+function syncServiceSendToClientHidden(checkbox) {
+    var sid = checkbox.getAttribute('data-service-id');
+    var hid = document.querySelector('input[name="service_' + sid + '_send_to_client"][data-service-inputs="view"]');
+    if (hid) hid.value = checkbox.checked ? 'on' : '';
+}
+document.querySelectorAll('.service-send-to-client-cb').forEach(function(cb) { syncServiceSendToClientHidden(cb); });
+
+document.getElementById('btnCreateMediaLink').addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true;
+    fetch('{% url "create_client_media_link" leadid %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        if (data.status === 'success') {
+            document.getElementById('clientMediaLinkInput').value = data.url;
+            document.getElementById('btnCopyMediaLink').disabled = false;
+        }
+    })
+    .catch(function() { btn.disabled = false; });
+});
+
+document.getElementById('btnCopyMediaLink').addEventListener('click', function() {
+    var input = document.getElementById('clientMediaLinkInput');
+    if (!input.value) return;
+    navigator.clipboard.writeText(input.value).then(function() {
+        var btn = document.getElementById('btnCopyMediaLink');
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(function() { btn.innerHTML = orig; }, 2000);
+    }).catch(function() {
+        input.select();
+        document.execCommand('copy');
     });
 });
 </script>

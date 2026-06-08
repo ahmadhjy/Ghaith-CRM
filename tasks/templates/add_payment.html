@@ -1,24 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Add New Payment</title>
     <meta charset="UTF-8">
-    {% load static %}
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/attach.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Payment — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container">
-    <div class="content">
-    <div class="payment-form-container">
-        <form method="post" enctype="multipart/form-data" class="payment-form">
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">Add Payment</h1>
+            <p class="req-hero__sub">Record a new client payment on this invoice.</p>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <form method="post" class="payment-form">
             {% csrf_token %}
-            {{ form.as_p }}
-            <input type="submit" value="Submit" class="submit-button">
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field">
+                        <label for="id_amount">Amount</label>
+                        {{ form.amount }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_date">Date</label>
+                        {{ form.date }}
+                    </div>
+                </div>
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--accent"><i class="fas fa-plus"></i> Add Payment</button>
+                <button type="button" class="req-btn req-btn--outline" onclick="history.back()">Cancel</button>
+            </div>
         </form>
     </div>
-    </div>
-    </div>
+</div>
 </body>
 </html>

@@ -2,47 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Display Tasks</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Done Invoices — Ghaith CRM</title>
 </head>
 <body>
 {% include 'navbar.html' %}
-<div class="container">
-  <div class="content">
-    <div class="header">
-      <h2>Done Invoices</h2>
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">Done Invoices</h1>
+            <p class="req-hero__sub">Completed lead tasks and finalized orders.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'current_lead_tasks' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> All Orders</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-table-wrap">
+            <table class="req-table data-table">
+                <thead>
+                    <tr>
+                        <th>Invoice ID</th>
+                        <th>Lead Name</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>Finalization Notes</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in data %}
+                    <tr class="{{ d.status }}">
+                        <td data-label="Invoice ID">{{ d.pk }}</td>
+                        <td data-label="Lead Name"><strong>{{ d.lead.name }}</strong></td>
+                        <td data-label="Destination">{{ d.lead.destination }}</td>
+                        <td data-label="Status"><span class="req-status-pill req-status-pill--{{ d.status }}">{{ d.status }}</span></td>
+                        <td data-label="Finalization Notes">{{ d.lead.finalization_notes|default:"—" }}</td>
+                        <td data-label="Action"><a href="{% url 'edit_lead_tasks' d.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6"><div class="req-empty"><i class="fas fa-check-circle"></i>No done invoices yet.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    <hr/>
-    <div class="table-responsive">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Invoice ID</th>
-            <th>Lead Name</th>
-            <th>Destination</th>
-            <th>Status</th>
-            <th>Finalization Notes</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for d in data %}
-          <tr class="{{ d.status }}">
-            <td data-label="Invoice ID">{{ d.pk }}</td>
-            <td data-label="Lead Name">{{ d.lead.name }}</td>
-            <td data-label="Destination">{{ d.lead.destination }}</td>
-            <td data-label="Status">{{ d.status }}</td>
-            <td data-label="Finalization Notes">{{ d.lead.finalization_notes }}</td>
-            <td data-label="Action"><a href="{% url 'edit_lead_tasks' d.pk %}" class="edit-link">Edit</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
 </body>
 </html>
-

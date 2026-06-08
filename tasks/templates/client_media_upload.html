@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Your Photos &amp; Videos — Ghaith Travel</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f4f8;
+            color: #334e68;
+        }
+        .page {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(15, 76, 129, 0.08);
+        }
+        h1 { margin: 0 0 8px; color: #0f4c81; font-size: 1.5rem; }
+        .subtitle { margin: 0 0 20px; color: #627d98; }
+        .upload-zone {
+            border: 2px dashed #bcccdc;
+            border-radius: 8px;
+            padding: 28px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+        .upload-zone:hover { border-color: #0f4c81; background: #f0f7ff; }
+        .upload-zone input { display: none; }
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .media-item {
+            position: relative;
+            border: 1px solid #d9e2ec;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .media-item img, .media-item video {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            display: block;
+        }
+        .media-item__name {
+            font-size: 11px;
+            padding: 6px 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .media-item__remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0,0,0,.65);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .actions { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            border: none;
+            border-radius: 6px;
+            padding: 12px 20px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #0f4c81; color: #fff; }
+        .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-secondary { background: #d9e2ec; color: #334e68; }
+        .status-msg { margin-top: 12px; font-weight: 600; }
+        .status-msg--success { color: #2f855a; }
+        .status-msg--error { color: #c53030; }
+        .submitted-banner {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            color: #234e52;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="card">
+        <h1>Share Your Trip Media</h1>
+        <p class="subtitle">Hello {{ upload_link.client_name }}, upload the photos and videos from your tour below.</p>
+
+        {% if is_submitted %}
+        <div class="submitted-banner">
+            <i class="fas fa-check-circle"></i>
+            Thank you! Your media has been submitted successfully.
+        </div>
+        {% endif %}
+
+        <div id="uploadSection" {% if is_submitted %}style="display:none"{% endif %}>
+            <label class="upload-zone" id="uploadZone">
+                <i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:#0f4c81;"></i>
+                <p>Tap to add photos or videos</p>
+                <input type="file" id="fileInput" accept="image/*,video/*" multiple>
+            </label>
+            <div class="media-grid" id="mediaGrid"></div>
+            <div class="actions">
+                <button type="button" class="btn btn-primary" id="btnSubmit" disabled>Submit All Media</button>
+            </div>
+            <p id="statusMsg" class="status-msg"></p>
+        </div>
+
+        {% if is_submitted and files %}
+        <div class="media-grid">
+            {% for file in files %}
+            <div class="media-item">
+                {% if file.is_video %}
+                <video src="{{ file.file.url }}" controls></video>
+                {% else %}
+                <img src="{{ file.file.url }}" alt="{{ file.original_name }}">
+                {% endif %}
+                <div class="media-item__name">{{ file.original_name }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+const token = '{{ upload_link.token }}';
+const uploadUrl = '{% url "client_media_upload_files" upload_link.token %}';
+const deleteUrlBase = '{% url "client_media_delete_file" upload_link.token 0 %}'.replace('/0/', '/');
+const submitUrl = '{% url "client_media_submit" upload_link.token %}';
+const csrfToken = '{{ csrf_token }}';
+const isSubmitted = {{ is_submitted|yesno:"true,false" }};
+
+const mediaGrid = document.getElementById('mediaGrid');
+const fileInput = document.getElementById('fileInput');
+const btnSubmit = document.getElementById('btnSubmit');
+const statusMsg = document.getElementById('statusMsg');
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateSubmitState() {
+    btnSubmit.disabled = mediaGrid.children.length === 0;
+}
+
+function renderFileItem(file) {
+    const item = document.createElement('div');
+    item.className = 'media-item';
+    item.dataset.fileId = file.id;
+
+    let preview;
+    if (file.is_video) {
+        preview = document.createElement('video');
+        preview.src = file.url;
+        preview.controls = true;
+    } else {
+        preview = document.createElement('img');
+        preview.src = file.url;
+        preview.alt = file.name;
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'media-item__remove';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.addEventListener('click', function() {
+        fetch(deleteUrlBase + file.id + '/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') || csrfToken }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status === 'success') {
+                item.remove();
+                updateSubmitState();
+            }
+        });
+    });
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'media-item__name';
+    nameEl.textContent = file.name;
+
+    item.appendChild(preview);
+    item.appendChild(removeBtn);
+    item.appendChild(nameEl);
+    mediaGrid.appendChild(item);
+    updateSubmitState();
+}
+
+{% if not is_submitted %}
+{% for file in files %}
+renderFileItem({
+    id: {{ file.pk }},
+    name: '{{ file.original_name|escapejs }}',
+    url: '{{ file.file.url }}',
+    is_video: {{ file.is_video|yesno:"true,false" }}
+});
+{% endfor %}
+{% endif %}
+
+fileInput.addEventListener('change', function() {
+    if (!this.files.length) return;
+    const formData = new FormData();
+    for (let i = 0; i < this.files.length; i++) {
+        formData.append('files', this.files[i]);
+    }
+    statusMsg.textContent = 'Uploading...';
+    statusMsg.className = 'status-msg';
+
+    fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') || csrfToken },
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.status === 'success') {
+            data.files.forEach(renderFileItem);
+            statusMsg.textContent = '';
+            fileInput.value = '';
+        } else {
+            statusMsg.textContent = data.message || 'Upload failed.';
+            statusMsg.className = 'status-msg status-msg--error';
+        }
+    })
+    .catch(function() {
+        statusMsg.textContent = 'Upload failed. Please try again.';
+        statusMsg.className = 'status-msg status-msg--error';
+    });
+});
+
+btnSubmit.addEventListener('click', function() {
+    btnSubmit.disabled = true;
+    statusMsg.textContent = 'Submitting...';
+    fetch(submitUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') || csrfToken }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.status === 'success') {
+            statusMsg.textContent = 'Submitted successfully! Thank you.';
+            statusMsg.className = 'status-msg status-msg--success';
+            document.getElementById('uploadSection').style.display = 'none';
+            location.reload();
+        } else {
+            statusMsg.textContent = data.message || 'Could not submit.';
+            statusMsg.className = 'status-msg status-msg--error';
+            btnSubmit.disabled = false;
+        }
+    })
+    .catch(function() {
+        statusMsg.textContent = 'Could not submit. Please try again.';
+        statusMsg.className = 'status-msg status-msg--error';
+        btnSubmit.disabled = false;
+    });
+});
+
+updateSubmitState();
+</script>
+</body>
+</html>

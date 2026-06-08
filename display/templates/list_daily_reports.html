@@ -2,48 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Daily Reports</title>
-    {% load static %}
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/report.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reports — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container">
-        <div class="content">
-        <h2 class="fancy-header">Daily Reports</h2>
-        <div class="d-flex justify-content-between mb-3">
-            <a href="{% url 'daily_report' %}" class="btn btn-primary">New Report</a>
-            <form method="get" class="form-inline">
-                <div class="form-group mx-sm-3 mb-2">
-                    <label for="date" class="sr-only">Date</label>
-                    <input type="date" class="form-control" id="date" name="date" value="{{ date_filter }}">
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Reports</div>
+            <h1 class="req-hero__title">Daily Reports</h1>
+            <p class="req-hero__sub">Team daily activity summaries.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'daily_report' %}" class="req-btn-ghost"><i class="fas fa-plus"></i> New Report</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-filters">
+            <form method="get">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Date</span>
+                    <input type="date" name="date" class="req-input" value="{{ date_filter }}">
                 </div>
-                <button type="submit" class="btn btn-secondary mb-2">Filter</button>
+                <button type="submit" class="req-btn req-btn--primary req-btn--sm">Filter</button>
             </form>
         </div>
-        <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Username</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for report in reports %}
+        <div class="req-table-wrap">
+            <table class="req-table table">
+                <thead><tr><th>Date</th><th>User</th><th>View</th></tr></thead>
+                <tbody>
+                    {% for report in reports %}
                     <tr>
-                        <td><a href="{% url 'view_daily_report' report.pk %}">{{ report.created_at }}</a></td>
-                        <td>{{ report.user.username }}</td>
+                        <td data-label="Date">{{ report.created_at }}</td>
+                        <td data-label="User">{{ report.user.username }}</td>
+                        <td data-label="View"><a href="{% url 'view_daily_report' report.pk %}" class="req-btn req-btn--outline req-btn--sm">Open</a></td>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
+                    {% empty %}
+                    <tr><td colspan="3"><div class="req-empty"><i class="fas fa-file-alt"></i>No reports found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 </body>
 </html>

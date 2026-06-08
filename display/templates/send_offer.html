@@ -1,72 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-    {% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Send Offer</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
+    <title>Send Offer — {{ lead.name }}</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container">
-        <div class="content">
-        <h2>Send Offer</h2>
-        <hr/>
-        <div class="container-assist">
-        <b>Name  </b>{{ lead.name }} <br/>
-        <b>Phone  </b>{{ lead.phone }} <br/>
-        <b>Destination  </b>{{ lead.destination }} <br/>
-        <hr/>
+{% include 'navbar.html' %}
+
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Step 3 — Send Offer</div>
+            <h1 class="req-hero__title">{{ lead.name }}</h1>
+            <p class="req-hero__sub">Record offer details and send to the client.</p>
+        </div>
+    </header>
+
+    {% include 'shared/workflow_stepper.html' with workflow_step=3 lead=lead %}
+
+    <div class="req-lead-banner">
+        <div class="req-lead-banner__item"><i class="fas fa-user"></i><strong>Name</strong> {{ lead.name }}</div>
+        <div class="req-lead-banner__item"><i class="fas fa-phone"></i><strong>Phone</strong> {{ lead.phone }}</div>
+        <div class="req-lead-banner__item"><i class="fas fa-map-marker-alt"></i><strong>Destination</strong> {{ lead.destination|default:"—" }}</div>
+    </div>
+
+    <div class="req-card">
+        <div class="req-card__head">
+            <div class="req-card__head-left">
+                <div class="req-card__icon req-card__icon--purple"><i class="fas fa-paper-plane"></i></div>
+                <div>
+                    <h2 class="req-card__title">Offer Details</h2>
+                    <p class="req-card__sub">What was sent and current status</p>
+                </div>
+            </div>
+            <a href="{% url 'create_offer' lead.pk %}" class="req-btn req-btn--accent req-btn--sm"><i class="fas fa-file-alt"></i> Create Offer</a>
         </div>
 
-
-        <div class="attach-container">
-            <a href="{% url 'add_attachment' pk=lead.id %}" class="button">Add Attachment</a>
-          
-            {% if attachments.all %}
-                <table class="attachment-table">
-                    <tbody>
-                        {% for attachment in lead.attachments.all %}
-                            <tr>
-                                <td>
-                                    <a href="{{ attachment.file.url }}" class="attachment-link">{{ attachment.attachment_name }}</a>
-                                </td>
-                                <td>
-                                    <a href="{% url 'delete_attachment' lead_id=lead.id attachment_id=attachment.pk %}" class="delete-link">Delete</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="req-card__body">
+            <div class="req-card__head" style="padding:0 0 12px;border:none;background:none">
+                <h3 class="req-card__title" style="font-size:.9rem">Attached Offers</h3>
+                <a href="{% url 'add_attachment' pk=lead.id %}" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-plus"></i> Add Attachment</a>
+            </div>
+            {% if lead.attachments.all %}
+            <ul class="req-attach-list">
+                {% for attachment in lead.attachments.all %}
+                <li class="req-attach-item">
+                    <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-file"></i> {{ attachment.attachment_name }}</a>
+                    <a href="{% url 'delete_attachment' lead_id=lead.id attachment_id=attachment.pk %}" class="req-link--danger">Delete</a>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>No Offers Attached</p>
+            <div class="req-empty" style="padding:20px"><i class="fas fa-folder-open"></i>No offers attached.</div>
             {% endif %}
         </div>
+
         <form method="post">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="id_offer_details">Offer Sent:</label>
-                {{ form.offer_details }}
+            <div class="req-card__body" style="border-top:1px solid var(--req-border)">
+                <div class="req-grid">
+                    <div class="req-field req-field--full">
+                        <label for="id_offer_details">Offer Sent</label>
+                        {{ form.offer_details }}
+                    </div>
+                    <div class="req-field req-field--full">
+                        <label for="id_finalization_notes">What Happened</label>
+                        {{ form.finalization_notes }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_assigned_to">Assigned To</label>
+                        {{ form.assigned_to }}
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="id_finalization_notes">What Happened:</label>
-                <br/>
-                {{ form.finalization_notes }}
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--accent" name="submit_next"><i class="fas fa-arrow-right"></i> Submit &amp; Next</button>
+                <button type="submit" class="req-btn req-btn--outline" name="submit_exit"><i class="fas fa-save"></i> Submit &amp; Exit</button>
             </div>
-            <div class="form-group">
-                <label for="id_assigned_to">Assigned To:</label>
-                <br/>
-                {{ form.assigned_to }}
-            </div>
-            <a href="{% url 'create_offer' lead.pk %}" class="btn btn-create-offer">Create Offer</a>
-            <button type="submit" class="btn btn-primary" name="submit_next">Submit & Next ></button>
-            <button type="submit" class="btn btn-secondary" name="submit_exit">Submit & Exit</button>
         </form>
-        </div>
     </div>
-    <a href="{% url 'qualify_lead' lead.pk %}" class="btn btn-secondary mt-3">< Previous Page</a>
+
+    <a href="{% url 'qualify_lead' lead.pk %}" class="req-nav-back"><i class="fas fa-arrow-left"></i> Previous — Qualify</a>
+</div>
 </body>
 </html>

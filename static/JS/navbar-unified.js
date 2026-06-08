@@ -1,5 +1,5 @@
 (function () {
-  document.body.classList.add("has-unified-nav");
+  document.body.classList.add("has-unified-nav", "req-page");
 
   const nav = document.getElementById("appNav");
   const toggle = document.getElementById("appNavToggle");

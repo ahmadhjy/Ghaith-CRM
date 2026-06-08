@@ -3,86 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoices</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <title>All Orders — Ghaith CRM</title>
 </head>
 <body>
 {% include 'navbar.html' %}
-<div class="container">
-    <div class="content">
-        <div class="header">
-            <h2>My Invoices</h2>
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">All Orders</h1>
+            <p class="req-hero__sub">Invoices and lead tasks assigned to your pipeline.</p>
         </div>
-        <hr/>
-        <div class="status-counts-box">
-            <ul class="status-list">
-                {% for status, count in status_counts.items %}
-                <li>
-                    <span class="status">{{ status }}</span>
-                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="filter-container">
-            <!-- Filter dropdown -->
-            <form method="GET" action="{% url 'current_lead_tasks' %}" class="filter-form">
-                <label for="status" class="filter-label">Filter by Status:</label>
-                <select id="status" name="status" class="filter-select">
-                    <option value="">All</option>
-                    {% for choice in status_choices %}
-                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-                <label for="travel_date_only" class="filter-label">Travel Date Only:</label>
-                <input type="checkbox" id="travel_date_only" name="travel_date_only" {% if travel_date_only %}checked{% endif %}>
-                <button type="submit" class="filter-button">Apply Filter</button>
-            </form>
-            <!-- End of filter dropdown -->
-        
-            <!-- Smart Search form -->
-            <form method="GET" action="{% url 'current_lead_tasks' %}" class="smart-search-form">
-                <label for="search" class="filter-label">Search:</label>
-                <input type="text" id="search" name="search" placeholder="Enter keywords" class="filter-input">
-                <button type="submit" class="filter-button">Search</button>
-            </form>
-            <!-- End of Smart Search form -->
-        </div>            
+    </header>
 
-        <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Invoice ID</th>
-                    <th>Lead Name</th>
-                    <th>Destination</th>
-                    <th>Status</th>
-                    <th>Assigned To</th>
-                    <th>Finalization Notes</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for lead_task in data %}
-                    <tr class="{{ lead_task.status }}">
-                        <td data-label="Invoice ID">{{ lead_task.pk }}</td>
-                        <td data-label="Lead Name">{{ lead_task.lead.name }}</td>
-                        <td data-label="Destination">{{ lead_task.lead.destination }}</td>
-                        <td data-label="Status">
-                            <span class="status-pill {% if lead_task.status == 'cancelled' %}status-pill--cancelled{% endif %}">
-                                {{ lead_task.status }}
-                            </span>
-                        </td>
-                        <td data-label="Assigned To">{{ lead_task.assigned_to.username }}</td>
-                        <td data-label="Finalization Notes">{{ lead_task.lead.finalization_notes }}</td>
-                        <td data-label="Action"><a href="{% url 'edit_lead_tasks' lead_task.pk %}" class="edit-link">Edit</a></td>
+    <div class="req-stats">
+        {% for status, count in status_counts.items %}
+        <div class="req-stat req-stat--{{ status }}">
+            <span class="req-stat__label">{{ status }}</span>
+            <span class="req-stat__value">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="req-card">
+        <div class="req-filters">
+            <form method="GET" action="{% url 'current_lead_tasks' %}">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Status</span>
+                    <select id="status" name="status" class="req-select">
+                        <option value="">All</option>
+                        {% for choice in status_choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <label class="req-filter-group" style="flex-direction:row;align-items:center;gap:6px;padding-top:18px">
+                    <input type="checkbox" id="travel_date_only" name="travel_date_only" {% if travel_date_only %}checked{% endif %}>
+                    <span class="req-filter-label" style="margin:0">Travel date only</span>
+                </label>
+                <label class="req-filter-group" style="flex-direction:row;align-items:center;gap:6px;padding-top:18px">
+                    <input type="checkbox" id="assigned_to_me" name="assigned_to_me" {% if assigned_to_me or not is_staff %}checked{% endif %}>
+                    <span class="req-filter-label" style="margin:0">Assigned to me</span>
+                </label>
+                <button type="submit" class="req-btn req-btn--primary req-btn--sm"><i class="fas fa-filter"></i> Filter</button>
+            </form>
+            <form method="GET" action="{% url 'current_lead_tasks' %}">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Search</span>
+                    <input type="text" id="search" name="search" placeholder="Keywords…" class="req-input" value="{{ search_query }}">
+                </div>
+                <button type="submit" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-search"></i> Search</button>
+            </form>
+        </div>
+        <div class="req-table-wrap">
+            <table class="req-table data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Lead</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>Assigned</th>
+                        <th>Notes</th>
+                        <th>Edit</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>        
+                </thead>
+                <tbody>
+                    {% for lead_task in data %}
+                    <tr class="{{ lead_task.status }}">
+                        <td data-label="ID">{{ lead_task.pk }}</td>
+                        <td data-label="Lead"><strong>{{ lead_task.lead.name }}</strong></td>
+                        <td data-label="Destination">{{ lead_task.lead.destination }}</td>
+                        <td data-label="Status"><span class="req-status-pill req-status-pill--{{ lead_task.status }}">{{ lead_task.status }}</span></td>
+                        <td data-label="Assigned">{{ lead_task.assigned_to.username }}</td>
+                        <td data-label="Notes">{{ lead_task.lead.finalization_notes|truncatechars:30|default:"—" }}</td>
+                        <td data-label="Edit"><a href="{% url 'edit_lead_tasks' lead_task.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7"><div class="req-empty"><i class="fas fa-inbox"></i>No orders found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

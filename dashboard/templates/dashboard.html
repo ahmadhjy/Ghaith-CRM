@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-    {% load static %}
-    <head>
-        <meta name="description" content="Main Dashboard" />
-        <title>Ghaith system dashboard</title>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/dashboard.css' %}">
-    </head>
-    <body>
-        {% include 'navbar.html' %}
-        <div class="container">
-            <div class="content">
-                <h1>Dashboard</h1>
-                <p class="list-page__desc">Quick access to calendar and payment tracking.</p>
-                <div class="calendar-lists-links">
-                    <a class="btn btn-info" href="{% url 'calendar' %}">Open Calendar</a>
-                    <a class="btn btn-info" href="{% url 'supplier_payments_list' %}">Supplier Payments</a>
-                    <a class="btn btn-info" href="{% url 'client_payments_list' %}">Client Payments</a>
-                </div>
-            </div>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard — Ghaith CRM</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Home</div>
+            <h1 class="req-hero__title">Dashboard</h1>
+            <p class="req-hero__sub">Quick access to calendar and payment tracking.</p>
         </div>
-    </body>
-</html>
+    </header>
 
+    <div class="req-stats">
+        <a href="{% url 'calendar' %}" class="req-stat" style="text-decoration:none;color:inherit">
+            <span class="req-stat__label">Calendar</span>
+            <span class="req-stat__value"><i class="fas fa-calendar-alt"></i></span>
+        </a>
+        <a href="{% url 'supplier_payments_list' %}" class="req-stat" style="text-decoration:none;color:inherit">
+            <span class="req-stat__label">Supplier Payments</span>
+            <span class="req-stat__value"><i class="fas fa-truck"></i></span>
+        </a>
+        <a href="{% url 'client_payments_list' %}" class="req-stat" style="text-decoration:none;color:inherit">
+            <span class="req-stat__label">Client Payments</span>
+            <span class="req-stat__value"><i class="fas fa-money-check-alt"></i></span>
+        </a>
+    </div>
+</div>
+</body>
+</html>

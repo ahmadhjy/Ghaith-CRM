@@ -2,44 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Display Tasks</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/display.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Done Tasks — Ghaith CRM</title>
 </head>
 <body>
 {% include 'navbar.html' %}
-<div class="container">
-  <div class="content">
-    <div class="header">
-      <h2>Done Tasks</h2>
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Tasks</div>
+            <h1 class="req-hero__title">Done Tasks</h1>
+            <p class="req-hero__sub">Completed and archived tasks.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'current tasks' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> My Tasks</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-table-wrap">
+            <table class="req-table data-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Due Time</th>
+                        <th>Status</th>
+                        <th>What Happened</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in expired_tasks %}
+                    <tr class="{{ task.status }}">
+                        <td data-label="Title"><strong>{{ task.title }}</strong></td>
+                        <td data-label="Due Time">{{ task.due_time }}</td>
+                        <td data-label="Status">{{ task.status }}</td>
+                        <td data-label="What Happened">{{ task.what_happened|default:"—" }}</td>
+                        <td data-label="Action"><a href="{% url 'edit_task' task.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5"><div class="req-empty"><i class="fas fa-tasks"></i>No done tasks yet.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    <hr/>
-    <div class="table-responsive">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Due Time</th>
-            <th>Status</th>
-            <th>What Happened</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for task in expired_tasks %}
-          <tr class="{{ task.status }}">
-            <td data-label="Title">{{ task.title }}</td>
-            <td data-label="Due Time">{{ task.due_time }}</td>
-            <td data-label="Status">{{ task.status }}</td>
-            <td data-label="What Happened">{{ task.what_happened }}</td>
-            <td data-label="Action"><a href="{% url 'edit_task' task.pk %}" class="edit-link">Edit</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
 </body>
 </html>

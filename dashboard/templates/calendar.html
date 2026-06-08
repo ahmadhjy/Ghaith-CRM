@@ -1,103 +1,111 @@
 {% extends 'base.html' %}
 
-{% block title %}
-Dashboard Calendar
+{% block title %}User Dashboard — Calendar{% endblock %}
+
+{% block hero %}
+<header class="req-hero">
+    <div class="req-hero__bg"></div>
+    <div class="req-hero__content">
+        <div class="req-hero__eyebrow">Dashboard</div>
+        <h1 class="req-hero__title">User Dashboard</h1>
+        <p class="req-hero__sub">Calendar, requests, tasks &amp; orders at a glance.</p>
+        <div class="req-hero__footer">
+            <div class="req-hero__actions">
+                <a href="{% url 'event_new' %}" class="req-btn-ghost"><i class="fas fa-plus"></i> New Event</a>
+                <a href="{% url 'supplier_payments_list' %}" class="req-btn-ghost"><i class="fas fa-credit-card"></i> Supplier Payments</a>
+                <a href="{% url 'client_payments_list' %}" class="req-btn-ghost"><i class="fas fa-wallet"></i> Client Payments</a>
+            </div>
+        </div>
+    </div>
+</header>
 {% endblock %}
 
 {% block content %}
 <div class="form-event-type">
     <form method="get" action="{% url 'calendar' %}" class="dashboard-filter-form">
         <label for="event_type">Event type</label>
-        <select name="event_type" onchange="this.form.submit()">
+        <select name="event_type" id="event_type" onchange="this.form.submit()">
             <option value="">All Types</option>
             {% for type_value, type_name in type_choices %}
             <option value="{{ type_value }}" {% if type_value == event_type %}selected{% endif %}>{{ type_name }}</option>
             {% endfor %}
         </select>
-        <!-- Keep the current month in the form to maintain context -->
         <input type="hidden" name="month" value="{{ request.GET.month }}">
         <label class="dashboard-filter-form__check">
-            <input
-            type="checkbox"
-            name="show_done"
-            value="on"
-            onchange="this.form.submit()"
-            {% if show_done == 'on' %} checked {% endif %}
-        >
-        Show Done Events
-    </label>
+            <input type="checkbox" name="show_done" value="on" onchange="this.form.submit()" {% if show_done == 'on' %}checked{% endif %}>
+            Show Done Events
+        </label>
     </form>
 </div>
-<div class="status-counts-container">
-    <div class="status-counts-box">
-        <div class="status-title">My Requests</div>
-        <ul class="status-list">
-            {% for status, count in lead_counts.items %}
-                <li>
-                    <span class="status">{{ status }}</span>
-                    <span class="count {% if status == 'processing' %}processing{% elif status == 'negotiation' %}negotiation{% elif status == 'finalized' %}finalized{% elif status == 'onhold' %}onhold{% elif status == 'done' %}unqual{% elif status == 'followup' %}followup{% endif %}">{{ count }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
-    <div class="status-counts-box">
-        <div class="status-title">My Tasks</div>
-        <ul class="status-list">
-            {% for status, count in task_counts.items %}
-                <li>
-                    <span class="status">{{ status }}</span>
-                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}in-progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
-    <div class="status-counts-box">
-        <div class="status-title">Orders</div>
-        <ul class="status-list">
-            {% for status, count in lead_task_counts.items %}
-                <li>
-                    <span class="status">{{ status }}</span>
-                    <span class="count {% if status == 'onhold' %}onhold{% elif status == 'progress' %}in-progress{% elif status == 'done' %}done{% endif %}">{{ count }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
 
-<div class="calendar-lists-links">
-    <a class="btn btn-info" href="{% url 'supplier_payments_list' %}">Supplier Payments List</a>
-    <a class="btn btn-info" href="{% url 'client_payments_list' %}">Client Payments List</a>
+<div class="dash-stats-grid">
+    <div class="req-card dash-stats-card">
+        <div class="dash-stats-card__head">
+            <div class="req-card__icon req-card__icon--blue"><i class="fas fa-list-alt"></i></div>
+            <div>
+                <h2 class="dash-stats-card__title">My Requests</h2>
+                <a href="{% url 'display_data' %}" class="dash-stats-card__link">View all</a>
+            </div>
+        </div>
+        <div class="req-stats dash-stats-card__stats">
+            {% for status, count in lead_counts.items %}
+            <div class="req-stat req-stat--{{ status }}">
+                <span class="req-stat__label">{{ status }}</span>
+                <span class="req-stat__value">{{ count }}</span>
+            </div>
+            {% empty %}
+            <p class="dash-stats-card__empty">No requests assigned to you.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="req-card dash-stats-card">
+        <div class="dash-stats-card__head">
+            <div class="req-card__icon req-card__icon--purple"><i class="fas fa-tasks"></i></div>
+            <div>
+                <h2 class="dash-stats-card__title">My Tasks</h2>
+                <a href="{% url 'current tasks' %}" class="dash-stats-card__link">View all</a>
+            </div>
+        </div>
+        <div class="req-stats dash-stats-card__stats">
+            {% for status, count in task_counts.items %}
+            <div class="req-stat req-stat--{{ status }}">
+                <span class="req-stat__label">{{ status }}</span>
+                <span class="req-stat__value">{{ count }}</span>
+            </div>
+            {% empty %}
+            <p class="dash-stats-card__empty">No tasks assigned to you.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="req-card dash-stats-card">
+        <div class="dash-stats-card__head">
+            <div class="req-card__icon req-card__icon--teal"><i class="far fa-file-alt"></i></div>
+            <div>
+                <h2 class="dash-stats-card__title">Orders</h2>
+                <a href="{% url 'current_lead_tasks' %}" class="dash-stats-card__link">View all</a>
+            </div>
+        </div>
+        <div class="req-stats dash-stats-card__stats">
+            {% for status, count in lead_task_counts.items %}
+            <div class="req-stat req-stat--{{ status }}">
+                <span class="req-stat__label">{{ status }}</span>
+                <span class="req-stat__value">{{ count }}</span>
+            </div>
+            {% empty %}
+            <p class="dash-stats-card__empty">No orders assigned to you.</p>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 
 <div class="calendar-nav-actions">
-    <a class="btn btn-info left" href="{% url 'calendar' %}?{{ prev_month }}"> Previous Month </a>
-    <a class="btn btn-info right" href="{% url 'calendar' %}?{{ next_month }}"> Next Month </a>
-    <a class="btn btn-info right" href="{% url 'event_new' %}"> New Event </a>
+    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ prev_month }}"><i class="fas fa-chevron-left"></i> Previous</a>
+    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ next_month }}">Next <i class="fas fa-chevron-right"></i></a>
 </div>
 
 <div class="calendar-shell table-responsive">
     {{ calendar }}
 </div>
-
-<script>
-
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Delete links have been removed from events
-    </script>
-    
 {% endblock %}

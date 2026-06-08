@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ upload_link.client_name }} — Media</title>
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Client Media</div>
+            <h1 class="req-hero__title">{{ upload_link.client_name }}</h1>
+            <p class="req-hero__sub">
+                Invoice <a href="{% url 'edit_lead_tasks' upload_link.leadtask.pk %}" style="color:#fff">#{{ upload_link.leadtask.pk }}</a>
+                {% if upload_link.is_submitted %} — Submitted {{ upload_link.submitted_at|date:"M d, Y" }}{% endif %}
+            </p>
+            <div class="req-hero__footer">
+                <div class="req-hero__actions">
+                    <a href="{% url 'client_media_upload' upload_link.token %}" target="_blank" rel="noopener noreferrer" class="req-btn-ghost">Client Page</a>
+                    <a href="{% url 'client_media_uploads_list' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> All Uploads</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="req-card">
+        <div class="req-card__body">
+            {% if files %}
+            <ul class="req-attach-list">
+                {% for file in files %}
+                <li class="req-attach-item">
+                    <div>
+                        <strong>{{ file.original_name }}</strong>
+                        <div style="font-size:.8rem;color:var(--req-muted)">{{ file.uploaded_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <a href="{{ file.file.url }}" download class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-download"></i> Download</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="req-empty"><i class="fas fa-folder-open"></i>No files uploaded yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

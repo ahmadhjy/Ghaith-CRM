@@ -1,97 +1,97 @@
-<!-- purchased_services.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Purchased Services</title>
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/input.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/list-pages.css' %}">
+    <title>Purchased Services — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    <div class="container list-page list-page--supplier">
-        <div class="content">
-        <h1 class="list-page__title">Purchased Services</h1>
+{% include 'navbar.html' %}
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Orders</div>
+            <h1 class="req-hero__title">Purchased Services</h1>
+            <p class="req-hero__sub">Supplier services across all invoices — filter, track, and mark processed.</p>
+            <div class="req-hero__footer">
+                <div class="req-hero__actions">
+                    <a href="{% url 'supplier_payments_list' %}" class="req-btn-ghost"><i class="fas fa-calendar-alt"></i> Calendar View</a>
+                </div>
+            </div>
+        </div>
+    </header>
 
-        <div class="list-page__filters">
-            <form method="GET" action="{% url 'purchased_services' %}" class="filter-form filter-form--stack">
-                <input type="text" name="search" placeholder="Search services" value="{{ request.GET.search }}" class="search-input">
-                <select name="filter" class="filter-select">
-                    <option value="">All</option>
-                    <option value="paid" {% if request.GET.filter == 'paid' %}selected{% endif %}>Paid</option>
-                    <option value="unpaid" {% if request.GET.filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
-                    <option value="overdue" {% if request.GET.filter == 'overdue' %}selected{% endif %}>Overdue</option>
-                    <option value="processed" {% if request.GET.filter == 'processed' %}selected{% endif %}>Processed</option>
-                    <option value="unprocessed" {% if request.GET.filter == 'unprocessed' %}selected{% endif %}>Unprocessed</option>
-                </select>
-                <button type="submit" class="filter-button">Filter</button>
+    <div class="req-card">
+        <div class="req-filters">
+            <form method="GET" action="{% url 'purchased_services' %}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;width:100%">
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Search</span>
+                    <input type="text" name="search" placeholder="Search services…" value="{{ request.GET.search }}" class="req-input">
+                </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Filter</span>
+                    <select name="filter" class="req-select">
+                        <option value="">All</option>
+                        <option value="paid" {% if request.GET.filter == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="unpaid" {% if request.GET.filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                        <option value="overdue" {% if request.GET.filter == 'overdue' %}selected{% endif %}>Overdue</option>
+                        <option value="processed" {% if request.GET.filter == 'processed' %}selected{% endif %}>Processed</option>
+                        <option value="unprocessed" {% if request.GET.filter == 'unprocessed' %}selected{% endif %}>Unprocessed</option>
+                    </select>
+                </div>
+                <button type="submit" class="req-btn req-btn--primary req-btn--sm"><i class="fas fa-filter"></i> Filter</button>
             </form>
         </div>
 
         <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
-        <table id="servicesTable" class="list-table list-table--supplier">
-            <thead>
-                <tr>
-                    <th>Lead Name</th>
-                    <th>Service Name</th>
-                    <th>Supplier</th>
-                    <th>Details</th>
-                    <th>Net</th>
-                    <th>Due Time</th>
-                    <th>Paid</th>
-                    <th>Processed</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for service in services %}
-                <tr class="{% if service.processed %}processed{% elif service.due_time and service.due_time < now and not service.is_checked %}overdue{% endif %}">
-                    <td data-label="Lead Name">
-                        <a class="supplier-link"
-                           href="{% url 'edit_lead_tasks' service.leadtask.pk %}"
-                           title="{{ service.leadtask.lead.name }}">
-                            {{ service.leadtask.lead.name }}
-                        </a>
-                    </td>
-                    <td data-label="Service Name">
-                        <a class="supplier-link"
-                           href="{% url 'edit_lead_tasks' service.leadtask.pk %}"
-                           title="{{ service.service_name }}">
-                            {{ service.service_name|slice:":20" }}
-                            {% if service.service_name|length > 20 %}...{% endif %}
-                        </a>
-                    </td>
-
-                    <!-- Supplier truncated to 20 chars -->
-                    <td data-label="Supplier">
-                        <span title="{{ service.supplier }}">
-                            {{ service.supplier|slice:":20" }}{% if service.supplier|length > 20 %}...{% endif %}
-                        </span>
-                    </td>                 <td data-label="Details">
-                        <span title="{{ service.details }}">
-                          {{ service.details|slice:":10" }}{% if service.details|length > 10 %}...{% endif %}
-                        </span>
-                      </td>
-                                          <td data-label="Net">{{ service.net }}</td>
-                    <td data-label="Due Time">{{ service.due_time }}</td>
-                    <td data-label="Paid">{{ service.is_checked|yesno:"Yes,No" }}</td>
-                    <td data-label="Processed">{{ service.processed|yesno:"Yes,No" }}</td>
-                    <td data-label="Actions">
-                        {% if not service.processed %}
-                        <form method="POST" action="{% url 'mark_service_processed' service.pk %}" class="list-table__inline-form">
-                            {% csrf_token %}
-                            <button type="submit" class="process-button">Mark Processed</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
+            <table id="servicesTable" class="req-table list-table list-table--supplier">
+                <thead>
+                    <tr>
+                        <th>Lead Name</th>
+                        <th>Service Name</th>
+                        <th>Supplier</th>
+                        <th>Details</th>
+                        <th>Net</th>
+                        <th>Due Time</th>
+                        <th>Paid</th>
+                        <th>Processed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr class="{% if service.processed %}processed{% elif service.due_time and service.due_time < now and not service.is_checked %}overdue{% endif %}">
+                        <td data-label="Lead Name">
+                            <a class="supplier-link" href="{% url 'edit_lead_tasks' service.leadtask.pk %}" title="{{ service.leadtask.lead.name }}">{{ service.leadtask.lead.name }}</a>
+                        </td>
+                        <td data-label="Service Name">
+                            <a class="supplier-link" href="{% url 'edit_lead_tasks' service.leadtask.pk %}" title="{{ service.service_name }}">
+                                {{ service.service_name|truncatechars:20 }}
+                            </a>
+                        </td>
+                        <td data-label="Supplier"><span title="{{ service.supplier }}">{{ service.supplier|truncatechars:20 }}</span></td>
+                        <td data-label="Details"><span title="{{ service.details }}">{{ service.details|truncatechars:10 }}</span></td>
+                        <td data-label="Net">{{ service.net }}</td>
+                        <td data-label="Due Time">{{ service.due_time }}</td>
+                        <td data-label="Paid">{{ service.is_checked|yesno:"Yes,No" }}</td>
+                        <td data-label="Processed">{{ service.processed|yesno:"Yes,No" }}</td>
+                        <td data-label="Actions">
+                            {% if not service.processed %}
+                            <form method="POST" action="{% url 'mark_service_processed' service.pk %}" class="list-table__inline-form">
+                                {% csrf_token %}
+                                <button type="submit" class="process-button">Mark Processed</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="list-table__empty"><div class="req-empty"><i class="fas fa-concierge-bell"></i>No services found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 </body>
 </html>

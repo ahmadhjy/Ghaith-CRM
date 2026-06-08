@@ -1,16 +1,26 @@
 {% extends 'base.html' %}
 
-{% block title %}
+{% block title %}Client Payments{% endblock %}
+
+{% block hero %}
+<header class="req-hero">
+    <div class="req-hero__bg"></div>
+    <div class="req-hero__content">
+        <div class="req-hero__eyebrow">Orders</div>
+        <h1 class="req-hero__title">Client Payments</h1>
+        <p class="req-hero__sub">Track client payment schedule and status.</p>
+        <div class="req-hero__footer">
+            <div class="req-hero__actions">
+                <a href="{% url 'client_payments' %}" class="req-btn-ghost">Full List</a>
+                <a href="{% url 'client_payments_pdf' %}?{{ request.GET.urlencode }}" class="req-btn-ghost"><i class="fas fa-download"></i> PDF</a>
+            </div>
+        </div>
+    </div>
+</header>
 {% endblock %}
 
 {% block content %}
 <div class="list-page list-page--client">
-    <header class="list-page__header">
-        <h2 class="list-page__title">Client Payments</h2>
-        <p class="list-page__desc">Client payments. Filter by date, month, or paid status.</p>
-        <a href="{% url 'client_payments' %}" class="btn btn--link list-page__link">Full client payments list</a>
-        <a href="{% url 'client_payments_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--secondary">Download PDF</a>
-    </header>
 
     <div class="list-page__filters">
         <form method="GET" action="{% url 'client_payments_list' %}" class="filter-form filter-form--stack">

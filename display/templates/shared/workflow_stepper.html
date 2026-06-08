@@ -1,0 +1,36 @@
+{% comment %}
+  workflow_step: 1=Create, 2=Qualify, 3=Send Offer, 4=Close Deal
+  lead: Lead instance (required for steps 2-4 links)
+{% endcomment %}
+<nav class="req-stepper" aria-label="Request workflow">
+    {% if lead.pk %}
+    <a href="{% url 'edit_creation_lead' lead.pk %}"
+       class="req-step {% if workflow_step == 1 %}is-active{% elif workflow_step > 1 %}is-done{% endif %}">
+        <span class="req-step__num">{% if workflow_step > 1 %}<i class="fas fa-check" style="font-size:.65rem"></i>{% else %}1{% endif %}</span>
+        <span>Create</span>
+    </a>
+    <a href="{% url 'qualify_lead' lead.pk %}"
+       class="req-step {% if workflow_step == 2 %}is-active{% elif workflow_step > 2 %}is-done{% elif workflow_step < 2 %}is-disabled{% endif %}">
+        <span class="req-step__num">{% if workflow_step > 2 %}<i class="fas fa-check" style="font-size:.65rem"></i>{% else %}2{% endif %}</span>
+        <span>Qualify</span>
+    </a>
+    <a href="{% url 'send_offer_lead' lead.pk %}"
+       class="req-step {% if workflow_step == 3 %}is-active{% elif workflow_step > 3 %}is-done{% elif workflow_step < 3 %}is-disabled{% endif %}">
+        <span class="req-step__num">{% if workflow_step > 3 %}<i class="fas fa-check" style="font-size:.65rem"></i>{% else %}3{% endif %}</span>
+        <span>Send Offer</span>
+    </a>
+    <a href="{% url 'deal_lead' lead.pk %}"
+       class="req-step {% if workflow_step == 4 %}is-active{% elif workflow_step < 4 %}is-disabled{% endif %}">
+        <span class="req-step__num">4</span>
+        <span>Close Deal</span>
+    </a>
+    {% else %}
+    <div class="req-step is-active">
+        <span class="req-step__num">1</span>
+        <span>Create New Request</span>
+    </div>
+    <div class="req-step is-disabled"><span class="req-step__num">2</span><span>Qualify</span></div>
+    <div class="req-step is-disabled"><span class="req-step__num">3</span><span>Send Offer</span></div>
+    <div class="req-step is-disabled"><span class="req-step__num">4</span><span>Close Deal</span></div>
+    {% endif %}
+</nav>

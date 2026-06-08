@@ -1,105 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Lead Form</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/lead.css' %}">
-    <style>
-        .duplicate-warning {
-            margin-top: 20px;
-        }
-        .duplicate-warning ul {
-            padding-left: 20px;
-        }
-        .duplicate-warning ul li {
-            list-style-type: disc;
-        }
-        .duplicate-warning ul li a {
-            color: #dc3545;
-            text-decoration: none;
-        }
-        .duplicate-warning ul li a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>{% if form.instance.pk %}Edit Request{% else %}New Request{% endif %} — Ghaith CRM</title>
 </head>
 <body>
-    {% include 'navbar.html' %}
-<div class="container">
-    <div class="content">
-    <h2>Create Lead</h2>
-    <hr/>
-    <form method="post" id="createForm">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="id_name">Name:</label>
-            {{ form.name }}
-        </div>
-        <div class="form-group">
-            <label for="id_country_code">Country Code:</label>
-            {{ form.country_code }}
-        </div>
-        <div class="form-group">
-            <label for="id_phone">Phone:</label>
-            {{ form.phone }}
-        </div>
-        <div class="form-group">
-            <label for="id_channel">Channel:</label>
-            {{ form.channel }}
-        </div>
-        <div class="form-group">
-            <label for="id_reason_of_travel">Travel Details:</label>
-            {{ form.reason_of_travel }}
-        </div>
-        <div class="form-group">
-            <label for="id_destination">Destination:</label>
-            {{ form.destination }}
-        </div>
-        <div class="form-group">
-            <label for="id_assigned_to">Assigned To:</label>
-            {{ form.assigned_to }}
-        </div>
-        <div class="form-group">
-            <label for="id_takeover">Add to Takeover List:</label>
-            {{ form.takeover }}
-        </div>
+{% include 'navbar.html' %}
 
-        {% if duplicate_warning %}
-            <div class="alert alert-warning duplicate-warning" role="alert">
-                {{ duplicate_warning }}
-                <ul>
-                    {% for duplicate in duplicates %}
-                        <li><a href="{% url 'edit-model' duplicate.pk %}">{{ duplicate.name }}</a></li>
-                    {% endfor %}
-                </ul>
-                <input type="hidden" name="confirm" value="true">
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Step 1 — Create</div>
+            <h1 class="req-hero__title">{% if form.instance.pk %}Edit Request{% else %}New Request{% endif %}</h1>
+            <p class="req-hero__sub">Enter the client's basic information to start the request.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'display_data' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> All Requests</a>
             </div>
-        {% endif %}
+        </div>
+    </header>
 
-        <button type="submit" class="btn btn-primary" name="submit_next">Submit & Next ></button>
-        <button type="submit" class="btn btn-secondary" name="submit_exit">Submit & Exit</button>
-    </form>
+    {% with lead=form.instance %}
+    {% include 'shared/workflow_stepper.html' with workflow_step=1 lead=lead %}
+    {% endwith %}
+
+    <div class="req-card">
+        <div class="req-card__head">
+            <div class="req-card__head-left">
+                <div class="req-card__icon req-card__icon--blue"><i class="fas fa-user-plus"></i></div>
+                <div>
+                    <h2 class="req-card__title">Client Information</h2>
+                    <p class="req-card__sub">Name, contact details &amp; travel intent</p>
+                </div>
+            </div>
+        </div>
+        <form method="post" id="createForm">
+            {% csrf_token %}
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field">
+                        <label for="id_name">Name</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_country_code">Country Code</label>
+                        {{ form.country_code }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_phone">Phone</label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_channel">Channel</label>
+                        {{ form.channel }}
+                    </div>
+                    <div class="req-field req-field--full">
+                        <label for="id_reason_of_travel">Travel Details</label>
+                        {{ form.reason_of_travel }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_destination">Destination</label>
+                        {{ form.destination }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_assigned_to">Assigned To</label>
+                        {{ form.assigned_to }}
+                    </div>
+                    <div class="req-field">
+                        <label for="id_takeover">Add to Takeover List</label>
+                        {{ form.takeover }}
+                    </div>
+                </div>
+
+                {% if duplicate_warning %}
+                <div class="req-alert req-alert--warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> {{ duplicate_warning }}
+                    <ul>
+                        {% for duplicate in duplicates %}
+                        <li><a href="{% url 'edit-model' duplicate.pk %}">{{ duplicate.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    <input type="hidden" name="confirm" value="true">
+                </div>
+                {% endif %}
+            </div>
+            <div class="req-card__foot">
+                <button type="submit" class="req-btn req-btn--accent" name="submit_next"><i class="fas fa-arrow-right"></i> Submit &amp; Next</button>
+                <button type="submit" class="req-btn req-btn--outline" name="submit_exit"><i class="fas fa-check"></i> Submit &amp; Exit</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
 <script>
-    document.getElementById("createForm").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-        }
-    });
-
-    document.getElementById("id_phone").addEventListener("input", function(event) {
-        this.value = this.value.replace(/\D/g, '');
-    });
+document.getElementById("createForm").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") event.preventDefault();
+});
+document.getElementById("id_phone").addEventListener("input", function() {
+    this.value = this.value.replace(/\D/g, '');
+});
 </script>
 </body>
 </html>
