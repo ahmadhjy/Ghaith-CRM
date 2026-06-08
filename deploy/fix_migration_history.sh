@@ -23,6 +23,7 @@ fail() { log "ERROR: $*"; exit 1; }
 [[ -x "$PYTHON" ]] || fail "Python not found: $PYTHON"
 
 cd "$PROJECT_DIR"
+export PYTHONPATH="${PROJECT_DIR}:${PYTHONPATH:-}"
 
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 mkdir -p "$BACKUP_ROOT"
