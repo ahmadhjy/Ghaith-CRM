@@ -61,6 +61,7 @@ log "Syncing application code (preserving db, media, settings)..."
 rsync -a --delete \
     --exclude='db.sqlite3' \
     --exclude='media/' \
+    --exclude='ghaithleads/' \
     --exclude='ghaithleads/settings.py' \
     --exclude='ghaithleads/local_settings.py' \
     --exclude='*.csv' \
