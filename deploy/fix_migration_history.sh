@@ -11,9 +11,12 @@
 #
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
 PROJECT_DIR="/home/ghaithtravel/ghaithleads"
 VENV_DIR="/home/ghaithtravel/djangenv"
-DB="${PROJECT_DIR}/db.sqlite3"
 BACKUP_ROOT="/home/ghaithtravel/deploy-backups"
 export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-ghaithleads.settings}"
 
@@ -23,11 +26,19 @@ MANAGE="${PROJECT_DIR}/manage.py"
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 fail() { log "ERROR: $*"; exit 1; }
 
-[[ -f "$DB" ]] || fail "Database not found: $DB"
 [[ -f "$MANAGE" ]] || fail "manage.py not found"
 [[ -x "$PYTHON" ]] || fail "Python not found: $PYTHON"
 
 cd "$PROJECT_DIR"
+
+DB="$(resolve_database_path "$PYTHON" "$PROJECT_DIR" "$DJANGO_SETTINGS_MODULE")" || {
+    log "Could not find database. Check Django settings:"
+    log "  grep -A6 DATABASES ghaithleads/settings.py"
+    log "  find /home/ghaithtravel -name '*.sqlite3' 2>/dev/null"
+    fail "Database file not found (read from ghaithleads.settings)"
+}
+
+log "Using database: ${DB}"
 
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 mkdir -p "$BACKUP_ROOT"
