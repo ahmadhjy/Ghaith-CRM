@@ -11,6 +11,7 @@ djangorestframework-simplejwt==5.3.1
 fonttools==4.51.0
 html5lib==1.1
 pillow==10.2.0
+psycopg2-binary==2.9.9
 pycparser==2.22
 pydyf==0.10.0
 PyJWT==2.8.0
