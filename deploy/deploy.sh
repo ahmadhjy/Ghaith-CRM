@@ -215,6 +215,13 @@ if [[ "$SYNC_SYSTEM_TO_GHAITHLEADS" == "yes" && -d "${PROJECT_DIR}/${REPO_SYSTEM
     fi
 fi
 
+# ── Patch production settings (notifications app, VAPID) ───────────────────
+SETTINGS_PY="${PROJECT_DIR}/${PROD_SETTINGS_PACKAGE}/settings.py"
+if [[ -f "$SETTINGS_PY" ]]; then
+    log "--- Patching production settings.py (notifications / VAPID) ---"
+    run "$PYTHON" "${SCRIPT_DIR}/patch_production_settings.py" "$SETTINGS_PY"
+fi
+
 # ── Dependencies ────────────────────────────────────────────────────────────
 log "--- Installing/updating Python dependencies ---"
 run "$PIP" install -r "${PROJECT_DIR}/requirements.txt"
