@@ -26,7 +26,7 @@
   function csrfHeaders() {
     return {
       'Content-Type': 'application/json',
-      'X-CSRFToken': cfg.csrfToken,
+      'X-CSRFToken': window.getCsrfToken(cfg.csrfToken),
     };
   }
 

@@ -41,15 +41,18 @@
     </div>
 </div>
 
+<form style="display:none" aria-hidden="true">{% csrf_token %}</form>
 <script>
   window.CRM_CHAT = {
     usersUrl: "{% url 'notifications_api_chat_users' %}",
     threadUrlBase: "{% url 'notifications_api_chat_thread' user_id=0 %}".replace('/0/', '/'),
     sendUrl: "{% url 'notifications_api_chat_send' %}",
     csrfToken: "{{ csrf_token }}",
-    initialUserId: {{ selected_user.pk|default:'null' }},
+    currentUserId: {{ user.pk }},
+    initialUserId: {% if selected_user %}{{ selected_user.pk }}{% else %}null{% endif %},
   };
 </script>
+<script src="{% static 'JS/crm-csrf.js' %}"></script>
 <script src="{% static 'JS/crm-chat.js' %}"></script>
 </body>
 </html>

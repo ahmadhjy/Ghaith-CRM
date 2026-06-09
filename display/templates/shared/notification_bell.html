@@ -1,6 +1,7 @@
 {% load static %}
 {% if user.is_authenticated %}
 <link rel="stylesheet" href="{% static 'css/crm-notifications.css' %}">
+<form style="display:none" aria-hidden="true">{% csrf_token %}</form>
 
 <div class="crm-notify-push-banner" id="crmNotifyPushBanner" hidden>
   <span><i class="fas fa-bell"></i> Enable browser alerts for payments, messages, and team updates</span>
@@ -47,5 +48,6 @@
     isStaff: {{ user.is_staff|yesno:"true,false" }},
   };
 </script>
+<script src="{% static 'JS/crm-csrf.js' %}"></script>
 <script src="{% static 'JS/crm-notifications.js' %}"></script>
 {% endif %}

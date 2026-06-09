@@ -12,11 +12,12 @@
 
   let activeUserId = cfg.initialUserId || null;
   let pollTimer = null;
+  let validUserIds = [];
 
   function csrfHeaders() {
     return {
       'Content-Type': 'application/json',
-      'X-CSRFToken': cfg.csrfToken,
+      'X-CSRFToken': window.getCsrfToken(cfg.csrfToken),
     };
   }
 
@@ -24,7 +25,24 @@
     return iso ? new Date(iso).toLocaleString() : '';
   }
 
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function resetThread() {
+    stopPolling();
+    activeUserId = null;
+    placeholder.hidden = false;
+    thread.hidden = true;
+    threadHead.textContent = '';
+    messagesEl.innerHTML = '';
+  }
+
   function renderUsers(users) {
+    validUserIds = users.map(function (u) { return u.id; });
     if (!users.length) {
       userListEl.innerHTML = '<p class="crm-notify__empty">No other users.</p>';
       return;
@@ -70,26 +88,43 @@
 
   function loadThread() {
     if (!activeUserId) return;
+    if (cfg.currentUserId && activeUserId === cfg.currentUserId) {
+      resetThread();
+      return;
+    }
     fetch(cfg.threadUrlBase + activeUserId + '/', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) {
+          resetThread();
+          return null;
+        }
+        return r.json();
+      })
       .then(function (data) {
+        if (!data || !data.user) return;
         threadHead.textContent = data.user.name;
         renderMessages(data.messages || []);
+      })
+      .catch(function () {
+        resetThread();
       });
   }
 
   function selectUser(userId) {
+    if (!userId || (cfg.currentUserId && userId === cfg.currentUserId)) return;
+    if (validUserIds.length && validUserIds.indexOf(userId) === -1) return;
+
     activeUserId = userId;
     placeholder.hidden = true;
     thread.hidden = false;
     loadUsers();
     loadThread();
-    if (pollTimer) clearInterval(pollTimer);
+    stopPolling();
     pollTimer = setInterval(loadThread, 8000);
   }
 
   function loadUsers() {
-    fetch(cfg.usersUrl, { credentials: 'same-origin' })
+    return fetch(cfg.usersUrl, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         renderUsers(data.users || []);
@@ -116,6 +151,15 @@
       });
   });
 
-  loadUsers();
-  if (activeUserId) selectUser(activeUserId);
+  loadUsers().then(function () {
+    if (
+      activeUserId &&
+      activeUserId !== cfg.currentUserId &&
+      validUserIds.indexOf(activeUserId) !== -1
+    ) {
+      selectUser(activeUserId);
+    } else {
+      activeUserId = null;
+    }
+  });
 })();
