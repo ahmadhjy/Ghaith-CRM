@@ -17,6 +17,15 @@ def get_vapid_public_key():
     return getattr(settings, 'VAPID_PUBLIC_KEY', '')
 
 
+def get_vapid_private_key():
+    key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
+    if isinstance(key, bytes):
+        key = key.decode()
+    if '\\n' in key:
+        key = key.replace('\\n', '\n')
+    return key
+
+
 def send_push_to_user(user, title, body, url=''):
     if not vapid_configured():
         return
@@ -52,7 +61,7 @@ def send_push_to_user(user, title, body, url=''):
                     'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
                 },
                 data=payload,
-                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_private_key=get_vapid_private_key(),
                 vapid_claims=vapid_claims,
             )
         except WebPushException as exc:

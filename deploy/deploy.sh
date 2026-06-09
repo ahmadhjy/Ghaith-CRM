@@ -307,6 +307,12 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
     git -C "$PROJECT_DIR" rev-parse HEAD > "${BACKUP_DIR}/git_commit_after.txt" 2>/dev/null || true
 fi
 
+if [[ ! -f "${PROJECT_DIR}/deploy/vapid.env" ]]; then
+    log "NOTE: Browser push not configured. Run on server:"
+    log "  python manage.py generate_vapid_keys --write"
+    log "  Then add _load_vapid_env() from deploy/ghaithleads_settings_production.SNIPPET.py to ghaithleads/settings.py"
+fi
+
 log "========== Deploy finished successfully =========="
 log "Site: https://${PA_DOMAIN}/"
 log "Backup: ${BACKUP_DIR}"

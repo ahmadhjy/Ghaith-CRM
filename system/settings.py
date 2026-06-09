@@ -152,7 +152,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_ROOT = BASE_DIR / 'static_root/'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
-# Browser push (Web Push / VAPID). Generate with: python manage.py generate_vapid_keys
+# Browser push (Web Push / VAPID). Generate with: python manage.py generate_vapid_keys --write
+def _load_vapid_env():
+    vapid_file = BASE_DIR / 'deploy' / 'vapid.env'
+    if not vapid_file.exists():
+        return
+    for line in vapid_file.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key.strip(), value)
+
+
+_load_vapid_env()
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')

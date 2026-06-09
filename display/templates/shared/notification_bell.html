@@ -2,6 +2,12 @@
 {% if user.is_authenticated %}
 <link rel="stylesheet" href="{% static 'css/crm-notifications.css' %}">
 
+<div class="crm-notify-push-banner" id="crmNotifyPushBanner" hidden>
+  <span><i class="fas fa-bell"></i> Enable browser alerts for payments, messages, and team updates</span>
+  <button type="button" class="crm-notify-push-banner__enable" id="crmNotifyPushEnable">Enable</button>
+  <button type="button" class="crm-notify-push-banner__dismiss" id="crmNotifyPushDismiss" aria-label="Dismiss">×</button>
+</div>
+
 <div class="crm-notify" id="crmNotify">
   <button type="button" class="crm-notify__bell" id="crmNotifyBell" aria-label="Notifications" aria-expanded="false">
     <i class="fas fa-bell"></i>
@@ -35,7 +41,8 @@
     broadcastUrl: "{% url 'notifications_api_broadcast' %}",
     vapidUrl: "{% url 'notifications_api_vapid' %}",
     pushSubscribeUrl: "{% url 'notifications_api_push_subscribe' %}",
-    swUrl: "{% static 'sw.js' %}",
+    swUrl: "{% url 'notifications_service_worker' %}",
+    swScope: "/",
     csrfToken: "{{ csrf_token }}",
     isStaff: {{ user.is_staff|yesno:"true,false" }},
   };

@@ -1,9 +1,11 @@
 import json
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
@@ -189,6 +191,19 @@ def api_chat_send(request):
             'created_at': message.created_at.isoformat(),
         },
     })
+
+
+@require_GET
+def service_worker(request):
+    """Serve SW at site scope so push works on all CRM pages."""
+    sw_path = Path(settings.BASE_DIR) / 'static' / 'sw.js'
+    response = HttpResponse(
+        sw_path.read_text(encoding='utf-8'),
+        content_type='application/javascript',
+    )
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response
 
 
 @login_required(login_url='/login/')

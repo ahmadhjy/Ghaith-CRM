@@ -1,6 +1,9 @@
 # Copy relevant lines into /home/ghaithtravel/ghaithleads/ghaithleads/settings.py
 # (production only — do not commit this file with real secrets to GitHub)
 
+import os
+from pathlib import Path
+
 DEBUG = False
 
 ALLOWED_HOSTS = [
@@ -24,6 +27,29 @@ DATABASES = {
 STATIC_ROOT = BASE_DIR / 'static'
 STATIC_URL = '/static/'
 # Do not set STATICFILES_STORAGE to ManifestStaticFilesStorage on production.
+
+# Add to INSTALLED_APPS:
+# 'notifications',
+
+# Browser push — run once on server: python manage.py generate_vapid_keys --write
+# That creates deploy/vapid.env (gitignored). Loader:
+def _load_vapid_env():
+    vapid_file = BASE_DIR / 'deploy' / 'vapid.env'
+    if not vapid_file.exists():
+        return
+    for line in vapid_file.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key.strip(), value)
+
+
+_load_vapid_env()
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
 
 # Optional: import local overrides
 # try:

@@ -6,7 +6,7 @@ self.addEventListener('push', function (event) {
 
   const options = {
     body: data.body || '',
-    icon: '/static/css/favicon.ico',
+    badge: '/static/css/favicon.ico',
     data: { url: data.url || '/' },
   };
 

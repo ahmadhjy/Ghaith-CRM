@@ -9,13 +9,17 @@
   const list = document.getElementById('crmNotifyList');
   const markAllBtn = document.getElementById('crmNotifyMarkAll');
   const broadcastForm = document.getElementById('crmNotifyBroadcast');
+  const pushBanner = document.getElementById('crmNotifyPushBanner');
+  const pushEnableBtn = document.getElementById('crmNotifyPushEnable');
+  const pushDismissBtn = document.getElementById('crmNotifyPushDismiss');
 
   const COUNT_INTERVAL_MS = 90000;
   const OPEN_INTERVAL_MS = 45000;
+  const PUSH_DISMISS_KEY = 'crm_push_banner_dismissed';
   let countTimer = null;
   let openTimer = null;
-  let pushRegistered = false;
   let listLoaded = false;
+  let swRegistration = null;
 
   function csrfHeaders() {
     return {
@@ -143,10 +147,6 @@
     stopCountPolling();
     fetchNotifications();
     startOpenPolling();
-    if (!pushRegistered) {
-      pushRegistered = true;
-      registerPush();
-    }
   }
 
   function closePanel() {
@@ -214,41 +214,103 @@
     return arr;
   }
 
-  function registerPush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    fetch(cfg.vapidUrl, { credentials: 'same-origin' })
+  function hidePushBanner() {
+    if (pushBanner) pushBanner.hidden = true;
+  }
+
+  function showPushBanner() {
+    if (!pushBanner) return;
+    if (Notification.permission !== 'default') return;
+    try {
+      const dismissed = localStorage.getItem(PUSH_DISMISS_KEY);
+      if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+    } catch (e) {}
+    pushBanner.hidden = false;
+  }
+
+  function saveSubscription(sub) {
+    if (!sub) return Promise.resolve();
+    const json = sub.toJSON();
+    return fetch(cfg.pushSubscribeUrl, {
+      method: 'POST',
+      headers: csrfHeaders(),
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: json.keys,
+      }),
+      credentials: 'same-origin',
+    });
+  }
+
+  function subscribeToPush(reg, publicKey) {
+    return reg.pushManager.getSubscription().then(function (existing) {
+      if (existing) return existing;
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    });
+  }
+
+  function requestPushPermission() {
+    if (!('Notification' in window)) return Promise.resolve(null);
+    if (Notification.permission === 'granted') return Promise.resolve('granted');
+    if (Notification.permission === 'denied') return Promise.resolve('denied');
+    return Notification.requestPermission();
+  }
+
+  function initPush(promptUser) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return Promise.resolve();
+
+    return fetch(cfg.vapidUrl, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.enabled || !data.public_key) return;
-        return navigator.serviceWorker.register(cfg.swUrl).then(function (reg) {
-          return reg.pushManager.getSubscription().then(function (sub) {
-            if (sub) return sub;
-            return Notification.requestPermission().then(function (perm) {
-              if (perm !== 'granted') return null;
-              return reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(data.public_key),
-              });
-            });
-          }).then(function (sub) {
-            if (!sub) return;
-            const json = sub.toJSON();
-            return fetch(cfg.pushSubscribeUrl, {
-              method: 'POST',
-              headers: csrfHeaders(),
-              body: JSON.stringify({
-                endpoint: json.endpoint,
-                keys: json.keys,
-              }),
-              credentials: 'same-origin',
-            });
+        if (!data.enabled || !data.public_key) return null;
+
+        const regOpts = { scope: cfg.swScope || '/' };
+        return navigator.serviceWorker.register(cfg.swUrl, regOpts).then(function (reg) {
+          swRegistration = reg;
+
+          if (Notification.permission === 'granted') {
+            return subscribeToPush(reg, data.public_key).then(saveSubscription).then(hidePushBanner);
+          }
+
+          if (!promptUser) {
+            showPushBanner();
+            return null;
+          }
+
+          return requestPushPermission().then(function (perm) {
+            if (perm !== 'granted') {
+              if (perm === 'denied') hidePushBanner();
+              return null;
+            }
+            return subscribeToPush(reg, data.public_key)
+              .then(saveSubscription)
+              .then(hidePushBanner);
           });
         });
       })
       .catch(function () {});
   }
 
+  if (pushEnableBtn) {
+    pushEnableBtn.addEventListener('click', function () {
+      initPush(true);
+    });
+  }
+
+  if (pushDismissBtn) {
+    pushDismissBtn.addEventListener('click', function () {
+      hidePushBanner();
+      try { localStorage.setItem(PUSH_DISMISS_KEY, String(Date.now())); } catch (e) {}
+    });
+  }
+
   // Collapsed by default: lightweight badge poll only.
   fetchCount();
   startCountPolling();
+
+  // Register service worker + subscribe if already granted; otherwise show enable banner.
+  window.setTimeout(function () { initPush(false); }, 1500);
 })();

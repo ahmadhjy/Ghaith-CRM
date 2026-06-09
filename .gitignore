@@ -19,6 +19,7 @@ static_root/
 
 # Deployment (secrets — never commit)
 deploy/pythonanywhere.env
+deploy/vapid.env
 
 # IDE
 .idea/
