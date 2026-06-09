@@ -1,0 +1,44 @@
+{% load static %}
+{% if user.is_authenticated %}
+<link rel="stylesheet" href="{% static 'css/crm-notifications.css' %}">
+
+<div class="crm-notify" id="crmNotify">
+  <button type="button" class="crm-notify__bell" id="crmNotifyBell" aria-label="Notifications" aria-expanded="false">
+    <i class="fas fa-bell"></i>
+    <span class="crm-notify__badge" id="crmNotifyBadge" hidden>0</span>
+  </button>
+
+  <div class="crm-notify__panel" id="crmNotifyPanel" hidden>
+    <div class="crm-notify__panel-head">
+      <strong>Notifications</strong>
+      <div class="crm-notify__panel-actions">
+        <button type="button" class="crm-notify__link-btn" id="crmNotifyMarkAll">Mark all read</button>
+        <a href="{% url 'notifications_chat' %}" class="crm-notify__link-btn"><i class="fas fa-comments"></i> Chat</a>
+      </div>
+    </div>
+
+    {% if user.is_staff %}
+    <form class="crm-notify__broadcast" id="crmNotifyBroadcast">
+      <textarea rows="2" placeholder="Notice for all users…" id="crmNotifyBroadcastBody"></textarea>
+      <button type="submit" class="crm-notify__broadcast-btn">Send to everyone</button>
+    </form>
+    {% endif %}
+
+    <div class="crm-notify__list" id="crmNotifyList"></div>
+  </div>
+</div>
+
+<script>
+  window.CRM_NOTIFY = {
+    listUrl: "{% url 'notifications_api_list' %}",
+    markReadUrl: "{% url 'notifications_api_mark_read' %}",
+    broadcastUrl: "{% url 'notifications_api_broadcast' %}",
+    vapidUrl: "{% url 'notifications_api_vapid' %}",
+    pushSubscribeUrl: "{% url 'notifications_api_push_subscribe' %}",
+    swUrl: "{% static 'sw.js' %}",
+    csrfToken: "{{ csrf_token }}",
+    isStaff: {{ user.is_staff|yesno:"true,false" }},
+  };
+</script>
+<script src="{% static 'JS/crm-notifications.js' %}"></script>
+{% endif %}

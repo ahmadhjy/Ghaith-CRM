@@ -1,0 +1,346 @@
+.crm-notify {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 1003;
+}
+
+.crm-notify__bell {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+}
+
+.crm-notify__bell:hover {
+  background: #1d4ed8;
+}
+
+.crm-notify.is-open .crm-notify__bell {
+  background: #1d4ed8;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55);
+}
+
+.crm-notify__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.crm-notify__panel {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  pointer-events: none;
+}
+
+.crm-notify.is-open .crm-notify__panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.crm-notify__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.crm-notify__panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.crm-notify__link-btn {
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.crm-notify__broadcast {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  gap: 8px;
+}
+
+.crm-notify__broadcast textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.crm-notify__broadcast-btn {
+  justify-self: end;
+  border: 0;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.crm-notify__list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.crm-notify__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.crm-notify__item:hover {
+  background: #f8fafc;
+}
+
+.crm-notify__item.is-unread {
+  background: #eff6ff;
+}
+
+.crm-notify__item-kind {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.crm-notify__item-title {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.crm-notify__item-msg {
+  color: #475569;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.crm-notify__item-time {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  margin-top: 4px;
+}
+
+.crm-notify__empty {
+  padding: 24px 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* Chat page */
+.crm-chat {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  min-height: 480px;
+}
+
+.crm-chat__sidebar {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.crm-chat__sidebar-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 10px 4px;
+}
+
+.crm-chat__user {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.crm-chat__user:hover,
+.crm-chat__user.is-active {
+  background: #eff6ff;
+}
+
+.crm-chat__user-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.crm-chat__user-preview {
+  font-size: 0.8rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crm-chat__user-unread {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+  margin-left: 6px;
+}
+
+.crm-chat__main {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+}
+
+.crm-chat__placeholder {
+  margin: auto;
+  color: #94a3b8;
+  padding: 24px;
+}
+
+.crm-chat__thread {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 480px;
+}
+
+.crm-chat__thread-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.crm-chat__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8fafc;
+}
+
+.crm-chat__bubble {
+  max-width: 75%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.crm-chat__bubble.is-mine {
+  align-self: flex-end;
+  background: #2563eb;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.crm-chat__bubble.is-theirs {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+}
+
+.crm-chat__bubble-time {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.crm-chat__composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.crm-chat__composer textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+}
+
+@media (max-width: 900px) {
+  .crm-notify {
+    top: 14px;
+    right: 14px;
+  }
+
+  .crm-chat {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-chat__sidebar {
+    max-height: 200px;
+  }
+}

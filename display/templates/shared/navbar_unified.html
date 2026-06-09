@@ -4,6 +4,8 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/requests-modern.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'css/app-modern-global.css' %}">
 
+{% include 'shared/notification_bell.html' %}
+
 <button class="app-nav__toggle" id="appNavToggle" aria-label="Open menu" aria-expanded="false">
   <i class="fas fa-bars"></i>
 </button>
@@ -58,6 +60,9 @@
     </a>
     <a class="app-nav__item" href="{% url 'client_media_uploads_list' %}">
       <i class="fas fa-photo-video"></i><span>Client Media</span>
+    </a>
+    <a class="app-nav__item" href="{% url 'notifications_chat' %}">
+      <i class="fas fa-comments"></i><span>Team Chat</span>
     </a>
     <a class="app-nav__item" href="{% url 'list_daily_reports' %}">
       <i class="far fa-file-alt"></i><span>Daily Reports</span>

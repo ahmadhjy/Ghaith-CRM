@@ -3,6 +3,7 @@ from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
+    path('notifications/', include('notifications.urls')),
     # Existing web views
     path('dashboard/', include('dashboard.urls')),
     path('input/', views.input_data, name='input_data'),

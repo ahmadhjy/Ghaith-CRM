@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Team Chat — Ghaith CRM</title>
+    {% include 'shared/app_head.html' %}
+    <link rel="stylesheet" href="{% static 'css/crm-notifications.css' %}">
+</head>
+<body class="has-unified-nav">
+{% include 'navbar.html' %}
+
+<div class="req-wrap">
+    <header class="req-hero">
+        <div class="req-hero__bg"></div>
+        <div class="req-hero__content">
+            <div class="req-hero__eyebrow">Team</div>
+            <h1 class="req-hero__title">Internal Chat</h1>
+            <p class="req-hero__sub">Message your colleagues. You’ll get a notification when someone replies.</p>
+        </div>
+    </header>
+
+    <div class="crm-chat">
+        <aside class="crm-chat__sidebar" id="crmChatSidebar">
+            <p class="crm-chat__sidebar-title">Team members</p>
+            <div id="crmChatUserList"></div>
+        </aside>
+
+        <section class="crm-chat__main" id="crmChatMain">
+            <div class="crm-chat__placeholder" id="crmChatPlaceholder">
+                Select a team member to start chatting.
+            </div>
+            <div class="crm-chat__thread" id="crmChatThread" hidden>
+                <header class="crm-chat__thread-head" id="crmChatThreadHead"></header>
+                <div class="crm-chat__messages" id="crmChatMessages"></div>
+                <form class="crm-chat__composer" id="crmChatForm">
+                    <textarea id="crmChatInput" rows="2" placeholder="Type a message…" required></textarea>
+                    <button type="submit" class="req-btn-primary">Send</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+  window.CRM_CHAT = {
+    usersUrl: "{% url 'notifications_api_chat_users' %}",
+    threadUrlBase: "{% url 'notifications_api_chat_thread' user_id=0 %}".replace('/0/', '/'),
+    sendUrl: "{% url 'notifications_api_chat_send' %}",
+    csrfToken: "{{ csrf_token }}",
+    initialUserId: {{ selected_user.pk|default:'null' }},
+  };
+</script>
+<script src="{% static 'JS/crm-chat.js' %}"></script>
+</body>
+</html>

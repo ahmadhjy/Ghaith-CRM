@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'display',
     'tasks',
     'dashboard',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -150,3 +151,8 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_ROOT = BASE_DIR / 'static_root/'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+# Browser push (Web Push / VAPID). Generate with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
