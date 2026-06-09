@@ -1,37 +1,119 @@
+/* Sidebar — matches Ghaith CRM hero / requests-modern theme */
+
 .app-nav {
   position: fixed;
   top: 0;
   left: 0;
   width: 260px;
   height: 100vh;
-  background: #0f172a;
-  color: #e2e8f0;
   z-index: 1001;
   overflow-y: auto;
-  box-shadow: 2px 0 18px rgba(15, 23, 42, 0.3);
+  overflow-x: clip;
+  font-family: var(--req-font, 'Plus Jakarta Sans', system-ui, sans-serif);
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(175deg, #0a3d6b 0%, #0f4c81 42%, #0d5a7a 78%, #0d9488 140%);
+  box-shadow: 4px 0 28px rgba(15, 76, 129, 0.18);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 45%),
+    radial-gradient(circle at 100% 100%, rgba(13, 148, 136, 0.25) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .app-nav__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 14px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  position: sticky;
-  top: 0;
-  background: #0f172a;
+  gap: 10px;
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 61, 107, 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.app-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-nav__brand-mark {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.app-nav__brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-nav__brand-text strong {
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.app-nav__brand-text small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-top: 2px;
 }
 
 .app-nav__close {
   display: none;
   border: 0;
-  background: transparent;
-  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-nav__close:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .app-nav__menu {
-  padding: 10px 8px 16px;
+  position: relative;
+  z-index: 1;
+  padding: 12px 10px 20px;
+}
+
+.app-nav__section-label {
+  padding: 10px 12px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .app-nav__item,
@@ -41,52 +123,101 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  color: #cbd5e1;
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.82);
   text-decoration: none;
   padding: 10px 12px;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  font-size: 0.95rem;
+  border-radius: var(--req-radius-sm, 10px);
+  margin-bottom: 3px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.app-nav__item i,
-.app-nav__group > summary i {
+.app-nav__group > summary > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-nav__item > i,
+.app-nav__group > summary > i:not(.app-nav__chevron) {
   width: 18px;
+  flex-shrink: 0;
   text-align: center;
+  opacity: 0.9;
+  font-size: 0.92rem;
 }
 
 .app-nav__item:hover,
 .app-nav__group > summary:hover,
 .app-nav__group > a:hover {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.app-nav__item.is-active,
+.app-nav__group > a.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 3px 0 0 #5eead4;
+}
+
+.app-nav__item--danger {
+  margin-top: 8px;
+  color: rgba(254, 202, 202, 0.95);
 }
 
 .app-nav__item--danger:hover {
-  background: #7f1d1d;
+  background: rgba(220, 38, 38, 0.28);
+  border-color: rgba(252, 165, 165, 0.25);
+  color: #fff;
 }
 
 .app-nav__group {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .app-nav__group > summary {
   list-style: none;
   cursor: pointer;
+  padding-right: 10px;
 }
 
 .app-nav__group > summary::-webkit-details-marker {
   display: none;
 }
 
+.app-nav__group > summary::marker {
+  content: '';
+  display: none;
+}
+
+.app-nav__chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 14px;
+  font-size: 0.68rem;
+  opacity: 0.75;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.app-nav__group[open] > summary .app-nav__chevron {
+  transform: rotate(180deg);
+}
+
 .app-nav__group[open] > summary {
-  background: #1e293b;
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
 .app-nav__group > a {
   padding-left: 40px;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .app-nav__toggle {
@@ -96,17 +227,26 @@
   width: 42px;
   height: 42px;
   border: 0;
-  border-radius: 8px;
-  background: #2563eb;
+  border-radius: var(--req-radius-sm, 10px);
+  background: linear-gradient(135deg, var(--req-primary, #0f4c81), var(--req-primary-light, #1a6bb5));
   color: #fff;
   z-index: 1002;
   display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(15, 76, 129, 0.35);
+  cursor: pointer;
+}
+
+.app-nav__toggle:hover {
+  filter: brightness(1.06);
 }
 
 .app-nav__backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.6);
+  background: rgba(10, 61, 107, 0.45);
+  backdrop-filter: blur(2px);
   z-index: 1000;
   opacity: 0;
   pointer-events: none;
@@ -130,8 +270,6 @@
 
   .app-nav__toggle {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .app-nav__close {

@@ -101,20 +101,47 @@ def notify_takeover_lead(lead):
     )
 
 
-def notify_media_upload(media_file):
-    upload_link = media_file.upload_link
+def notify_media_upload_link(upload_link, *, files_added=0):
+    """One notification per client media page — message shows total file count."""
+    total = upload_link.files.count()
+    if total == 0:
+        return
+
     leadtask = upload_link.leadtask
     lead = leadtask.lead
     url = reverse('client_media_upload_detail', kwargs={'token': str(upload_link.token)})
-    notify_all_users(
-        kind=NotificationKind.MEDIA_UPLOAD,
-        title=f'New client media: {lead.name}',
-        message=f'{media_file.original_name} uploaded',
-        url=url,
-        lead=lead,
-        leadtask=leadtask,
-        dedupe_prefix=f'media_upload:{media_file.pk}',
-    )
+    title = f'New client media: {lead.name}'
+    file_word = 'file' if total == 1 else 'files'
+    message = f'{total} media {file_word} uploaded'
+
+    from .push import send_push_to_user
+
+    for user in active_users():
+        dedupe_key = f'media_upload:{upload_link.pk}:{user.pk}'
+        notification, created = UserNotification.objects.get_or_create(
+            recipient=user,
+            dedupe_key=dedupe_key,
+            defaults={
+                'kind': NotificationKind.MEDIA_UPLOAD,
+                'title': title,
+                'message': message,
+                'url': url,
+                'lead': lead,
+                'leadtask': leadtask,
+            },
+        )
+        if not created:
+            notification.title = title
+            notification.message = message
+            notification.url = url
+            update_fields = ['title', 'message', 'url']
+            if files_added > 0:
+                notification.is_read = False
+                update_fields.append('is_read')
+            notification.save(update_fields=update_fields)
+
+        if created or files_added > 0:
+            send_push_to_user(user, title, message, url)
 
 
 def notify_new_chat_message(message):

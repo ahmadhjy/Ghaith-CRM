@@ -1212,6 +1212,11 @@ def client_media_upload_files(request, token):
                 ('.mp4', '.mov', '.avi', '.webm', '.mkv')
             ),
         })
+
+    if uploaded:
+        from notifications.services import notify_media_upload_link
+        notify_media_upload_link(upload_link, files_added=len(uploaded))
+
     return JsonResponse({'status': 'success', 'files': uploaded})
 
 

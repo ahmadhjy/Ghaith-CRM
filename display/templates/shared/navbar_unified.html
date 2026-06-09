@@ -13,13 +13,20 @@
 
 <aside class="app-nav" id="appNav">
   <div class="app-nav__header">
-    <strong>Ghaith CRM</strong>
+    <div class="app-nav__brand">
+      <span class="app-nav__brand-mark" aria-hidden="true">G</span>
+      <div class="app-nav__brand-text">
+        <strong>Ghaith CRM</strong>
+        <small>Travel &amp; Leads</small>
+      </div>
+    </div>
     <button class="app-nav__close" id="appNavClose" aria-label="Close menu">
       <i class="fas fa-times"></i>
     </button>
   </div>
 
   <nav class="app-nav__menu" aria-label="Main">
+    <div class="app-nav__section-label">Main</div>
     <a class="app-nav__item" href="{% url 'stats_dashboard' %}">
       <i class="fas fa-chart-line"></i><span>Ghaith Dashboard</span>
     </a>
@@ -28,7 +35,7 @@
     </a>
 
     <details class="app-nav__group">
-      <summary><i class="fas fa-list-alt"></i><span>Requests</span></summary>
+      <summary><i class="fas fa-list-alt"></i><span>Requests</span><i class="fas fa-chevron-down app-nav__chevron" aria-hidden="true"></i></summary>
       <a href="{% url 'display_data' %}">All</a>
       <a href="{% url 'create_lead' %}">Add New</a>
       <a href="{% url 'archived_leads' %}">Archived Leads</a>
@@ -40,20 +47,24 @@
       <i class="fas fa-handshake"></i><span>Take Over List</span>
     </a>
 
+    <div class="app-nav__section-label">Work</div>
+
     <details class="app-nav__group">
-      <summary><i class="fas fa-tasks"></i><span>Tasks</span></summary>
+      <summary><i class="fas fa-tasks"></i><span>Tasks</span><i class="fas fa-chevron-down app-nav__chevron" aria-hidden="true"></i></summary>
       <a href="{% url 'current tasks' %}">My Tasks</a>
       <a href="{% url 'expired_tasks' %}">Overdue</a>
       <a href="{% url 'input_task' %}">Add New</a>
     </details>
 
     <details class="app-nav__group">
-      <summary><i class="far fa-file-alt"></i><span>Orders</span></summary>
+      <summary><i class="far fa-file-alt"></i><span>Orders</span><i class="fas fa-chevron-down app-nav__chevron" aria-hidden="true"></i></summary>
       <a href="{% url 'current_lead_tasks' %}">All Orders</a>
       <a href="{% url 'travellers_list' %}">Travellers</a>
       <a href="{% url 'supplier_payments_list' %}">Supplier Payments (Calendar)</a>
       <a href="{% url 'client_payments_list' %}">Client Payments (Calendar)</a>
     </details>
+
+    <div class="app-nav__section-label">Tools</div>
 
     <a class="app-nav__item" href="{% url 'event_new' %}" target="_blank" rel="noopener noreferrer">
       <i class="far fa-calendar-plus"></i><span>Create Reminder</span>

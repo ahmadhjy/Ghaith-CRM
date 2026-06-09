@@ -825,6 +825,7 @@ def stats_dashboard(request):
     sold_leads_this_month = Lead.objects.filter(last_modified__range=(month_start, month_end), sold=True)
     achieved_profit = sum(lead.get_numeric_profit() for lead in sold_leads_this_month)
     progress_percentage = (achieved_profit / monthly_target) * 100 if monthly_target else 0
+    progress_display = min(progress_percentage, 100)
 
     # Additional stats
     employee_stats = []
@@ -902,6 +903,7 @@ def stats_dashboard(request):
         'monthly_target': monthly_target,
         'achieved_profit': achieved_profit,
         'progress_percentage': progress_percentage,
+        'progress_display': progress_display,
         'employee_stats': employee_stats,
         'top_destinations': top_destinations,
         'status_labels': mark_safe(json.dumps(status_labels)),

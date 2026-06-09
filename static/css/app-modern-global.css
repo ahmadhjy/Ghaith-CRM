@@ -643,6 +643,138 @@ body.has-unified-nav .progress-bar {
   font-weight: 700;
 }
 
+/* Ghaith Dashboard — monthly target block */
+body.has-unified-nav .dash-target-section .section-title {
+  margin: 0;
+}
+
+body.has-unified-nav .dash-target-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+
+body.has-unified-nav .dash-target-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+}
+
+body.has-unified-nav .dash-target-filters__label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--req-muted);
+}
+
+body.has-unified-nav .dash-target-filters__select {
+  min-width: 130px;
+  padding: 8px 32px 8px 12px;
+  border: 1.5px solid var(--req-border);
+  border-radius: var(--req-radius-sm);
+  background: var(--req-surface);
+  color: var(--req-text);
+  font-family: var(--req-font);
+  font-size: .88rem;
+  font-weight: 600;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+body.has-unified-nav .dash-target-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 700px) {
+  body.has-unified-nav .dash-target-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.has-unified-nav .dash-target-stat {
+  background: var(--req-surface-2);
+  border: 1px solid var(--req-border);
+  border-radius: var(--req-radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+body.has-unified-nav .dash-target-stat--accent {
+  background: linear-gradient(135deg, rgba(15, 76, 129, 0.08), rgba(13, 148, 136, 0.1));
+  border-color: rgba(15, 76, 129, 0.18);
+}
+
+body.has-unified-nav .dash-target-stat__label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--req-muted);
+}
+
+body.has-unified-nav .dash-target-stat__value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--req-text);
+  line-height: 1.1;
+}
+
+body.has-unified-nav .dash-target-stat--accent .dash-target-stat__value {
+  color: var(--req-primary);
+}
+
+body.has-unified-nav .dash-target-progress__track {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--req-surface-2);
+  border: 1px solid var(--req-border);
+  overflow: hidden;
+}
+
+body.has-unified-nav .dash-target-progress__fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--req-primary), var(--req-primary-light), var(--req-accent));
+  transition: width 0.35s ease;
+}
+
+body.has-unified-nav .dash-target-progress__meta {
+  margin: 10px 0 0;
+  font-size: .9rem;
+  color: var(--req-muted);
+}
+
+body.has-unified-nav .dash-target-progress__meta strong {
+  color: var(--req-text);
+  font-weight: 800;
+}
+
+body.has-unified-nav .dash-target-progress__badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--req-success);
+  font-size: .75rem;
+  font-weight: 700;
+}
+
 body.has-unified-nav .card {
   background: var(--req-surface);
   border: 1px solid var(--req-border);

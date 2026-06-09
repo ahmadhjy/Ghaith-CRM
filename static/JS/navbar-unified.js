@@ -33,4 +33,26 @@
   window.addEventListener("resize", function () {
     if (window.innerWidth > 900) closeNav();
   });
+
+  // Highlight current page in the sidebar
+  const currentPath = window.location.pathname;
+  const links = nav.querySelectorAll('.app-nav__item[href], .app-nav__group > a');
+
+  links.forEach(function (link) {
+    let linkPath;
+    try {
+      linkPath = new URL(link.href, window.location.origin).pathname;
+    } catch (e) {
+      return;
+    }
+
+    const isMatch = linkPath === currentPath
+      || (linkPath.length > 1 && currentPath.startsWith(linkPath));
+
+    if (isMatch) {
+      link.classList.add('is-active');
+      const group = link.closest('.app-nav__group');
+      if (group) group.open = true;
+    }
+  });
 })();

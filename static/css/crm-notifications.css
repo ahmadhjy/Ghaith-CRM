@@ -62,13 +62,14 @@
 }
 
 .crm-notify__greeting {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--req-text, #0f172a);
   white-space: nowrap;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--req-font, 'Plus Jakarta Sans', system-ui, sans-serif);
 }
 
 .crm-notify__bell {
@@ -77,20 +78,20 @@
   height: 44px;
   border: 0;
   border-radius: 50%;
-  background: #2563eb;
+  background: linear-gradient(135deg, var(--req-primary, #0f4c81), var(--req-primary-light, #1a6bb5));
   color: #fff;
   font-size: 1.1rem;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 4px 14px rgba(15, 76, 129, 0.35);
 }
 
 .crm-notify__bell:hover {
-  background: #1d4ed8;
+  filter: brightness(1.06);
 }
 
 .crm-notify.is-open .crm-notify__bell {
-  background: #1d4ed8;
-  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.55);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 18px rgba(15, 76, 129, 0.45);
 }
 
 .crm-notify__badge {
@@ -156,7 +157,7 @@
 .crm-notify__link-btn {
   border: 0;
   background: transparent;
-  color: #2563eb;
+  color: var(--req-primary, #0f4c81);
   font-size: 0.8rem;
   cursor: pointer;
   text-decoration: none;
@@ -210,7 +211,8 @@
 }
 
 .crm-notify__item.is-unread {
-  background: #eff6ff;
+  background: #f0f7fc;
+  border-left: 3px solid var(--req-primary, #0f4c81);
 }
 
 .crm-notify__item-kind {
@@ -362,7 +364,7 @@
 
 .crm-chat__bubble.is-mine {
   align-self: flex-end;
-  background: #2563eb;
+  background: linear-gradient(135deg, var(--req-primary, #0f4c81), var(--req-primary-light, #1a6bb5));
   color: #fff;
   border-bottom-right-radius: 4px;
 }
