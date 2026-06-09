@@ -899,6 +899,7 @@ def current_leadtasks(request):
             Q(lead__destination__icontains=search_query) |
             Q(lead__phone__icontains=search_query) |
             Q(notes__icontains=search_query) |
+            Q(lead__finalization_notes__icontains=search_query) |
             Q(assigned_to__username__icontains=search_query)
         ).distinct()
 
