@@ -10,6 +10,7 @@
 </div>
 
 <div class="crm-notify" id="crmNotify">
+  <span class="crm-notify__greeting">Hi, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}</span>
   <button type="button" class="crm-notify__bell" id="crmNotifyBell" aria-label="Notifications" aria-expanded="false">
     <i class="fas fa-bell"></i>
     <span class="crm-notify__badge" id="crmNotifyBadge" hidden>0</span>

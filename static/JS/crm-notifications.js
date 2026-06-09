@@ -217,7 +217,10 @@
   }
 
   function hidePushBanner() {
-    if (pushBanner) pushBanner.hidden = true;
+    if (!pushBanner) return;
+    pushBanner.hidden = true;
+    pushBanner.classList.add('is-dismissed');
+    pushBanner.setAttribute('aria-hidden', 'true');
   }
 
   function markPushHandled() {
@@ -237,7 +240,10 @@
   }
 
   function showPushBanner() {
-    if (shouldShowPushBanner()) pushBanner.hidden = false;
+    if (!shouldShowPushBanner()) return;
+    pushBanner.hidden = false;
+    pushBanner.classList.remove('is-dismissed');
+    pushBanner.setAttribute('aria-hidden', 'false');
   }
 
   function saveSubscription(sub) {

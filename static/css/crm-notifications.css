@@ -16,6 +16,12 @@
   font-size: 0.88rem;
 }
 
+/* hidden attribute is overridden by display:flex above — must force hide */
+.crm-notify-push-banner[hidden],
+.crm-notify-push-banner.is-dismissed {
+  display: none !important;
+}
+
 .crm-notify-push-banner span {
   flex: 1;
 }
@@ -50,6 +56,19 @@
   top: 14px;
   right: 18px;
   z-index: 1003;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crm-notify__greeting {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .crm-notify__bell {
