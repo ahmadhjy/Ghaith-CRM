@@ -16,10 +16,12 @@
   const COUNT_INTERVAL_MS = 90000;
   const OPEN_INTERVAL_MS = 45000;
   const PUSH_DISMISS_KEY = 'crm_push_banner_dismissed';
+  const PUSH_HANDLED_KEY = 'crm_push_handled';
   let countTimer = null;
   let openTimer = null;
   let listLoaded = false;
   let swRegistration = null;
+  let pushInitStarted = false;
 
   function csrfHeaders() {
     return {
@@ -218,14 +220,24 @@
     if (pushBanner) pushBanner.hidden = true;
   }
 
-  function showPushBanner() {
-    if (!pushBanner) return;
-    if (Notification.permission !== 'default') return;
+  function markPushHandled() {
+    hidePushBanner();
+    try { localStorage.setItem(PUSH_HANDLED_KEY, '1'); } catch (e) {}
+  }
+
+  function shouldShowPushBanner() {
+    if (!pushBanner || !('Notification' in window)) return false;
+    if (Notification.permission !== 'default') return false;
     try {
+      if (localStorage.getItem(PUSH_HANDLED_KEY)) return false;
       const dismissed = localStorage.getItem(PUSH_DISMISS_KEY);
-      if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+      if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return false;
     } catch (e) {}
-    pushBanner.hidden = false;
+    return true;
+  }
+
+  function showPushBanner() {
+    if (shouldShowPushBanner()) pushBanner.hidden = false;
   }
 
   function saveSubscription(sub) {
@@ -239,7 +251,10 @@
         keys: json.keys,
       }),
       credentials: 'same-origin',
-    });
+    }).then(function (r) {
+      if (!r.ok) return null;
+      return r.json();
+    }).catch(function () { return null; });
   }
 
   function subscribeToPush(reg, publicKey) {
@@ -260,19 +275,33 @@
   }
 
   function initPush(promptUser) {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return Promise.resolve();
+    if (pushInitStarted && !promptUser) return Promise.resolve();
+    pushInitStarted = true;
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (promptUser) markPushHandled();
+      return Promise.resolve();
+    }
+
+    if (Notification.permission === 'granted') {
+      markPushHandled();
+    }
 
     return fetch(cfg.vapidUrl, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.enabled || !data.public_key) return null;
+        if (!data.enabled || !data.public_key) {
+          if (promptUser) markPushHandled();
+          else showPushBanner();
+          return null;
+        }
 
         const regOpts = { scope: cfg.swScope || '/' };
         return navigator.serviceWorker.register(cfg.swUrl, regOpts).then(function (reg) {
           swRegistration = reg;
 
           if (Notification.permission === 'granted') {
-            return subscribeToPush(reg, data.public_key).then(saveSubscription).then(hidePushBanner);
+            return subscribeToPush(reg, data.public_key).then(saveSubscription);
           }
 
           if (!promptUser) {
@@ -281,28 +310,27 @@
           }
 
           return requestPushPermission().then(function (perm) {
-            if (perm !== 'granted') {
-              if (perm === 'denied') hidePushBanner();
-              return null;
-            }
-            return subscribeToPush(reg, data.public_key)
-              .then(saveSubscription)
-              .then(hidePushBanner);
+            markPushHandled();
+            if (perm !== 'granted') return null;
+            return subscribeToPush(reg, data.public_key).then(saveSubscription);
           });
         });
       })
-      .catch(function () {});
+      .catch(function () {
+        if (promptUser) markPushHandled();
+      });
   }
 
   if (pushEnableBtn) {
     pushEnableBtn.addEventListener('click', function () {
+      markPushHandled();
       initPush(true);
     });
   }
 
   if (pushDismissBtn) {
     pushDismissBtn.addEventListener('click', function () {
-      hidePushBanner();
+      markPushHandled();
       try { localStorage.setItem(PUSH_DISMISS_KEY, String(Date.now())); } catch (e) {}
     });
   }
