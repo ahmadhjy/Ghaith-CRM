@@ -9,19 +9,13 @@
   const list = document.getElementById('crmNotifyList');
   const markAllBtn = document.getElementById('crmNotifyMarkAll');
   const broadcastForm = document.getElementById('crmNotifyBroadcast');
-  const pushBanner = document.getElementById('crmNotifyPushBanner');
-  const pushEnableBtn = document.getElementById('crmNotifyPushEnable');
-  const pushDismissBtn = document.getElementById('crmNotifyPushDismiss');
 
   const COUNT_INTERVAL_MS = 90000;
   const OPEN_INTERVAL_MS = 45000;
-  const PUSH_DISMISS_KEY = 'crm_push_banner_dismissed';
-  const PUSH_HANDLED_KEY = 'crm_push_handled';
   let countTimer = null;
   let openTimer = null;
   let listLoaded = false;
-  let swRegistration = null;
-  let pushInitStarted = false;
+  let pushSubscribed = false;
 
   function csrfHeaders() {
     return {
@@ -216,36 +210,6 @@
     return arr;
   }
 
-  function hidePushBanner() {
-    if (!pushBanner) return;
-    pushBanner.hidden = true;
-    pushBanner.classList.add('is-dismissed');
-    pushBanner.setAttribute('aria-hidden', 'true');
-  }
-
-  function markPushHandled() {
-    hidePushBanner();
-    try { localStorage.setItem(PUSH_HANDLED_KEY, '1'); } catch (e) {}
-  }
-
-  function shouldShowPushBanner() {
-    if (!pushBanner || !('Notification' in window)) return false;
-    if (Notification.permission !== 'default') return false;
-    try {
-      if (localStorage.getItem(PUSH_HANDLED_KEY)) return false;
-      const dismissed = localStorage.getItem(PUSH_DISMISS_KEY);
-      if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return false;
-    } catch (e) {}
-    return true;
-  }
-
-  function showPushBanner() {
-    if (!shouldShowPushBanner()) return;
-    pushBanner.hidden = false;
-    pushBanner.classList.remove('is-dismissed');
-    pushBanner.setAttribute('aria-hidden', 'false');
-  }
-
   function saveSubscription(sub) {
     if (!sub) return Promise.resolve();
     const json = sub.toJSON();
@@ -280,71 +244,64 @@
     return Notification.requestPermission();
   }
 
-  function initPush(promptUser) {
-    if (pushInitStarted && !promptUser) return Promise.resolve();
-    pushInitStarted = true;
-
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      if (promptUser) markPushHandled();
-      return Promise.resolve();
-    }
-
-    if (Notification.permission === 'granted') {
-      markPushHandled();
-    }
+  /** Auto-enable push: register SW, ask browser permission, subscribe. */
+  function enablePush(askPermission) {
+    if (pushSubscribed) return Promise.resolve();
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return Promise.resolve();
+    if (!('Notification' in window)) return Promise.resolve();
+    if (Notification.permission === 'denied') return Promise.resolve();
 
     return fetch(cfg.vapidUrl, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.enabled || !data.public_key) {
-          if (promptUser) markPushHandled();
-          else showPushBanner();
-          return null;
-        }
+        if (!data.enabled || !data.public_key) return null;
 
-        const regOpts = { scope: cfg.swScope || '/' };
-        return navigator.serviceWorker.register(cfg.swUrl, regOpts).then(function (reg) {
-          swRegistration = reg;
+        return navigator.serviceWorker.register(cfg.swUrl, { scope: cfg.swScope || '/' })
+          .then(function (reg) {
+            function doSubscribe() {
+              return subscribeToPush(reg, data.public_key).then(function (sub) {
+                if (!sub) return null;
+                pushSubscribed = true;
+                return saveSubscription(sub);
+              });
+            }
 
-          if (Notification.permission === 'granted') {
-            return subscribeToPush(reg, data.public_key).then(saveSubscription);
-          }
+            if (Notification.permission === 'granted') {
+              return doSubscribe();
+            }
 
-          if (!promptUser) {
-            showPushBanner();
-            return null;
-          }
+            if (!askPermission) return null;
 
-          return requestPushPermission().then(function (perm) {
-            markPushHandled();
-            if (perm !== 'granted') return null;
-            return subscribeToPush(reg, data.public_key).then(saveSubscription);
+            return requestPushPermission().then(function (perm) {
+              if (perm === 'granted') return doSubscribe();
+              return null;
+            });
           });
-        });
       })
-      .catch(function () {
-        if (promptUser) markPushHandled();
-      });
+      .catch(function () {});
   }
 
-  if (pushEnableBtn) {
-    pushEnableBtn.addEventListener('click', function () {
-      markPushHandled();
-      initPush(true);
-    });
-  }
-
-  if (pushDismissBtn) {
-    pushDismissBtn.addEventListener('click', function () {
-      markPushHandled();
-      try { localStorage.setItem(PUSH_DISMISS_KEY, String(Date.now())); } catch (e) {}
-    });
+  function bootstrapPush() {
+    if (Notification.permission === 'denied') return;
+    if (Notification.permission === 'granted') {
+      enablePush(false);
+      return;
+    }
+    // Permission not set yet — show browser's native Allow/Block dialog automatically.
+    enablePush(true);
   }
 
   // Collapsed by default: lightweight badge poll only.
   fetchCount();
   startCountPolling();
 
-  // Register service worker + subscribe if already granted; otherwise show enable banner.
-  window.setTimeout(function () { initPush(false); }, 1500);
+  // Auto-enable push shortly after login (no extra banner).
+  window.setTimeout(bootstrapPush, 800);
+
+  // If the browser blocks auto-prompt, retry on first click anywhere on the page.
+  document.addEventListener('click', function () {
+    if (!pushSubscribed && Notification.permission === 'default') {
+      enablePush(true);
+    }
+  }, { once: true, capture: true });
 })();

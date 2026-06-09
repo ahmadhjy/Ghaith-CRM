@@ -3,12 +3,6 @@
 <link rel="stylesheet" href="{% static 'css/crm-notifications.css' %}">
 <form style="display:none" aria-hidden="true">{% csrf_token %}</form>
 
-<div class="crm-notify-push-banner" id="crmNotifyPushBanner" hidden>
-  <span><i class="fas fa-bell"></i> Enable browser alerts for payments, messages, and team updates</span>
-  <button type="button" class="crm-notify-push-banner__enable" id="crmNotifyPushEnable">Enable</button>
-  <button type="button" class="crm-notify-push-banner__dismiss" id="crmNotifyPushDismiss" aria-label="Dismiss">×</button>
-</div>
-
 <div class="crm-notify" id="crmNotify">
   <span class="crm-notify__greeting">Hi, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}</span>
   <button type="button" class="crm-notify__bell" id="crmNotifyBell" aria-label="Notifications" aria-expanded="false">
