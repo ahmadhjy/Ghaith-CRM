@@ -79,14 +79,13 @@
                         <a href="{% url 'edit_lead_tasks' service.leadtask_id %}" class="list-table__link">#{{ service.leadtask_id }}</a>
                     </td>
                     <td data-label="Mark paid" class="list-table__td-mark-paid">
-                        {% if not service.is_checked %}
                         <form method="post" action="{% url 'service_mark_done' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn--small btn--primary">Paid</button>
+                            <label class="inv-toggle">
+                                <input type="checkbox" name="is_checked" value="on" onchange="this.form.submit();" {% if service.is_checked %}checked{% endif %}>
+                                <span class="inv-toggle__slider"></span>
+                            </label>
                         </form>
-                        {% else %}
-                        <span class="list-table__muted">—</span>
-                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

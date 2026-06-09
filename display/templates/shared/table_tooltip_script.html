@@ -1,0 +1,59 @@
+<script>
+(function () {
+    var tip = document.getElementById('reqTableTipFloat');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'reqTableTipFloat';
+        tip.className = 'req-tooltip-float';
+        tip.setAttribute('role', 'tooltip');
+        tip.hidden = true;
+        document.body.appendChild(tip);
+    }
+
+    function hideTip() {
+        tip.hidden = true;
+        tip.textContent = '';
+    }
+
+    function placeTip(el) {
+        var content = el.querySelector('.req-table-tip__content');
+        if (!content) return;
+        var text = content.textContent;
+        if (!text || !text.trim()) return;
+
+        tip.textContent = text;
+        tip.hidden = false;
+
+        requestAnimationFrame(function () {
+            var rect = el.getBoundingClientRect();
+            var margin = 12;
+            var gap = 8;
+            var top = rect.top - tip.offsetHeight - gap;
+            var left = rect.left;
+
+            if (top < margin) {
+                top = rect.bottom + gap;
+            }
+            if (left + tip.offsetWidth > window.innerWidth - margin) {
+                left = window.innerWidth - tip.offsetWidth - margin;
+            }
+            if (left < margin) {
+                left = margin;
+            }
+
+            tip.style.top = top + 'px';
+            tip.style.left = left + 'px';
+        });
+    }
+
+    document.querySelectorAll('.req-table-tip').forEach(function (el) {
+        el.addEventListener('mouseenter', function () { placeTip(el); });
+        el.addEventListener('mouseleave', hideTip);
+        el.addEventListener('focus', function () { placeTip(el); });
+        el.addEventListener('blur', hideTip);
+    });
+
+    window.addEventListener('scroll', hideTip, true);
+    window.addEventListener('resize', hideTip);
+})();
+</script>

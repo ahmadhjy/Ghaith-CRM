@@ -5,7 +5,7 @@ class CreateLeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'name', 'country_code', 'phone', 'channel', 'reason_of_travel', 
+            'name', 'country_code', 'phone', 'channel', 'reason_of_travel',
             'assigned_to', 'takeover', 'destination', 'type_of_service',
             'offer_prepared', 'offer_details'
         ]
@@ -28,7 +28,7 @@ class QualificationForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'destination', 'date_notes',
+            'name', 'destination', 'date_notes',
             'special_request', 'urgent', 'assignment_notes',
             'assigned_to', 'follow_up', 'reason_of_travel',
             'why_this_destination',
@@ -43,12 +43,12 @@ class QualificationForm(forms.ModelForm):
 class SendOfferForm(forms.ModelForm):
     class Meta:
         model = Lead
-        fields = ['finalization_notes', 'assigned_to', 'offer_details']
+        fields = ['name', 'finalization_notes', 'assigned_to', 'offer_details']
 
 class CloseDealForm(forms.ModelForm):
     class Meta:
         model = Lead
-        fields = ['selling_price', 'net', 'profit', 'sold', 'lost',
+        fields = ['name', 'selling_price', 'net', 'profit', 'sold', 'lost',
                   'finalization_notes', 'follow_up']
         widgets = {
             'follow_up': forms.DateInput(attrs={'type': 'date'}),

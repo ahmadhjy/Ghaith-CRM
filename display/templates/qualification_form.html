@@ -21,7 +21,6 @@
     {% include 'shared/workflow_stepper.html' with workflow_step=2 lead=lead %}
 
     <div class="req-lead-banner">
-        <div class="req-lead-banner__item"><i class="fas fa-user"></i><strong>Name</strong> {{ lead.name }}</div>
         <div class="req-lead-banner__item"><i class="fas fa-phone"></i><strong>Phone</strong> {{ lead.phone }}</div>
         <div class="req-lead-banner__item"><i class="fas fa-map-marker-alt"></i><strong>Destination</strong> {{ lead.destination|default:"—" }}</div>
     </div>
@@ -40,6 +39,13 @@
             {% csrf_token %}
             <div class="req-card__body">
                 <div class="req-grid">
+                    <div class="req-field">
+                        <label for="id_name">Name</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="req-field req-field--full">
+                        {% include 'shared/passengers_field.html' with lead=lead %}
+                    </div>
                     <div class="req-field">
                         <label for="id_destination">Destination</label>
                         {{ form.destination }}

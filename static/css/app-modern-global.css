@@ -997,3 +997,68 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   body.has-unified-nav .req-stat { min-width: calc(50% - 10px); }
   body.has-unified-nav .req-stats { gap: 8px; }
 }
+
+/* Toggle switch (same as invoice edit page) */
+.inv-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.inv-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.inv-toggle__slider {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .25s;
+}
+
+.inv-toggle__slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .25s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+}
+
+.inv-toggle input:checked + .inv-toggle__slider {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+}
+
+.inv-toggle input:checked + .inv-toggle__slider::before {
+  transform: translateX(18px);
+}
+
+.inv-toggle-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--req-muted);
+}
+
+.list-table__td-mark-paid {
+  text-align: center;
+}
+
+.list-table__inline-form {
+  display: inline-flex;
+  justify-content: center;
+  margin: 0;
+}

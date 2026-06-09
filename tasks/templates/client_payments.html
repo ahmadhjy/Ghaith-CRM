@@ -27,7 +27,7 @@
             <form method="GET" action="{% url 'client_payments' %}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;width:100%">
                 <div class="req-filter-group">
                     <span class="req-filter-label">Search</span>
-                    <input type="text" name="search" placeholder="Search payments…" value="{{ request.GET.search }}" class="req-input">
+                    <input type="text" name="search" placeholder="Name, passengers, phone…" value="{{ request.GET.search }}" class="req-input">
                 </div>
                 <div class="req-filter-group">
                     <span class="req-filter-label">Filter</span>

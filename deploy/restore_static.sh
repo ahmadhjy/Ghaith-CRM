@@ -14,6 +14,8 @@ REQUIRED=(
     "css/requests-modern.css"
     "css/app-modern-global.css"
     "JS/navbar-unified.js"
+    "JS/hover-tooltip.js"
+    "JS/passengers-field.js"
 )
 
 cd "$PROJECT_DIR"

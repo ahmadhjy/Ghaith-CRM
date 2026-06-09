@@ -39,7 +39,7 @@ The deploy script **syncs `system/` → `ghaithleads/`** after each pull and **n
 7. Removes **`__pycache__`** and **`.pyc`** only
 8. Runs **`manage.py check`**
 9. Shows migration plan, then **`manage.py migrate --noinput`** (pending only)
-10. Runs **`manage.py collectstatic --noinput --clear`**
+10. Skips **`collectstatic --clear`** by default (`RUN_COLLECTSTATIC=no`) — theme CSS lives in `static/` and is served directly by PythonAnywhere
 11. Reloads the web app (`touch` WSGI file or API)
 12. **Stops immediately** on any failed command (`set -e`)
 

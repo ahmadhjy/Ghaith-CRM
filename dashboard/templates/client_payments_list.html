@@ -72,9 +72,9 @@
                     <td data-label="Mark paid" class="list-table__td-mark-paid">
                         <form method="post" action="{% url 'update_payment' payment.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
                             {% csrf_token %}
-                            <label class="list-table__checkbox-label">
+                            <label class="inv-toggle">
                                 <input type="checkbox" name="payment_checked" onchange="this.form.submit();" {% if payment.is_checked %}checked{% endif %}>
-                                <span class="list-table__checkbox-text">Paid</span>
+                                <span class="inv-toggle__slider"></span>
                             </label>
                         </form>
                     </td>

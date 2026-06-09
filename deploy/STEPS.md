@@ -153,33 +153,67 @@ tail -50 /var/log/ghaithtravel.pythonanywhere.com.error.log
 ### On your PC
 
 ```bash
-git add .
-git commit -m "Describe your changes"
-git push origin main
+cd path/to/Ghaith-CRM
+git pull origin main
+git push origin main   # after your commits
 ```
 
 ### On PythonAnywhere Bash
 
 ```bash
 cd /home/ghaithtravel/ghaithleads
+export DJANGO_SETTINGS_MODULE=ghaithleads.settings
+
+# 1) Confirm deploy config (one-time; edit if needed)
+grep RUN_COLLECTSTATIC deploy/pythonanywhere.env
+# Must be: RUN_COLLECTSTATIC="no"
+
+# 2) Deploy
 bash deploy/deploy.sh
 ```
 
-That is the full routine. Typical time: 1–3 minutes.
+Typical time: 2–5 minutes (media backup can take 1–2 min).
+
+### After this release (passengers, tooltips, calendar toggles)
+
+The deploy applies new DB migrations automatically. If you want to run them manually first:
+
+```bash
+cd /home/ghaithtravel/ghaithleads
+export DJANGO_SETTINGS_MODULE=ghaithleads.settings
+/home/ghaithtravel/djangenv/bin/python manage.py migrate display
+```
+
+### If CSS/JS looks broken after deploy
+
+Never run `collectstatic --clear` on PythonAnywhere. Restore theme files from git:
+
+```bash
+cd /home/ghaithtravel/ghaithleads
+bash deploy/restore_static.sh
+```
+
+Then hard-refresh the browser (Ctrl+F5).
+
+### Quick deploy (skip slow media backup)
+
+```bash
+BACKUP_MEDIA=no bash deploy/deploy.sh
+```
 
 ---
 
 ## What the script does each time
 
-1. Backs up `db.sqlite3`, `media/`, and `ghaithleads/settings.py`
-2. `git pull` from GitHub (no delete, no reclone)
+1. Backs up Postgres (via `deploy/backup_database.py`), `media/`, and `ghaithleads/settings.py`
+2. `git fetch` + `git merge --ff-only` from GitHub (no delete, no reclone)
 3. Syncs `system/` → `ghaithleads/` (keeps your production `settings.py`)
 4. Activates `/home/ghaithtravel/djangenv`
 5. `pip install -r requirements.txt`
 6. Removes `__pycache__` / `.pyc` only
 7. `manage.py check`
 8. `manage.py migrate` (pending migrations only)
-9. `collectstatic`
+9. Verifies theme CSS/JS in `static/` — **does not** run `collectstatic --clear` (see `RUN_COLLECTSTATIC=no`)
 10. Reloads the web app (`touch` WSGI file)
 
 ---

@@ -1,0 +1,6 @@
+{% if text %}
+<span class="req-table-tip" tabindex="0" aria-describedby="">
+    <span class="req-table-tip__label">{{ text|truncatechars:max_length }}</span>
+    <span class="req-table-tip__content" hidden aria-hidden="true">{{ text }}</span>
+</span>
+{% else %}—{% endif %}

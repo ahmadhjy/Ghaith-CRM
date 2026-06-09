@@ -21,6 +21,8 @@ from .models import (
     Destination,
     CrmNotification,
 )
+from .passengers import save_lead_passengers
+from .phone_utils import build_full_phone, find_duplicate_leads, local_phone_part
 from django.db.models import Q
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -90,15 +92,20 @@ def create_lead(request, pk=None):
         if form.is_valid():
             phone = form.cleaned_data['phone']
             country_code = form.cleaned_data['country_code']
-            full_phone = f"{country_code}{phone}"
-            duplicates = list(Lead.objects.filter(phone=full_phone).exclude(pk=pk if pk else None))
-            
+            full_phone = build_full_phone(country_code, phone)
+            duplicates = find_duplicate_leads(country_code, phone, exclude_pk=pk)
+
             if duplicates and not request.POST.get('confirm'):
                 duplicate_names = ', '.join([dup.name for dup in duplicates])
                 return render(request, 'create_lead.html', {
                     'form': form,
+                    'lead': lead or form.instance,
+                    'passenger_names': request.POST.getlist('passenger_names'),
                     'duplicates': duplicates,
-                    'duplicate_warning': f'The phone number is already associated with the following leads: {duplicate_names}. Do you want to proceed?'
+                    'duplicate_warning': (
+                        f'This phone number is already used by: {duplicate_names}. '
+                        'Submit again to create this request anyway.'
+                    ),
                 })
 
             lead = form.save(commit=False)
@@ -111,6 +118,7 @@ def create_lead(request, pk=None):
             if lead.period is None:
                 lead.period = 20
             lead.save()
+            save_lead_passengers(lead, request.POST.getlist('passenger_names'))
 
             if 'submit_next' in request.POST:
                 return redirect('qualify_lead', lead_id=lead.pk)
@@ -118,7 +126,14 @@ def create_lead(request, pk=None):
                 return redirect('display_data')
     else:
         form = CreateLeadForm(instance=lead)
-    return render(request, 'create_lead.html', {'form': form, 'duplicates': []})
+        if lead and lead.phone:
+            form.initial['phone'] = local_phone_part(lead.country_code, lead.phone)
+    return render(request, 'create_lead.html', {
+        'form': form,
+        'lead': lead or form.instance,
+        'duplicates': [],
+        'passenger_names': [],
+    })
 
 
 
@@ -142,16 +157,19 @@ def qualify_lead(request, lead_id):
                 lead.status_changed_at = now()
                 lead.period = 10
                 lead.save()
+                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
                 return redirect('deal_lead', lead_id=lead.pk)
             elif "submit_exit" in request.POST:
                 lead.status = "processing"
                 lead.status_changed_at = now()
                 lead.save()
+                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
                 return redirect('display_data')
             elif "submit_unqualified" in request.POST:
                 lead.status = "done"
                 lead.lost = True
                 lead.save()
+                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
                 return redirect('display_data')
     else:
         form = QualificationForm(instance=main_lead)
@@ -169,10 +187,12 @@ def send_offer(request, lead_id):
             lead.attachments.set(main_lead.attachments.all())
             if "submit_next" in request.POST:
                 lead.save()
+                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
                 return redirect('deal_lead', lead_id=lead.pk)
             elif "submit_exit" in request.POST:
                 lead.status = "negotiation"
                 lead.save()
+                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
                 return redirect('display_data')
     else:
         form = SendOfferForm(instance=main_lead)
@@ -218,6 +238,7 @@ def closing_deal(request, lead_id):
                         event_type='invoice'  # Using 'invoice' type which is 'Follow-up reminder'
                     )
             lead.save()
+            save_lead_passengers(lead, request.POST.getlist('passenger_names'))
             return redirect('display_data')
     else:
         form = CloseDealForm(instance=main_lead)
@@ -267,11 +288,12 @@ def display_attached_files(request, pk):
     if request.method == 'POST':
         form = LeadForm(request.POST, instance=instance)
         if form.is_valid():
-            form.save()
+            lead = form.save()
+            save_lead_passengers(lead, request.POST.getlist('passenger_names'))
             return redirect('display_data')
     else:
         form = LeadForm(instance=instance)
-    return render(request, 'edit_model.html', {'form': form, 'leadid': instance.pk})
+    return render(request, 'edit_model.html', {'form': form, 'lead': instance, 'leadid': instance.pk})
 
 
 @login_required(login_url="/login/")
@@ -345,10 +367,11 @@ def display_data(request):
     if search_query:
         leads = leads.filter(
             Q(name__icontains=search_query) |
+            Q(passengers__name__icontains=search_query) |
             Q(destination__icontains=search_query) |
             Q(phone__icontains=search_query) |
             Q(finalization_notes__icontains=search_query)
-        )
+        ).distinct()
 
     paginator = Paginator(leads, 30)  # Show 30 leads per page
     page = request.GET.get('page')
@@ -393,10 +416,11 @@ def display_archived(request):
     if search_query:
         leads = leads.filter(
             Q(name__icontains=search_query) |
+            Q(passengers__name__icontains=search_query) |
             Q(destination__icontains=search_query) |
             Q(phone__icontains=search_query) |
             Q(finalization_notes__icontains=search_query)
-        )
+        ).distinct()
 
     paginator = Paginator(leads, 30)  # Show 30 leads per page
     page = request.GET.get('page')

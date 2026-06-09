@@ -55,6 +55,7 @@
             <div class="req-card__body">
                 <div class="req-grid req-grid--2">
                     <div class="req-field"><label for="id_name">Name</label>{{ form.name }}</div>
+                    <div class="req-field req-field--full">{% include 'shared/passengers_field.html' with lead=lead %}</div>
                     <div class="req-field"><label for="id_phone">Phone</label>{{ form.phone }}</div>
                     <div class="req-field"><label for="id_channel">Channel</label>{{ form.channel }}</div>
                     <div class="req-field"><label for="id_destination">Destination</label>{{ form.destination }}</div>

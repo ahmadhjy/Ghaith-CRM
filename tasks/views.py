@@ -449,13 +449,13 @@ def mark_service_processed(request, pk):
 @login_required
 @require_POST
 def service_mark_done(request, pk):
-    """Mark a service as paid (is_checked=True) and linked calendar event as done. Redirect to next or supplier list."""
+    """Toggle service paid status and sync linked calendar event. Redirect to next or supplier list."""
     service = get_object_or_404(Service, pk=pk)
-    service.is_checked = True
+    service.is_checked = request.POST.get('is_checked') == 'on'
     service.save()
     try:
         event = service.calendar_event
-        event.done = True
+        event.done = service.is_checked
         event.save()
     except Exception:
         pass  # No linked calendar event
@@ -467,7 +467,10 @@ def service_mark_done(request, pk):
 
 @login_required(login_url="/login/")
 def edit_lead_task(request, pk):
-    instance = get_object_or_404(LeadTask, pk=pk)
+    instance = get_object_or_404(
+        LeadTask.objects.select_related('lead').prefetch_related('lead__passengers'),
+        pk=pk,
+    )
     services = Service.objects.filter(leadtask=instance)
     lead_task_payments = Payment.objects.filter(leadtask=instance)
     attachments = Attachment.objects.filter(parentleadtask=instance)
@@ -892,14 +895,15 @@ def current_leadtasks(request):
         lead_tasks = lead_tasks.filter(
             Q(pk__icontains=search_query) |
             Q(lead__name__icontains=search_query) |
+            Q(lead__passengers__name__icontains=search_query) |
             Q(lead__destination__icontains=search_query) |
             Q(lead__phone__icontains=search_query) |
             Q(notes__icontains=search_query) |
             Q(assigned_to__username__icontains=search_query)
-        )
+        ).distinct()
 
     # Sort LeadTasks from newest to oldest
-    lead_tasks = lead_tasks.order_by('-pk')
+    lead_tasks = lead_tasks.select_related('lead', 'assigned_to').prefetch_related('lead__passengers').order_by('-pk')
 
     # Calculate counts for each status (include all tasks for counts)
     if request.user.is_staff and not assigned_to_me:
@@ -959,9 +963,10 @@ def client_payments(request):
     if search_query:
         payments = payments.filter(
             Q(leadtask__lead__name__icontains=search_query) |
+            Q(leadtask__lead__passengers__name__icontains=search_query) |
             Q(leadtask__lead__phone__icontains=search_query) |
             Q(leadtask__lead__channel__icontains=search_query)
-        )
+        ).distinct()
 
     if filter_status:
         if filter_status == 'paid':

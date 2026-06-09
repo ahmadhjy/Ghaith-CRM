@@ -37,11 +37,28 @@
         </div>
         <form method="post" id="createForm">
             {% csrf_token %}
+            {% if duplicate_warning %}
+            <input type="hidden" name="confirm" value="true">
+            {% endif %}
             <div class="req-card__body">
+                {% if duplicate_warning %}
+                <div class="req-alert req-alert--warning" id="duplicate-warning" role="alert">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Duplicate phone number</strong>
+                    <p>{{ duplicate_warning }}</p>
+                    <ul>
+                        {% for duplicate in duplicates %}
+                        <li><a href="{% url 'edit-model' duplicate.pk %}">{{ duplicate.name }}</a> — {{ duplicate.destination|default:"No destination" }} ({{ duplicate.status }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
                 <div class="req-grid req-grid--2">
                     <div class="req-field">
                         <label for="id_name">Name</label>
                         {{ form.name }}
+                    </div>
+                    <div class="req-field req-field--full">
+                        {% include 'shared/passengers_field.html' with lead=lead passenger_names=passenger_names %}
                     </div>
                     <div class="req-field">
                         <label for="id_country_code">Country Code</label>
@@ -73,21 +90,15 @@
                     </div>
                 </div>
 
-                {% if duplicate_warning %}
-                <div class="req-alert req-alert--warning" role="alert">
-                    <i class="fas fa-exclamation-triangle"></i> {{ duplicate_warning }}
-                    <ul>
-                        {% for duplicate in duplicates %}
-                        <li><a href="{% url 'edit-model' duplicate.pk %}">{{ duplicate.name }}</a></li>
-                        {% endfor %}
-                    </ul>
-                    <input type="hidden" name="confirm" value="true">
-                </div>
-                {% endif %}
             </div>
             <div class="req-card__foot">
+                {% if duplicate_warning %}
+                <button type="submit" class="req-btn req-btn--warning" name="submit_next"><i class="fas fa-exclamation-triangle"></i> Create anyway &amp; Next</button>
+                <button type="submit" class="req-btn req-btn--outline" name="submit_exit"><i class="fas fa-check"></i> Create anyway &amp; Exit</button>
+                {% else %}
                 <button type="submit" class="req-btn req-btn--accent" name="submit_next"><i class="fas fa-arrow-right"></i> Submit &amp; Next</button>
                 <button type="submit" class="req-btn req-btn--outline" name="submit_exit"><i class="fas fa-check"></i> Submit &amp; Exit</button>
+                {% endif %}
             </div>
         </form>
     </div>
@@ -100,6 +111,10 @@ document.getElementById("createForm").addEventListener("keydown", function(event
 document.getElementById("id_phone").addEventListener("input", function() {
     this.value = this.value.replace(/\D/g, '');
 });
+var dupWarn = document.getElementById("duplicate-warning");
+if (dupWarn) {
+    dupWarn.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 </script>
 </body>
 </html>

@@ -129,6 +129,12 @@
                         <div class="inv-info-item__value">{{ lead.name }}</div>
                     </div>
                     <div class="inv-info-item">
+                        <div class="inv-info-item__label">Other Passengers</div>
+                        <div class="inv-info-item__value">
+                            {% for p in lead.passengers.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+                        </div>
+                    </div>
+                    <div class="inv-info-item">
                         <div class="inv-info-item__label">Phone</div>
                         <div class="inv-info-item__value">{{ lead.phone|default:"—" }}</div>
                     </div>

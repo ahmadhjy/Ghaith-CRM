@@ -61,7 +61,7 @@
             <form method="GET" action="{% url 'display_data' %}">
                 <div class="req-filter-group">
                     <span class="req-filter-label">Search</span>
-                    <input type="text" id="search" name="search" placeholder="Name, destination, phone…" class="req-input" value="{{ request.GET.search }}">
+                    <input type="text" id="search" name="search" placeholder="Name, passengers, destination, phone…" class="req-input" value="{{ request.GET.search }}">
                 </div>
                 <button type="submit" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-search"></i> Search</button>
             </form>
@@ -88,7 +88,7 @@
                         <td data-label="Status">
                             <span class="req-status-pill req-status-pill--{% if d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">{{ d.status }}</span>
                         </td>
-                        <td data-label="What Happened">{{ d.finalization_notes|truncatechars:40|default:"—" }}</td>
+                        <td data-label="What Happened">{% include 'shared/table_tooltip.html' with text=d.finalization_notes max_length=40 %}</td>
                         <td data-label="Created">{{ d.created_at|date:"M d, Y" }}</td>
                         <td data-label="Edit"><a href="{% url 'edit-model' d.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                         <td data-label="Archive"><a href="{% url 'archive_lead' d.pk %}" class="req-link--danger req-btn--sm">Archive</a></td>
@@ -113,5 +113,6 @@
         </div>
     </div>
 </div>
+{% include 'shared/table_tooltip_script.html' %}
 </body>
 </html>

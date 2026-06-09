@@ -51,7 +51,7 @@
             <form method="GET" action="{% url 'current_lead_tasks' %}">
                 <div class="req-filter-group">
                     <span class="req-filter-label">Search</span>
-                    <input type="text" id="search" name="search" placeholder="Keywords…" class="req-input" value="{{ search_query }}">
+                    <input type="text" id="search" name="search" placeholder="Name, passengers, destination…" class="req-input" value="{{ search_query }}">
                 </div>
                 <button type="submit" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-search"></i> Search</button>
             </form>
@@ -73,11 +73,24 @@
                     {% for lead_task in data %}
                     <tr class="{{ lead_task.status }}">
                         <td data-label="ID">{{ lead_task.pk }}</td>
-                        <td data-label="Lead"><strong>{{ lead_task.lead.name }}</strong></td>
+                        <td data-label="Lead">
+                            <strong>{{ lead_task.lead.name }}</strong>
+                            {% with passengers=lead_task.lead.passengers.all %}
+                            {% if passengers %}
+                            <span class="req-lead-passengers">{% for p in passengers %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
                         <td data-label="Destination">{{ lead_task.lead.destination }}</td>
                         <td data-label="Status"><span class="req-status-pill req-status-pill--{{ lead_task.status }}">{{ lead_task.status }}</span></td>
                         <td data-label="Assigned">{{ lead_task.assigned_to.username }}</td>
-                        <td data-label="Notes">{{ lead_task.lead.finalization_notes|truncatechars:30|default:"—" }}</td>
+                        <td data-label="Notes">
+                            {% if lead_task.notes %}
+                            {% include 'shared/table_tooltip.html' with text=lead_task.notes max_length=30 %}
+                            {% elif lead_task.lead.finalization_notes %}
+                            {% include 'shared/table_tooltip.html' with text=lead_task.lead.finalization_notes max_length=30 %}
+                            {% else %}—{% endif %}
+                        </td>
                         <td data-label="Edit"><a href="{% url 'edit_lead_tasks' lead_task.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                     </tr>
                     {% empty %}
@@ -88,5 +101,6 @@
         </div>
     </div>
 </div>
+{% include 'shared/table_tooltip_script.html' %}
 </body>
 </html>

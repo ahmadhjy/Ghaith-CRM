@@ -154,6 +154,17 @@ class Lead(models.Model):
         return int(re.sub(r'\D', '', self.profit)) if self.profit else 0
 
 
+class LeadPassenger(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='passengers')
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
+
 class CrmNotification(models.Model):
     """
     Lightweight record to track CRM notifications created when a summary is sent

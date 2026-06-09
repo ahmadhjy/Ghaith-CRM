@@ -225,6 +225,8 @@ body.req-page {
 }
 
 .req-stat--onhold .req-stat__value { color: #b45309; }
+.req-stat--progress .req-stat__value { color: #16a34a; }
+.req-stat--cancelled .req-stat__value { color: #dc2626; }
 .req-stat--processing .req-stat__value { color: #2563eb; }
 .req-stat--negotiation .req-stat__value { color: #7c3aed; }
 .req-stat--finalized .req-stat__value { color: #0891b2; }
@@ -431,6 +433,9 @@ body.req-page {
 .req-table tbody tr.processing td { border-left: 3px solid #2563eb; }
 .req-table tbody tr.negotiation td { border-left: 3px solid #7c3aed; }
 .req-table tbody tr.onhold td { border-left: 3px solid #d97706; }
+.req-table tbody tr.progress td { border-left: 3px solid #86efac; }
+.req-table tbody tr.done td { border-left: 3px solid #16a34a; }
+.req-table tbody tr.cancelled td { border-left: 3px solid #dc2626; }
 .req-table tbody tr.followup td { border-left: 3px solid #db2777; }
 .req-table tbody tr.finalized td { border-left: 3px solid #0891b2; }
 
@@ -448,10 +453,108 @@ body.req-page {
 .req-status-pill--processing { background: #dbeafe; color: #1d4ed8; }
 .req-status-pill--negotiation { background: #ede9fe; color: #6d28d9; }
 .req-status-pill--onhold { background: #fef3c7; color: #b45309; }
+.req-status-pill--progress { background: #dcfce7; color: #16a34a; }
+.req-status-pill--done { background: #d1fae5; color: #047857; }
+.req-status-pill--cancelled { background: #fee2e2; color: #dc2626; }
 .req-status-pill--followup { background: #fce7f3; color: #be185d; }
 .req-status-pill--finalized { background: #cffafe; color: #0e7490; }
 .req-status-pill--sold { background: #d1fae5; color: #047857; }
 .req-status-pill--lost { background: #fee2e2; color: #b91c1c; }
+
+.req-passengers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.req-passengers__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.req-passengers__label {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--req-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.req-passengers__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.req-passengers__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.req-passengers__row .req-input {
+  flex: 1;
+}
+
+.req-hover-text,
+.req-table-tip {
+  display: inline-block;
+  max-width: 220px;
+  vertical-align: bottom;
+  cursor: help;
+  outline: none;
+}
+
+.req-table-tip__label {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px dotted var(--req-muted);
+}
+
+.req-table-tip__content {
+  display: none !important;
+}
+
+.req-tooltip-float {
+  position: fixed;
+  z-index: 99999;
+  min-width: 200px;
+  max-width: min(400px, calc(100vw - 24px));
+  max-height: min(280px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: var(--req-font, system-ui, sans-serif);
+  font-size: .82rem;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .35);
+  pointer-events: none;
+}
+
+.req-tooltip-float[hidden] {
+  display: none !important;
+}
+
+.req-lead-passengers {
+  display: block;
+  margin-top: 4px;
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--req-muted);
+  line-height: 1.35;
+}
 
 .req-link {
   color: var(--req-primary) !important;
@@ -597,8 +700,20 @@ body.req-page {
   color: #92400e;
 }
 
+.req-alert--warning p { margin: 8px 0 0; }
 .req-alert--warning ul { margin: 8px 0 0; padding-left: 20px; }
 .req-alert--warning a { color: var(--req-danger); font-weight: 600; }
+
+.req-btn--warning {
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+}
+
+.req-btn--warning:hover {
+  background: #d97706;
+  color: #fff;
+}
 
 /* Toggle (close deal) */
 .req-outcome-grid {
@@ -723,3 +838,67 @@ body.req-page {
 }
 
 .req-check-item input { width: 18px; height: 18px; accent-color: var(--req-accent); }
+
+/* Toggle switch — same as invoice edit (paid / send to client) */
+.inv-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.inv-toggle input[type="checkbox"] {
+  position: absolute;
+  margin: 0;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.inv-toggle__slider {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .25s;
+}
+
+.inv-toggle__slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .25s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+}
+
+.inv-toggle input:checked + .inv-toggle__slider {
+  background: linear-gradient(135deg, var(--req-accent), #14b8a6);
+}
+
+.inv-toggle input:checked + .inv-toggle__slider::before {
+  transform: translateX(18px);
+}
+
+.inv-toggle-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--req-muted);
+}
+
+.list-table__td-mark-paid .inv-toggle {
+  margin: 0 auto;
+}
