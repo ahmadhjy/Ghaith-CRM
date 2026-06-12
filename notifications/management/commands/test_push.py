@@ -6,6 +6,7 @@ from notifications.models import PushSubscription
 from notifications.push import (
     get_site_origin,
     get_vapid_public_key,
+    load_vapid_credentials,
     send_test_push,
     vapid_configured,
 )
@@ -86,6 +87,12 @@ class Command(BaseCommand):
         self.stdout.write(f'VAPID configured: {vapid_configured()}')
         pub = get_vapid_public_key()
         self.stdout.write(f'VAPID public key: {pub[:24]}…' if pub else 'VAPID public key: (missing)')
+        try:
+            load_vapid_credentials()
+            self.stdout.write(self.style.SUCCESS('VAPID private key: loads OK'))
+        except ValueError as exc:
+            self.stdout.write(self.style.ERROR(f'VAPID private key: INVALID — {exc}'))
+            self.stdout.write('Run: python manage.py generate_vapid_keys --write')
         self.stdout.write(f'CRM_SITE_URL: {get_site_origin() or "(not set)"}')
         self.stdout.write('')
 

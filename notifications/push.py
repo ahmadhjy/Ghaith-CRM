@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 
 from django.conf import settings
 
@@ -10,25 +11,57 @@ STALE_PUSH_HTTP_CODES = {401, 403, 404, 410}
 
 
 def vapid_configured():
-    return bool(
-        getattr(settings, 'VAPID_PUBLIC_KEY', '')
-        and getattr(settings, 'VAPID_PRIVATE_KEY', '')
-    )
+    try:
+        load_vapid_credentials()
+        return True
+    except Exception:
+        return bool(
+            getattr(settings, 'VAPID_PUBLIC_KEY', '')
+            and getattr(settings, 'VAPID_PRIVATE_KEY', '')
+        )
 
 
 def get_vapid_public_key():
     return getattr(settings, 'VAPID_PUBLIC_KEY', '')
 
 
+def _pem_file_path():
+    return Path(settings.BASE_DIR) / 'deploy' / 'vapid_private.pem'
+
+
 def get_vapid_private_key():
+    pem_file = _pem_file_path()
+    if pem_file.is_file():
+        return pem_file.read_text(encoding='utf-8')
+
     key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
     if isinstance(key, bytes):
         key = key.decode()
-    if not key:
-        return ''
-    if '\\n' in key:
-        key = key.replace('\\n', '\n')
-    return key.strip()
+    return key or ''
+
+
+def normalize_vapid_private_pem(key: str) -> str:
+    key = (key or '').strip()
+    if len(key) >= 2 and key[0] == key[-1] and key[0] in '"\'':
+        key = key[1:-1].strip()
+    key = key.replace('\\n', '\n')
+    key = key.replace('\r\n', '\n').replace('\r', '\n')
+    if '-----BEGIN' not in key:
+        raise ValueError('VAPID private key is not PEM format (missing -----BEGIN)')
+    if not key.endswith('\n'):
+        key += '\n'
+    return key
+
+
+def load_vapid_credentials():
+    """Return a py_vapid.Vapid instance; raises ValueError if key is invalid."""
+    from py_vapid import Vapid
+
+    pem = normalize_vapid_private_pem(get_vapid_private_key())
+    try:
+        return Vapid.from_pem(pem.encode('utf-8'))
+    except Exception as exc:
+        raise ValueError(f'Invalid VAPID private key: {exc}') from exc
 
 
 def get_site_origin():
@@ -67,8 +100,15 @@ def _response_detail(exc):
 
 
 def send_push_to_user(user, title, body, url='', *, verbose=False):
-    if not vapid_configured():
-        msg = 'VAPID keys not configured'
+    try:
+        vapid = load_vapid_credentials()
+    except ValueError as exc:
+        msg = str(exc)
+        logger.error('Push disabled — %s', msg)
+        return {'sent': 0, 'failed': 0, 'skipped': 'invalid_vapid_key', 'errors': [msg]}
+
+    if not get_vapid_public_key():
+        msg = 'VAPID_PUBLIC_KEY is not configured'
         logger.warning('Push skipped for %s — %s', user.username, msg)
         return {'sent': 0, 'failed': 0, 'skipped': 'vapid_not_configured', 'errors': [msg]}
 
@@ -86,10 +126,6 @@ def send_push_to_user(user, title, body, url='', *, verbose=False):
         msg = 'pywebpush not installed'
         logger.warning('%s; browser push disabled', msg)
         return {'sent': 0, 'failed': 0, 'skipped': 'pywebpush_missing', 'errors': [msg]}
-
-    private_pem = get_vapid_private_key()
-    if not private_pem:
-        return {'sent': 0, 'failed': 0, 'skipped': 'invalid_vapid_key', 'errors': ['empty private key']}
 
     icon_url = get_push_icon_url()
     payload = json.dumps({
@@ -113,7 +149,7 @@ def send_push_to_user(user, title, body, url='', *, verbose=False):
                     'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
                 },
                 data=payload,
-                vapid_private_key=private_pem,
+                vapid_private_key=vapid,
                 vapid_claims=_vapid_claims(),
                 ttl=86400,
             )

@@ -2,8 +2,10 @@ import base64
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from cryptography.hazmat.primitives import serialization
+
+from notifications.push import load_vapid_credentials, normalize_vapid_private_pem
 
 
 class Command(BaseCommand):
@@ -13,15 +15,30 @@ class Command(BaseCommand):
         parser.add_argument(
             '--write',
             action='store_true',
-            help='Write keys to deploy/vapid.env (gitignored on server)',
+            help='Write keys to deploy/vapid.env and deploy/vapid_private.pem',
+        )
+        parser.add_argument(
+            '--verify',
+            action='store_true',
+            help='Verify existing VAPID keys load correctly (no new keys generated)',
         )
 
     def handle(self, *args, **options):
+        if options['verify']:
+            try:
+                load_vapid_credentials()
+            except ValueError as exc:
+                raise CommandError(str(exc)) from exc
+            pub = getattr(settings, 'VAPID_PUBLIC_KEY', '')
+            self.stdout.write(self.style.SUCCESS('VAPID keys are valid.'))
+            if pub:
+                self.stdout.write(f'Public key: {pub[:32]}…')
+            return
+
         try:
             from py_vapid import Vapid
         except ImportError:
-            self.stderr.write('Install pywebpush first: pip install pywebpush')
-            return
+            raise CommandError('Install pywebpush first: pip install pywebpush')
 
         vapid = Vapid()
         vapid.generate_keys()
@@ -35,23 +52,37 @@ class Command(BaseCommand):
         private_pem = vapid.private_pem()
         if isinstance(private_pem, bytes):
             private_pem = private_pem.decode()
+        private_pem = normalize_vapid_private_pem(private_pem)
         private_one_line = private_pem.replace('\n', '\\n')
 
-        self.stdout.write('Add these to ghaithleads/settings.py on production:\n')
-        self.stdout.write('')
-        self.stdout.write(f"VAPID_PUBLIC_KEY = '{public_key}'")
-        self.stdout.write(f"VAPID_PRIVATE_KEY = '{private_one_line}'")
-        self.stdout.write("VAPID_ADMIN_EMAIL = 'mailto:admin@ghaithtravel.com'")
-        self.stdout.write('')
+        self.stdout.write('Keys generated. After --write, reload the web app.\n')
+        self.stdout.write(f'VAPID_PUBLIC_KEY={public_key[:32]}…')
 
         if options['write']:
-            out = Path(settings.BASE_DIR) / 'deploy' / 'vapid.env'
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(
+            deploy_dir = Path(settings.BASE_DIR) / 'deploy'
+            deploy_dir.mkdir(parents=True, exist_ok=True)
+
+            pem_path = deploy_dir / 'vapid_private.pem'
+            pem_path.write_text(private_pem, encoding='utf-8')
+
+            env_path = deploy_dir / 'vapid.env'
+            env_path.write_text(
                 '# Browser push keys — never commit to GitHub\n'
                 f'VAPID_PUBLIC_KEY="{public_key}"\n'
                 f'VAPID_PRIVATE_KEY="{private_one_line}"\n'
                 'VAPID_ADMIN_EMAIL="mailto:admin@ghaithtravel.com"\n',
                 encoding='utf-8',
             )
-            self.stdout.write(self.style.SUCCESS(f'Wrote {out}'))
+
+            # Verify round-trip
+            try:
+                load_vapid_credentials()
+            except ValueError as exc:
+                raise CommandError(f'Generated keys failed verification: {exc}') from exc
+
+            self.stdout.write(self.style.SUCCESS(f'Wrote {env_path}'))
+            self.stdout.write(self.style.SUCCESS(f'Wrote {pem_path}'))
+            self.stdout.write(
+                'Reload the PythonAnywhere web app, then run: '
+                'python manage.py generate_vapid_keys --verify'
+            )
