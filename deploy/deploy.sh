@@ -164,6 +164,15 @@ fi
 
 # ── Git pull ────────────────────────────────────────────────────────────────
 if [[ -d "${PROJECT_DIR}/.git" ]]; then
+    # Production uses PostgreSQL; a tracked/local db.sqlite3 must not block git pull.
+    if [[ -e "${PROJECT_DIR}/db.sqlite3" ]]; then
+        quarantine="${PROJECT_DIR}/db.sqlite3.local-backup.${TIMESTAMP}"
+        log "--- Quarantining db.sqlite3 → ${quarantine} (live DB is PostgreSQL) ---"
+        if [[ "$DRY_RUN" -eq 0 ]]; then
+            mv "${PROJECT_DIR}/db.sqlite3" "$quarantine"
+        fi
+    fi
+
     log "--- Pulling latest code from ${GIT_REMOTE}/${GIT_BRANCH} ---"
 
     if [[ "$REQUIRE_CLEAN_GIT" == "yes" ]]; then
