@@ -246,6 +246,9 @@ if [[ "$SKIP_MIGRATE" -eq 0 ]]; then
 
     log "--- Applying migrations (safe: only runs pending migrations) ---"
     run "$PYTHON" "$MANAGE_PY" migrate --noinput
+
+    log "--- Ensuring auth_user CRM columns (is_sales, administration) ---"
+    run "$PYTHON" "$MANAGE_PY" ensure_user_crm_columns
 else
     log "Skipping migrations (--skip-migrate)"
 fi
