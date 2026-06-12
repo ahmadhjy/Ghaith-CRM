@@ -10,16 +10,37 @@ from notifications.push import (
 )
 
 
+def resolve_user(identifier):
+    ident = (identifier or '').strip()
+    if not ident:
+        return None
+    user = User.objects.filter(username=ident).first()
+    if user:
+        return user
+    user = User.objects.filter(username__iexact=ident).first()
+    if user:
+        return user
+    return User.objects.filter(first_name__iexact=ident).first()
+
+
 class Command(BaseCommand):
     help = 'Send a test browser push (checks VAPID + subscriptions).'
 
     def add_arguments(self, parser):
         parser.add_argument('username', nargs='?', default='', help='Target username')
         parser.add_argument('--list-subs', action='store_true', help='List users with push subscriptions')
+        parser.add_argument('--list-users', action='store_true', help='List all usernames in the database')
         parser.add_argument('--diagnose', action='store_true', help='Show VAPID config and test all subscribers')
         parser.add_argument('--all', action='store_true', help='Send test push to every subscribed user')
 
     def handle(self, *args, **options):
+        if options['list_users']:
+            for name in User.objects.order_by('username').values_list('username', flat=True):
+                subs = PushSubscription.objects.filter(user__username=name).count()
+                flag = f' [{subs} push device(s)]' if subs else ''
+                self.stdout.write(f'  {name}{flag}')
+            return
+
         if options['list_subs'] or options['diagnose']:
             self._list_subscriptions()
             if options['list_subs'] and not options['diagnose']:
@@ -79,21 +100,29 @@ class Command(BaseCommand):
             self.stdout.write(f'  ({count} device{"s" if count != 1 else ""})')
 
     def _test_user(self, username, *, verbose=False):
-        user = User.objects.filter(username__iexact=username).first()
+        user = resolve_user(username)
         if not user:
-            known = list(
-                User.objects.filter(push_subscriptions__isnull=False)
-                .distinct()
-                .values_list('username', flat=True)
+            similar = list(
+                User.objects.filter(username__icontains=username.strip())
+                .values_list('username', flat=True)[:10]
             )
-            hint = f' Known subscribers: {", ".join(known)}' if known else ''
-            raise CommandError(f'User not found: {username}.{hint}')
+            hint = f' Similar: {", ".join(similar)}' if similar else ''
+            raise CommandError(
+                f'User not found: {username!r}.{hint}\n'
+                'Run: python manage.py test_push --list-users'
+            )
 
         subs = PushSubscription.objects.filter(user=user).count()
         if subs == 0:
+            subscribers = list(
+                PushSubscription.objects.values_list('user__username', flat=True).distinct()
+            )
+            hint = ''
+            if subscribers:
+                hint = f'\nPush is currently registered for: {", ".join(subscribers)}'
             raise CommandError(
-                f'No push subscription for {user.username}. '
-                'Log in on that account and allow notifications in the browser.'
+                f'User "{user.username}" exists but has no browser push subscription.{hint}\n'
+                f'Log in on the site as {user.username}, allow notifications, wait a few seconds, then retry.'
             )
 
         result = send_test_push(user, verbose=verbose)
