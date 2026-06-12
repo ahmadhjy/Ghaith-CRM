@@ -16,6 +16,17 @@ def staff_users():
     return active_users().filter(is_staff=True)
 
 
+def administration_users():
+    return active_users().filter(administration=True)
+
+
+def recipients_for_payment_notifications():
+    """Staff/superusers plus users flagged as administration."""
+    users = set(staff_users())
+    users.update(administration_users())
+    return users
+
+
 def recipients_for_assigned_lead(lead, leadtask=None):
     """Admins plus the user assigned to the lead/order."""
     users = set(staff_users())
@@ -190,7 +201,7 @@ def sync_reminder_notifications():
         lead = leadtask.lead
         due = timezone.localtime(payment.date).strftime('%d %b %Y %H:%M')
         url = reverse('client_payments_list')
-        for user in recipients_for_assigned_lead(lead, leadtask):
+        for user in recipients_for_payment_notifications():
             create_notification(
                 recipient=user,
                 kind=NotificationKind.CLIENT_PAYMENT_DUE,
@@ -215,7 +226,7 @@ def sync_reminder_notifications():
         lead = leadtask.lead
         due = timezone.localtime(service.due_time).strftime('%d %b %Y %H:%M')
         url = reverse('supplier_payments_list')
-        for user in recipients_for_assigned_lead(lead, leadtask):
+        for user in recipients_for_payment_notifications():
             create_notification(
                 recipient=user,
                 kind=NotificationKind.SUPPLIER_PAYMENT_DUE,

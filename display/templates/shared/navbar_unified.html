@@ -78,6 +78,11 @@
     <a class="app-nav__item" href="{% url 'list_daily_reports' %}">
       <i class="far fa-file-alt"></i><span>Daily Reports</span>
     </a>
+    {% if user.is_staff %}
+    <a class="app-nav__item" href="{% url 'admin:index' %}" target="_blank" rel="noopener noreferrer">
+      <i class="fas fa-cog"></i><span>Admin</span>
+    </a>
+    {% endif %}
     <a class="app-nav__item app-nav__item--danger" href="{% url 'logout-user' %}">
       <i class="fas fa-sign-out-alt"></i><span>Logout</span>
     </a>

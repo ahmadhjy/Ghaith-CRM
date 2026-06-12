@@ -881,10 +881,6 @@ def current_leadtasks(request):
     else:
         lead_tasks = LeadTask.objects.filter(assigned_to=request.user)
 
-    # Hide done tasks by default (only show when filtered or searched)
-    if not selected_status and not search_query:
-        lead_tasks = lead_tasks.exclude(status='done')
-
     if selected_status:
         lead_tasks = lead_tasks.filter(status=selected_status)
 

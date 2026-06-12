@@ -229,11 +229,16 @@
 
   function subscribeToPush(reg, publicKey) {
     return reg.pushManager.getSubscription().then(function (existing) {
-      if (existing) return existing;
+      if (existing) {
+        return existing;
+      }
       return reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
+    }).catch(function (err) {
+      console.warn('CRM push subscribe failed:', err);
+      return null;
     });
   }
 
@@ -261,8 +266,12 @@
             function doSubscribe() {
               return subscribeToPush(reg, data.public_key).then(function (sub) {
                 if (!sub) return null;
-                pushSubscribed = true;
-                return saveSubscription(sub);
+                return saveSubscription(sub).then(function (result) {
+                  if (result && result.status === 'ok') {
+                    pushSubscribed = true;
+                  }
+                  return result;
+                });
               });
             }
 

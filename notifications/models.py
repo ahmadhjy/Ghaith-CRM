@@ -1,6 +1,15 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+# Receives client/supplier payment due notifications (plus staff/superusers).
+User.add_to_class(
+    'administration',
+    models.BooleanField(
+        default=False,
+        help_text='Receives payment due notifications (client and supplier).',
+    ),
+)
+
 
 class NotificationKind(models.TextChoices):
     MESSAGE = 'message', 'New message'

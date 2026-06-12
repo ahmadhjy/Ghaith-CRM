@@ -104,8 +104,10 @@ class UserMonthlyTargetAdmin(admin.ModelAdmin):
     ordering = ['-month']
 
 class CustomUserAdmin(UserAdmin):
+    list_display = UserAdmin.list_display + ('is_sales', 'administration')
+    list_filter = UserAdmin.list_filter + ('is_sales', 'administration')
     fieldsets = UserAdmin.fieldsets + (
-        (None, {'fields': ('is_sales',)}),
+        ('CRM roles', {'fields': ('is_sales', 'administration')}),
     )
 
 admin.site.register(Lead, LeadAdmin)

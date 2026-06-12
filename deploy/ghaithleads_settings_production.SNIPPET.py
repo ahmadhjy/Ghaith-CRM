@@ -28,7 +28,8 @@ STATIC_ROOT = BASE_DIR / 'static'
 STATIC_URL = '/static/'
 # Do not set STATICFILES_STORAGE to ManifestStaticFilesStorage on production.
 
-# Add to INSTALLED_APPS:
+# Add to INSTALLED_APPS (before django.contrib.admin):
+# 'jazzmin',
 # 'notifications',
 
 # Browser push — run once on server: python manage.py generate_vapid_keys --write
@@ -50,6 +51,10 @@ _load_vapid_env()
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
+
+# Browser push links + Jazzmin admin theme (copy from system/settings.py if needed)
+CRM_PUBLIC_ORIGIN = 'https://ghaithtravel.pythonanywhere.com'
+CRM_PUSH_ICON = '/static/css/favicon.ico'
 
 # Optional: import local overrides
 # try:
