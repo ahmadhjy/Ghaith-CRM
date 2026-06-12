@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
@@ -35,6 +36,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['list_users']:
+            self._print_database()
             for name in User.objects.order_by('username').values_list('username', flat=True):
                 subs = PushSubscription.objects.filter(user__username=name).count()
                 flag = f' [{subs} push device(s)]' if subs else ''
@@ -70,7 +72,16 @@ class Command(BaseCommand):
 
         self._test_user(username, verbose=True)
 
+    def _print_database(self):
+        db = settings.DATABASES['default']
+        self.stdout.write('--- Database (manage.py is using this) ---')
+        self.stdout.write(f"ENGINE: {db['ENGINE']}")
+        self.stdout.write(f"NAME: {db['NAME']}")
+        self.stdout.write(f"SETTINGS: {settings.SETTINGS_MODULE}")
+        self.stdout.write('')
+
     def _print_config(self):
+        self._print_database()
         self.stdout.write('--- Push configuration ---')
         self.stdout.write(f'VAPID configured: {vapid_configured()}')
         pub = get_vapid_public_key()
