@@ -6,6 +6,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 PUSH_ICON_PATH = '/static/img/favicon.svg'
+STALE_PUSH_HTTP_CODES = {401, 403, 404, 410}
 
 
 def vapid_configured():
@@ -55,36 +56,40 @@ def _vapid_claims():
     }
 
 
-def _build_vapid_key():
-    private_pem = get_vapid_private_key()
-    if not private_pem:
-        return None
+def _response_detail(exc):
+    response = getattr(exc, 'response', None)
+    if response is None:
+        return ''
     try:
-        from py_vapid import Vapid
-
-        return Vapid.from_string(private_key=private_pem)
-    except Exception as exc:
-        logger.error('Invalid VAPID private key: %s', exc)
-        return None
+        return (response.text or '')[:500]
+    except Exception:
+        return ''
 
 
-def send_push_to_user(user, title, body, url=''):
+def send_push_to_user(user, title, body, url='', *, verbose=False):
     if not vapid_configured():
-        logger.warning('Push skipped for %s — VAPID keys not configured', user.username)
-        return {'sent': 0, 'failed': 0, 'skipped': 'vapid_not_configured'}
+        msg = 'VAPID keys not configured'
+        logger.warning('Push skipped for %s — %s', user.username, msg)
+        return {'sent': 0, 'failed': 0, 'skipped': 'vapid_not_configured', 'errors': [msg]}
 
     from .models import PushSubscription
 
     subscriptions = list(PushSubscription.objects.filter(user=user))
     if not subscriptions:
-        logger.info('Push skipped for %s — no browser subscription saved', user.username)
-        return {'sent': 0, 'failed': 0, 'skipped': 'no_subscription'}
+        msg = 'no browser subscription saved'
+        logger.info('Push skipped for %s — %s', user.username, msg)
+        return {'sent': 0, 'failed': 0, 'skipped': 'no_subscription', 'errors': [msg]}
 
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import WebPushException, webpush
     except ImportError:
-        logger.warning('pywebpush not installed; browser push disabled')
-        return {'sent': 0, 'failed': 0, 'skipped': 'pywebpush_missing'}
+        msg = 'pywebpush not installed'
+        logger.warning('%s; browser push disabled', msg)
+        return {'sent': 0, 'failed': 0, 'skipped': 'pywebpush_missing', 'errors': [msg]}
+
+    private_pem = get_vapid_private_key()
+    if not private_pem:
+        return {'sent': 0, 'failed': 0, 'skipped': 'invalid_vapid_key', 'errors': ['empty private key']}
 
     icon_url = get_push_icon_url()
     payload = json.dumps({
@@ -95,56 +100,62 @@ def send_push_to_user(user, title, body, url=''):
         'badge': icon_url,
     })
 
-    vapid_key = _build_vapid_key()
-    private_pem = get_vapid_private_key()
-
     sent = 0
     failed = 0
     stale = []
+    errors = []
 
     for sub in subscriptions:
         try:
-            kwargs = {
-                'subscription_info': {
+            webpush(
+                subscription_info={
                     'endpoint': sub.endpoint,
                     'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
                 },
-                'data': payload,
-                'vapid_claims': _vapid_claims(),
-                'ttl': 86400,
-            }
-            if vapid_key is not None:
-                kwargs['vapid_private_key'] = vapid_key
-            else:
-                kwargs['vapid_private_key'] = private_pem
-
-            webpush(**kwargs)
+                data=payload,
+                vapid_private_key=private_pem,
+                vapid_claims=_vapid_claims(),
+                ttl=86400,
+            )
             sent += 1
         except WebPushException as exc:
             failed += 1
             status = getattr(getattr(exc, 'response', None), 'status_code', None)
-            logger.warning(
-                'Push failed for %s (HTTP %s): %s',
-                user.username,
-                status,
-                exc,
-            )
-            if status in (404, 410):
+            detail = _response_detail(exc)
+            err = f'HTTP {status}: {exc}'
+            if detail:
+                err += f' — {detail}'
+            errors.append(err)
+            logger.warning('Push failed for %s: %s', user.username, err)
+            if status in STALE_PUSH_HTTP_CODES:
                 stale.append(sub.pk)
         except Exception as exc:
             failed += 1
+            err = str(exc)
+            errors.append(err)
             logger.exception('Push error for %s: %s', user.username, exc)
 
     if stale:
         PushSubscription.objects.filter(pk__in=stale).delete()
+        errors.append(f'removed {len(stale)} stale subscription(s) — revisit site to re-enable push')
 
-    return {'sent': sent, 'failed': failed, 'stale_removed': len(stale)}
+    result = {
+        'sent': sent,
+        'failed': failed,
+        'stale_removed': len(stale),
+        'site_url': get_site_origin(),
+        'icon_url': icon_url,
+    }
+    if verbose or failed:
+        result['errors'] = errors
+    return result
 
 
-def send_test_push(user):
+def send_test_push(user, *, verbose=False):
     return send_push_to_user(
         user,
         'Ghaith CRM',
         'Browser notifications are working.',
         '/',
+        verbose=verbose,
     )
