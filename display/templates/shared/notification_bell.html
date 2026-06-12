@@ -39,6 +39,8 @@
     pushSubscribeUrl: "{% url 'notifications_api_push_subscribe' %}",
     swUrl: "{% url 'service_worker' %}",
     swScope: "/",
+    iconUrl: "{% static 'img/favicon.svg' %}",
+    pushTestUrl: "{% url 'notifications_api_push_test' %}",
     csrfToken: "{{ csrf_token }}",
     isStaff: {{ user.is_staff|yesno:"true,false" }},
   };

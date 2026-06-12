@@ -10,7 +10,13 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import ChatMessage, PushSubscription, UserNotification
-from .push import get_vapid_public_key, send_test_push, vapid_configured
+from .push import (
+    get_push_icon_url,
+    get_site_origin,
+    get_vapid_public_key,
+    send_test_push,
+    vapid_configured,
+)
 from .services import (
     notify_broadcast,
     notify_new_chat_message,
@@ -213,6 +219,8 @@ def api_vapid_public_key(request):
         'public_key': get_vapid_public_key(),
         'enabled': vapid_configured(),
         'subscribed': PushSubscription.objects.filter(user=request.user).exists(),
+        'icon_url': get_push_icon_url(),
+        'site_url': get_site_origin(),
     })
 
 

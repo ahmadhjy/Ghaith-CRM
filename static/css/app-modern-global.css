@@ -1194,3 +1194,63 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   justify-content: center;
   margin: 0;
 }
+
+/* ── Slim themed scrollbars (page + tables + panels) ── */
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body.has-unified-nav,
+body.req-page,
+.req-table-wrap,
+.crm-notify__list,
+.crm-chat__messages,
+.req-tooltip-float {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 76, 129, 0.38) transparent;
+}
+
+html::-webkit-scrollbar,
+body.has-unified-nav::-webkit-scrollbar,
+body.req-page::-webkit-scrollbar,
+.req-table-wrap::-webkit-scrollbar,
+.crm-notify__list::-webkit-scrollbar,
+.crm-chat__messages::-webkit-scrollbar,
+.req-tooltip-float::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body.has-unified-nav::-webkit-scrollbar-track,
+body.req-page::-webkit-scrollbar-track,
+.req-table-wrap::-webkit-scrollbar-track,
+.crm-notify__list::-webkit-scrollbar-track,
+.crm-chat__messages::-webkit-scrollbar-track,
+.req-tooltip-float::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+body.has-unified-nav::-webkit-scrollbar-thumb,
+body.req-page::-webkit-scrollbar-thumb,
+.req-table-wrap::-webkit-scrollbar-thumb,
+.crm-notify__list::-webkit-scrollbar-thumb,
+.crm-chat__messages::-webkit-scrollbar-thumb,
+.req-tooltip-float::-webkit-scrollbar-thumb {
+  background-color: rgba(15, 76, 129, 0.28);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body.has-unified-nav::-webkit-scrollbar-thumb:hover,
+body.req-page::-webkit-scrollbar-thumb:hover,
+.req-table-wrap::-webkit-scrollbar-thumb:hover,
+.crm-notify__list::-webkit-scrollbar-thumb:hover,
+.crm-chat__messages::-webkit-scrollbar-thumb:hover,
+.req-tooltip-float::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(15, 76, 129, 0.48);
+}

@@ -51,6 +51,9 @@ VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
 
+CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'https://ghaithtravel.pythonanywhere.com')
+CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
+
 # Optional: import local overrides
 # try:
 #     from .local_settings import *  # noqa: F403

@@ -210,6 +210,27 @@
     return arr;
   }
 
+  function buffersEqual(a, b) {
+    if (!a || !b || a.byteLength !== b.byteLength) return false;
+    for (let i = 0; i < a.byteLength; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  function showOsNotification(payload) {
+    if (!payload || Notification.permission !== 'granted') return;
+    const icon = payload.icon || cfg.iconUrl || '/static/img/favicon.svg';
+    try {
+      new Notification(payload.title || 'Ghaith CRM', {
+        body: payload.body || '',
+        icon: icon,
+        tag: payload.url || 'crm-notification',
+        data: { url: payload.url || '/' },
+      });
+    } catch (e) {}
+  }
+
   function saveSubscription(sub) {
     if (!sub) return Promise.resolve(null);
     const json = sub.toJSON();
@@ -234,12 +255,25 @@
   }
 
   function subscribeToPush(reg, publicKey) {
+    const appServerKey = urlBase64ToUint8Array(publicKey);
     return reg.pushManager.getSubscription().then(function (existing) {
-      if (existing) return existing;
-      return reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+      if (existing) {
+        const currentKey = existing.options && existing.options.applicationServerKey;
+        if (!buffersEqual(currentKey, appServerKey)) {
+          return existing.unsubscribe().then(function () {
+            return reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appServerKey,
+            });
+          });
+        }
+      } else {
+        return reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey,
+        });
+      }
+      return existing;
     });
   }
 
@@ -250,9 +284,8 @@
     return Notification.requestPermission();
   }
 
-  /** Auto-enable push: register SW, ask browser permission, subscribe. */
+  /** Register SW, subscribe, and always sync subscription to the server. */
   function enablePush(askPermission) {
-    if (pushSubscribed) return Promise.resolve();
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return Promise.resolve();
     if (!('Notification' in window)) return Promise.resolve();
     if (Notification.permission === 'denied') return Promise.resolve();
@@ -260,7 +293,16 @@
     return fetch(cfg.vapidUrl, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.enabled || !data.public_key) return null;
+        if (!data.enabled || !data.public_key) {
+          if (Notification.permission === 'granted') {
+            console.warn('CRM push: browser allows notifications but server VAPID is not configured');
+          }
+          return null;
+        }
+
+        if (data.subscribed) {
+          pushSubscribed = true;
+        }
 
         return navigator.serviceWorker.register(cfg.swUrl, { scope: cfg.swScope || '/' })
           .then(function (reg) {
@@ -291,30 +333,50 @@
             });
           });
       })
-      .catch(function () {});
+      .catch(function (err) {
+        console.warn('CRM push setup failed', err);
+      });
   }
 
   function bootstrapPush() {
     if (Notification.permission === 'denied') return;
-    if (Notification.permission === 'granted') {
-      enablePush(false);
-      return;
-    }
-    // Permission not set yet — show browser's native Allow/Block dialog automatically.
-    enablePush(true);
+    enablePush(Notification.permission !== 'granted');
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (event) {
+      if (!event.data || event.data.type !== 'crm-push') return;
+      showOsNotification(event.data.payload);
+    });
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(function (reg) {
+      reg.active && reg.active.postMessage({ type: 'crm-ready' });
+    }).catch(function () {});
   }
 
   // Collapsed by default: lightweight badge poll only.
   fetchCount();
   startCountPolling();
 
-  // Auto-enable push shortly after login (no extra banner).
   window.setTimeout(bootstrapPush, 800);
 
-  // If the browser blocks auto-prompt, retry on first click anywhere on the page.
   document.addEventListener('click', function () {
-    if (!pushSubscribed && Notification.permission === 'default') {
-      enablePush(true);
+    if (!pushSubscribed && Notification.permission !== 'denied') {
+      enablePush(Notification.permission === 'default');
     }
   }, { once: true, capture: true });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && Notification.permission === 'granted' && !pushSubscribed) {
+      enablePush(false);
+    }
+  });
+
+  window.setInterval(function () {
+    if (Notification.permission === 'granted' && !pushSubscribed) {
+      enablePush(false);
+    }
+  }, 120000);
 })();

@@ -1,4 +1,19 @@
 (function () {
+  if (!document.querySelector('link[rel="icon"]')) {
+    var icon = document.querySelector('meta[name="crm-favicon"]');
+    var href = icon ? icon.getAttribute('content') : '/static/img/favicon.svg';
+    var link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/svg+xml';
+    link.href = href;
+    document.head.appendChild(link);
+
+    var apple = document.createElement('link');
+    apple.rel = 'apple-touch-icon';
+    apple.href = href;
+    document.head.appendChild(apple);
+  }
+
   document.body.classList.add("has-unified-nav", "req-page");
 
   const nav = document.getElementById("appNav");

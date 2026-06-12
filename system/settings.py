@@ -170,3 +170,7 @@ _load_vapid_env()
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
+
+# Full site URL for browser push icons (production: https://ghaithtravel.pythonanywhere.com)
+CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'http://127.0.0.1:8000')
+CRM_PUSH_ICON_URL = '/static/img/favicon.svg'

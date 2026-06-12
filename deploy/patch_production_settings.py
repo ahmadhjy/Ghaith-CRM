@@ -33,6 +33,9 @@ _load_vapid_env()
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
+
+CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'https://ghaithtravel.pythonanywhere.com')
+CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 '''
 
 
@@ -51,12 +54,20 @@ def patch_settings(path: Path) -> list[str]:
         text = text[:insert_at] + "\n    'notifications'," + text[insert_at:]
         changes.append("added 'notifications' to INSTALLED_APPS")
 
-    if 'VAPID_PUBLIC_KEY' not in text:
+    if 'VAPID_PUBLIC_KEY' not in text or 'CRM_SITE_URL' not in text:
         if 'import os' not in text:
             text = 'import os\n' + text
             changes.append('added import os')
-        text = text.rstrip() + VAPID_BLOCK + '\n'
-        changes.append('added VAPID settings block')
+        if 'VAPID_PUBLIC_KEY' not in text:
+            text = text.rstrip() + VAPID_BLOCK + '\n'
+            changes.append('added VAPID settings block')
+        elif 'CRM_SITE_URL' not in text:
+            text = text.rstrip() + (
+                "\nCRM_SITE_URL = os.environ.get('CRM_SITE_URL', "
+                "'https://ghaithtravel.pythonanywhere.com')\n"
+                "CRM_PUSH_ICON_URL = '/static/img/favicon.svg'\n"
+            )
+            changes.append('added CRM_SITE_URL for push notifications')
 
     if changes:
         path.write_text(text, encoding='utf-8')
