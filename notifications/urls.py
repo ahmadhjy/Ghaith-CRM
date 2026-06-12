@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/chat/send/', views.api_chat_send, name='notifications_api_chat_send'),
     path('api/vapid-public-key/', views.api_vapid_public_key, name='notifications_api_vapid'),
     path('api/push/subscribe/', views.api_push_subscribe, name='notifications_api_push_subscribe'),
+    path('api/push/test/', views.api_push_test, name='notifications_api_push_test'),
     path('api/push/unsubscribe/', views.api_push_unsubscribe, name='notifications_api_push_unsubscribe'),
     path('api/broadcast/', views.api_broadcast, name='notifications_api_broadcast'),
 ]

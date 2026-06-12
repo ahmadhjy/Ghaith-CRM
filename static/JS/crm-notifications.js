@@ -211,7 +211,7 @@
   }
 
   function saveSubscription(sub) {
-    if (!sub) return Promise.resolve();
+    if (!sub) return Promise.resolve(null);
     const json = sub.toJSON();
     return fetch(cfg.pushSubscribeUrl, {
       method: 'POST',
@@ -222,23 +222,24 @@
       }),
       credentials: 'same-origin',
     }).then(function (r) {
-      if (!r.ok) return null;
+      if (!r.ok) {
+        console.warn('CRM push: could not save subscription', r.status);
+        return null;
+      }
       return r.json();
-    }).catch(function () { return null; });
+    }).catch(function (err) {
+      console.warn('CRM push: subscribe request failed', err);
+      return null;
+    });
   }
 
   function subscribeToPush(reg, publicKey) {
     return reg.pushManager.getSubscription().then(function (existing) {
-      if (existing) {
-        return existing;
-      }
+      if (existing) return existing;
       return reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-    }).catch(function (err) {
-      console.warn('CRM push subscribe failed:', err);
-      return null;
     });
   }
 
@@ -263,14 +264,17 @@
 
         return navigator.serviceWorker.register(cfg.swUrl, { scope: cfg.swScope || '/' })
           .then(function (reg) {
+            return reg.update().then(function () { return reg; });
+          })
+          .then(function (reg) {
             function doSubscribe() {
               return subscribeToPush(reg, data.public_key).then(function (sub) {
                 if (!sub) return null;
-                return saveSubscription(sub).then(function (result) {
-                  if (result && result.status === 'ok') {
+                return saveSubscription(sub).then(function (saved) {
+                  if (saved && saved.status === 'ok') {
                     pushSubscribed = true;
                   }
-                  return result;
+                  return saved;
                 });
               });
             }

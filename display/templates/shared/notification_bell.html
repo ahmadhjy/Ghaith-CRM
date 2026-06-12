@@ -37,7 +37,7 @@
     broadcastUrl: "{% url 'notifications_api_broadcast' %}",
     vapidUrl: "{% url 'notifications_api_vapid' %}",
     pushSubscribeUrl: "{% url 'notifications_api_push_subscribe' %}",
-    swUrl: "{% url 'notifications_service_worker' %}",
+    swUrl: "{% url 'service_worker' %}",
     swScope: "/",
     csrfToken: "{{ csrf_token }}",
     isStaff: {{ user.is_staff|yesno:"true,false" }},

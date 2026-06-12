@@ -40,16 +40,6 @@ def patch_settings(path: Path) -> list[str]:
     changes: list[str] = []
     text = path.read_text(encoding='utf-8')
 
-    if "'jazzmin'" not in text and '"jazzmin"' not in text:
-        match = re.search(
-            r"(INSTALLED_APPS\s*=\s*\[\s*\n)",
-            text,
-        )
-        if match:
-            insert_at = match.end()
-            text = text[:insert_at] + "    'jazzmin',\n" + text[insert_at:]
-            changes.append("added 'jazzmin' to INSTALLED_APPS")
-
     if "'notifications'" not in text and '"notifications"' not in text:
         match = re.search(
             r"(INSTALLED_APPS\s*=\s*\[[\s\S]*?)(\n\])",
@@ -60,13 +50,6 @@ def patch_settings(path: Path) -> list[str]:
         insert_at = match.start(2)
         text = text[:insert_at] + "\n    'notifications'," + text[insert_at:]
         changes.append("added 'notifications' to INSTALLED_APPS")
-
-    if 'CRM_PUBLIC_ORIGIN' not in text:
-        text = text.rstrip() + (
-            "\n\nCRM_PUBLIC_ORIGIN = 'https://ghaithtravel.pythonanywhere.com'\n"
-            "CRM_PUSH_ICON = '/static/css/favicon.ico'\n"
-        )
-        changes.append('added CRM_PUBLIC_ORIGIN for push links')
 
     if 'VAPID_PUBLIC_KEY' not in text:
         if 'import os' not in text:

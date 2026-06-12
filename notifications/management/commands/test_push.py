@@ -1,51 +1,44 @@
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
-from notifications.push import send_push_to_user, vapid_configured
+from notifications.push import send_test_push, vapid_configured
 
 
 class Command(BaseCommand):
-    help = 'Send a test browser push to a user (checks VAPID + saved subscription)'
+    help = 'Send a test browser push to a user (checks VAPID + subscriptions).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--user', default='', help='Username (default: first staff user)')
-        parser.add_argument('--all', action='store_true', help='Send to every user with a subscription')
+        parser.add_argument('username', nargs='?', default='', help='Target username')
+        parser.add_argument('--list-subs', action='store_true', help='List push subscriptions')
 
     def handle(self, *args, **options):
         if not vapid_configured():
-            raise CommandError('VAPID keys missing. Run: python manage.py generate_vapid_keys --write')
+            raise CommandError('VAPID keys are not configured. Run: python manage.py generate_vapid_keys --write')
 
-        if options['all']:
-            from notifications.models import PushSubscription
+        from notifications.models import PushSubscription
 
-            user_ids = PushSubscription.objects.values_list('user_id', flat=True).distinct()
-            users = User.objects.filter(pk__in=user_ids, is_active=True)
-        elif options['user']:
-            users = User.objects.filter(username__iexact=options['user'])
-            if not users.exists():
-                raise CommandError(f'User not found: {options["user"]}')
-        else:
-            users = User.objects.filter(is_active=True, is_staff=True).order_by('id')[:1]
-            if not users.exists():
-                raise CommandError('No staff user found; pass --user USERNAME')
+        if options['list_subs']:
+            for sub in PushSubscription.objects.select_related('user').order_by('user__username'):
+                self.stdout.write(f'{sub.user.username}: {sub.endpoint[:80]}…')
+            return
 
-        total = 0
-        for user in users:
-            sent = send_push_to_user(
-                user,
-                'Ghaith CRM test push',
-                f'If you see this, push works for {user.username}.',
-                '/',
+        username = options['username']
+        if not username:
+            raise CommandError('Provide a username or use --list-subs')
+
+        user = User.objects.filter(username__iexact=username).first()
+        if not user:
+            raise CommandError(f'User not found: {username}')
+
+        subs = PushSubscription.objects.filter(user=user).count()
+        if subs == 0:
+            raise CommandError(
+                f'No push subscription for {user.username}. '
+                'Log in on the site and allow notifications in the browser first.'
             )
-            total += sent
-            self.stdout.write(f'{user.username}: sent={sent}')
 
-        if total == 0:
-            self.stdout.write(
-                self.style.WARNING(
-                    'No push delivered. Ensure the user allowed notifications in the browser '
-                    'and has an active subscription (log in and allow push).'
-                )
-            )
-        else:
-            self.stdout.write(self.style.SUCCESS(f'Delivered {total} push notification(s).'))
+        result = send_test_push(user)
+        self.stdout.write(str(result))
+        if result.get('sent', 0) < 1:
+            raise CommandError('Push was not delivered — check server logs for WebPush errors.')
+        self.stdout.write(self.style.SUCCESS(f'Test push sent to {user.username}'))

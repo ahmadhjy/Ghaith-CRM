@@ -51,7 +51,6 @@ ALLOWED_HOSTS = ['thenewdomain.domain', 'localhost']
 
 # NOTE : i think that there should be a caching app in here
 INSTALLED_APPS = [
-    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -171,52 +170,3 @@ _load_vapid_env()
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtravel.com')
-
-# Public site URL for push notification links (production: set in ghaithleads/settings.py)
-CRM_PUBLIC_ORIGIN = os.environ.get('CRM_PUBLIC_ORIGIN', '')
-CRM_PUSH_ICON = '/static/css/favicon.ico'
-
-JAZZMIN_SETTINGS = {
-    'site_title': 'Ghaith Travel Admin',
-    'site_header': 'Ghaith Travel Administration',
-    'site_brand': 'Ghaith CRM',
-    'welcome_sign': 'Welcome to Ghaith Travel Administration',
-    'copyright': 'Ghaith Travel',
-    'search_model': ['auth.User', 'display.Lead', 'tasks.LeadTask'],
-    'topmenu_links': [
-        {'name': 'Open CRM', 'url': '/', 'new_window': False},
-    ],
-    'show_sidebar': True,
-    'navigation_expanded': True,
-    'hide_apps': [],
-    'order_with_respect_to': ['auth', 'display', 'tasks', 'dashboard', 'notifications'],
-    'icons': {
-        'auth': 'fas fa-users-cog',
-        'auth.user': 'fas fa-user',
-        'auth.group': 'fas fa-users',
-        'display.lead': 'fas fa-address-book',
-        'display.offer': 'fas fa-file-invoice',
-        'display.destination': 'fas fa-map-marker-alt',
-        'display.dailyreport': 'fas fa-clipboard-list',
-        'tasks.leadtask': 'fas fa-receipt',
-        'tasks.task': 'fas fa-tasks',
-        'tasks.service': 'fas fa-concierge-bell',
-        'tasks.payment': 'fas fa-dollar-sign',
-        'dashboard.event': 'fas fa-calendar-alt',
-        'notifications.usernotification': 'fas fa-bell',
-        'notifications.chatmessage': 'fas fa-comments',
-        'notifications.pushsubscription': 'fas fa-mobile-alt',
-    },
-    'custom_css': 'css/admin-jazzmin-overrides.css',
-    'use_google_fonts_cdn': True,
-    'show_ui_builder': False,
-}
-
-JAZZMIN_UI_TWEAKS = {
-    'theme': 'flatly',
-    'dark_mode_theme': None,
-    'navbar': 'navbar-navy navbar-dark',
-    'sidebar': 'sidebar-dark-navy',
-    'accent': 'accent-teal',
-    'brand_colour': 'navbar-primary',
-}

@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
@@ -16,14 +16,20 @@ def staff_users():
     return active_users().filter(is_staff=True)
 
 
+def admin_users():
+    """Staff and superusers — always receive payment notifications."""
+    return active_users().filter(Q(is_staff=True) | Q(is_superuser=True))
+
+
 def administration_users():
     return active_users().filter(administration=True)
 
 
 def recipients_for_payment_notifications():
-    """Staff/superusers plus users flagged as administration."""
-    users = set(staff_users())
-    users.update(administration_users())
+    """Payment due alerts: administration role + staff + superusers only."""
+    users = set(admin_users())
+    for user in administration_users():
+        users.add(user)
     return users
 
 

@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import ChatMessage, PushSubscription, UserNotification
-from .push import get_vapid_public_key, vapid_configured
+from .push import get_vapid_public_key, send_test_push, vapid_configured
 from .services import (
     notify_broadcast,
     notify_new_chat_message,
@@ -212,6 +212,7 @@ def api_vapid_public_key(request):
     return JsonResponse({
         'public_key': get_vapid_public_key(),
         'enabled': vapid_configured(),
+        'subscribed': PushSubscription.objects.filter(user=request.user).exists(),
     })
 
 
@@ -238,6 +239,25 @@ def api_push_subscribe(request):
         },
     )
     return JsonResponse({'status': 'ok'})
+
+
+@login_required(login_url='/login/')
+@require_POST
+def api_push_test(request):
+    if not request.user.is_staff:
+        return JsonResponse({'status': 'error', 'message': 'Admin only'}, status=403)
+    if not vapid_configured():
+        return JsonResponse({'status': 'error', 'message': 'VAPID not configured'}, status=503)
+
+    result = send_test_push(request.user)
+    if result.get('sent', 0) < 1:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Push not delivered',
+            'detail': result,
+        }, status=502)
+
+    return JsonResponse({'status': 'ok', 'detail': result})
 
 
 @login_required(login_url='/login/')
