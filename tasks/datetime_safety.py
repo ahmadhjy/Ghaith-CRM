@@ -94,6 +94,15 @@ def services_for_leadtask(leadtask):
     )
 
 
+def services_for_client_pdf(leadtask):
+    """Services for client PDF: send_to_client rows when set, otherwise all services."""
+    base = services_for_leadtask(leadtask).order_by('pk')
+    selected = base.filter(send_to_client=True)
+    if selected.exists():
+        return selected
+    return base
+
+
 def get_leadtask_for_edit(pk):
     """Load a LeadTask for the invoice page; repair corrupt datetimes once and retry."""
     from django.shortcuts import get_object_or_404

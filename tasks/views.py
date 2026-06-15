@@ -523,9 +523,10 @@ def generate_pdf(request, pk):
 @login_required
 def generate_client_pdf(request, pk):
     from tasks.pdf_template import build_client_invoice_pdf
+    from .datetime_safety import services_for_client_pdf
 
     lead_task = get_object_or_404(LeadTask, pk=pk)
-    services = Service.objects.filter(leadtask=lead_task, send_to_client=True)
+    services = list(services_for_client_pdf(lead_task))
     payments = Payment.objects.filter(leadtask=lead_task).order_by('date')
 
     response = HttpResponse(content_type='application/pdf')

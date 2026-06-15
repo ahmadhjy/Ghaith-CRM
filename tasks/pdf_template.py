@@ -504,7 +504,7 @@ def build_client_invoice_pdf(*, response, lead_task, services, payments):
             for idx, service in enumerate(services, 1)
         ]
     else:
-        service_rows = [['—', 'No services', '—']]
+        service_rows = [['—', 'No services on this invoice', '—']]
     story.append(_data_table(['#', 'Service', 'Details'], service_rows))
     story.append(Spacer(1, 10))
 
