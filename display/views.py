@@ -50,6 +50,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 
+def _aware_month_bounds(year, month):
+    start = timezone.datetime(year, month, 1)
+    if timezone.is_naive(start):
+        start = timezone.make_aware(start)
+    end = start + timezone.timedelta(days=calendar.monthrange(year, month)[1])
+    return start, end
+
+
 @login_required(login_url="/login")
 def logout_user(request):
     logout(request)
@@ -179,26 +187,8 @@ def qualify_lead(request, lead_id):
 
 @login_required(login_url="/login")
 def send_offer(request, lead_id):
-    main_lead = Lead.objects.get(pk=lead_id)
-    if request.method == 'POST':
-        form = SendOfferForm(request.POST, request.FILES, instance=main_lead)
-        if form.is_valid():
-            lead = form.save(commit=False)
-            lead.attachments.set(main_lead.attachments.all())
-            if "submit_next" in request.POST:
-                lead.save()
-                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
-                return redirect('deal_lead', lead_id=lead.pk)
-            elif "submit_exit" in request.POST:
-                lead.status = "negotiation"
-                lead.save()
-                save_lead_passengers(lead, request.POST.getlist('passenger_names'))
-                return redirect('display_data')
-    else:
-        form = SendOfferForm(instance=main_lead)
-    return render(request, "send_offer.html", {'lead': main_lead,
-                                               'attachments': main_lead.attachments,
-                                               'form': form})
+    """Deprecated — redirect to Close Deal."""
+    return redirect('deal_lead', lead_id=lead_id)
 
 
 @login_required(login_url="/login")
@@ -227,16 +217,9 @@ def closing_deal(request, lead_id):
                 lead.status = "finalized"
             if "postpone" in request.POST:
                 lead.status = "followup"
-                # Create follow-up event in calendar
+                from tasks.calendar_sync import sync_followup_event
                 if lead.follow_up:
-                    from dashboard.models import Event
-                    Event.objects.create(
-                        user=request.user,
-                        title=f"Follow-up: {lead.name}",
-                        description=f"Follow-up for lead: {lead.name} - {lead.destination or 'No destination'}",
-                        when=lead.follow_up,
-                        event_type='invoice'  # Using 'invoice' type which is 'Follow-up reminder'
-                    )
+                    sync_followup_event(lead, user=request.user)
             lead.save()
             save_lead_passengers(lead, request.POST.getlist('passenger_names'))
             return redirect('display_data')
@@ -275,7 +258,7 @@ def delete_attachment(request, lead_id, attachment_id):
         if 'qualify' in referer or lead.status in ['onhold', 'processing']:
             return redirect('qualify_lead', lead_id=lead_id)
         elif 'sendoffer' in referer or lead.status == 'negotiation':
-            return redirect('send_offer_lead', lead_id=lead_id)
+            return redirect('deal_lead', lead_id=lead_id)
         else:
             return redirect('edit-model', pk=lead_id)
     else:
@@ -302,7 +285,7 @@ def edit_model(request, pk):
     if instance.status == "onhold" or instance.status == "followup" or instance.status == "processing" or instance.status == "done":
         return redirect('qualify_lead', lead_id=pk)
     if instance.status == "negotiation":
-        return redirect('send_offer_lead', lead_id=pk)
+        return redirect('deal_lead', lead_id=pk)
     if instance.status == "finalized":
         return redirect('deal_lead', lead_id=pk)
     else:
@@ -789,8 +772,7 @@ def stats_dashboard(request):
     unqualified_over_modified = []
 
     for month in range(1, 13):
-        month_start = timezone.datetime(current_year, month, 1)
-        month_end = month_start + timezone.timedelta(days=calendar.monthrange(current_year, month)[1])
+        month_start, month_end = _aware_month_bounds(current_year, month)
 
         modified_leads = Lead.objects.filter(last_modified__range=(month_start, month_end))
         sold_leads = modified_leads.filter(sold=True)
@@ -816,8 +798,7 @@ def stats_dashboard(request):
     month_list = [calendar.month_name[i] for i in range(1, 13)]
     selected_month = request.GET.get('month', month_list[timezone.now().month - 1])  # Default to current month
     selected_month_index = month_list.index(selected_month) + 1
-    month_start = timezone.datetime(current_year, selected_month_index, 1)
-    month_end = month_start + timezone.timedelta(days=calendar.monthrange(current_year, selected_month_index)[1])
+    month_start, month_end = _aware_month_bounds(current_year, selected_month_index)
 
     monthly_target_obj = MonthlyTarget.objects.filter(month__year=current_year, month__month=selected_month_index).first()
     monthly_target = monthly_target_obj.target_profit if monthly_target_obj else 0

@@ -37,6 +37,7 @@ urlpatterns = [
     path('client_payments/', views.client_payments, name='client_payments'),
     path('client_payments/mark_processed/<int:pk>/', views.mark_payment_processed, name='mark_payment_processed'),
     path('travellers/', views.travellers_list, name='travellers_list'),
+    path('travellers/pdf/', views.travellers_pdf, name='travellers_pdf'),
     path('client-media/create/<int:pk>/', views.create_client_media_link, name='create_client_media_link'),
     path('client-media/', views.client_media_uploads_list, name='client_media_uploads_list'),
     path('client-media/<uuid:token>/manage/', views.client_media_upload_detail, name='client_media_upload_detail'),

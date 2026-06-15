@@ -25,8 +25,9 @@
     <form method="get" action="{% url 'calendar' %}" class="dashboard-filter-form">
         <label for="event_type">Event type</label>
         <select name="event_type" id="event_type" onchange="this.form.submit()">
-            <option value="">All Types</option>
-            {% for type_value, type_name in type_choices %}
+            <option value="user" {% if event_type == 'user' %}selected{% endif %}>Travelling clients</option>
+            <option value="all" {% if event_type == 'all' %}selected{% endif %}>All types</option>
+            {% for type_value, type_name in filter_type_choices %}
             <option value="{{ type_value }}" {% if type_value == event_type %}selected{% endif %}>{{ type_name }}</option>
             {% endfor %}
         </select>
@@ -101,8 +102,8 @@
 </div>
 
 <div class="calendar-nav-actions">
-    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ prev_month }}"><i class="fas fa-chevron-left"></i> Previous</a>
-    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ next_month }}">Next <i class="fas fa-chevron-right"></i></a>
+    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ prev_month }}&event_type={{ event_type }}{% if show_done == 'on' %}&show_done=on{% endif %}"><i class="fas fa-chevron-left"></i> Previous</a>
+    <a class="btn btn--secondary" href="{% url 'calendar' %}?{{ next_month }}&event_type={{ event_type }}{% if show_done == 'on' %}&show_done=on{% endif %}">Next <i class="fas fa-chevron-right"></i></a>
 </div>
 
 <div class="calendar-legend" aria-label="Event type colors">

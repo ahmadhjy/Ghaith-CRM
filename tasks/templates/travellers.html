@@ -14,6 +14,9 @@
             <div class="req-hero__eyebrow">Orders</div>
             <h1 class="req-hero__title">Travellers</h1>
             <p class="req-hero__sub">Upcoming and past travellers by destination and date.</p>
+            <div class="req-hero__footer">
+                <a href="{% url 'travellers_pdf' %}?{{ request.GET.urlencode }}" class="req-btn-ghost"><i class="fas fa-download"></i> PDF</a>
+            </div>
         </div>
     </header>
 
@@ -25,8 +28,12 @@
                     <input type="month" name="month" value="{{ request_month }}" class="req-input">
                 </div>
                 <div class="req-filter-group">
-                    <span class="req-filter-label">Travel Date</span>
-                    <input type="date" name="travel_date" value="{{ request_travel_date }}" class="req-input">
+                    <span class="req-filter-label">Travel From</span>
+                    <input type="date" name="travel_from" value="{{ travel_from }}" class="req-input">
+                </div>
+                <div class="req-filter-group">
+                    <span class="req-filter-label">Travel To</span>
+                    <input type="date" name="travel_to" value="{{ travel_to }}" class="req-input">
                 </div>
                 <div class="req-filter-group">
                     <span class="req-filter-label">Destination</span>
@@ -54,7 +61,7 @@
         <div class="req-table-wrap">
             <table class="req-table list-table">
                 <thead>
-                    <tr><th>Client</th><th>Destination</th><th>Travel</th><th>Return</th><th>Order</th><th>Assigned</th></tr>
+                    <tr><th>Client</th><th>Destination</th><th>Travel</th><th>Return</th><th>Services</th><th>Order</th><th>Assigned</th></tr>
                 </thead>
                 <tbody>
                     {% for lt in travellers %}
@@ -63,11 +70,12 @@
                         <td data-label="Destination">{{ lt.lead.destination|default:"—" }}</td>
                         <td data-label="Travel">{{ lt.travel_date|date:"Y-m-d" }}</td>
                         <td data-label="Return">{% if lt.return_date %}{{ lt.return_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                        <td data-label="Services">{{ lt.services_issued }} out of {{ lt.services_total }}</td>
                         <td data-label="Order"><a href="{% url 'edit_lead_tasks' lt.pk %}" class="req-link">#{{ lt.pk }}</a></td>
                         <td data-label="Assigned">{{ lt.assigned_to.get_full_name|default:lt.assigned_to.username }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6"><div class="req-empty"><i class="fas fa-plane"></i>No travellers found.</div></td></tr>
+                    <tr><td colspan="7"><div class="req-empty"><i class="fas fa-plane"></i>No travellers found.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

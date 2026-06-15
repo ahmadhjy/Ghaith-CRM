@@ -28,7 +28,10 @@ from reportlab.lib import colors
 from django.http import HttpResponse
 from datetime import datetime  # Make sure this line is included
 from dashboard.models import Event
-from .constants import get_supplier_choices
+from .constants import get_supplier_choices, get_service_choices, effective_service_net, parse_money
+from .calendar_sync import sync_payment_event, sync_service_event
+from .invoice_save import save_invoice_from_post
+from .datetime_safety import get_leadtask_for_edit, services_for_leadtask
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from reportlab.lib.units import inch 
@@ -190,7 +193,8 @@ def update_service(request, pk):
     if request.method == 'POST':
         form = ServiceForm(request.POST, instance=service)
         if form.is_valid():
-            form.save()
+            saved = form.save()
+            sync_service_event(saved)
         # Always redirect back; checkbox can be toggled via AJAX elsewhere
         return redirect('edit_lead_tasks', pk=leadtask_id)
     # GET: show edit form (handled by inline edit on page)
@@ -234,29 +238,7 @@ def delete_payment(request, pk):
  #
 
 def create_event_for_service(service):
-    if not service.due_time:
-        return
-    client_details = (
-        f"Name: {service.leadtask.lead.name}\n"
-        f"Phone: {service.leadtask.lead.phone}"
-    )
-    description = (
-        f"Service Name: {service.service_name}\n"
-        f"Supplier: {service.supplier}\n"
-        f"Details: {service.details}\n"
-        f"Net: ${service.net}\n"
-        f"Selling: ${service.selling}\n"
-        f"Client Details:\n{client_details}"
-    )
-    when_date = service.due_time.date() if hasattr(service.due_time, 'date') else service.due_time
-    Event.objects.create(
-        event_type='followup',
-        user=service.leadtask.assigned_to,
-        title=f"{service.supplier} - Supplier Payment - {service.leadtask.lead.name} (${service.net})",
-        description=description,
-        when=when_date,
-        service=service,
-    )
+    sync_service_event(service)
 
 
 
@@ -286,11 +268,13 @@ def save_all_services(request, leadid):
             'selling': request.POST.get('service_%s_selling' % pk, ''),
             'due_time': request.POST.get('service_%s_due_time' % pk) or None,
             'voucher_id': request.POST.get('service_%s_voucher_id' % pk, ''),
+            'issue_price': request.POST.get('service_%s_issue_price' % pk, ''),
             'is_checked': request.POST.get('service_%s_is_checked' % pk) == 'on',
             'send_to_client': request.POST.get('service_%s_send_to_client' % pk) == 'on',
         }, instance=service)
         if form.is_valid():
-            form.save()
+            saved = form.save()
+            sync_service_event(saved)
     # New rows: service_name[], supplier[], ...
     names = request.POST.getlist('service_name[]')
     suppliers = request.POST.getlist('supplier[]')
@@ -393,48 +377,29 @@ def create_supplier(request):
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import Service
 
 
 @login_required(login_url="/login/")
 def purchased_services(request):
-    if request.user.is_staff:
-        services = Service.objects.all().order_by('due_time')  # staff sees all
+    """Legacy URL — issued services live on the Purchases page."""
+    params = {}
+    legacy = request.GET.get('filter', '').strip()
+    if legacy == 'unpaid':
+        params['issued'] = 'unissued'
+    elif legacy == 'overdue':
+        params['overdue'] = 'on'
+    elif legacy in ('paid', 'processed', 'unprocessed'):
+        params['issued'] = 'issued'
     else:
-        # If Service had an assigned_to, filter by that field. Otherwise, staff-only logic is fine.
-        services = Service.objects.filter(leadtask__assigned_to=request.user).order_by('due_time')
-
-    search_query = request.GET.get('search', '')
-    filter_status = request.GET.get('filter', '')
-
-    # Search
-    if search_query:
-        services = services.filter(
-            Q(service_name__icontains=search_query) |
-            Q(supplier__icontains=search_query) |
-            Q(details__icontains=search_query)
-        )
-
-    # If a filter is provided:
-    if filter_status:
-        if filter_status == 'paid':
-            services = services.filter(is_checked=True)
-        elif filter_status == 'unpaid':
-            services = services.filter(is_checked=False)
-        elif filter_status == 'overdue':
-            services = services.filter(due_time__lt=timezone.now(), is_checked=False)
-        elif filter_status == 'processed':
-            services = services.filter(processed=True)
-        elif filter_status == 'unprocessed':
-            services = services.filter(processed=False)
-    else:
-        # No filter => hide processed
-        # So "All" in your dropdown means "All unprocessed"
-        services = services.filter(processed=False)
-
-    return render(request, 'purchased_services.html', {'services': services, 'now': timezone.now()})
+        params['issued'] = 'issued'
+    if request.GET.get('show_cancelled') == 'on':
+        params['show_cancelled'] = 'on'
+    query = '&'.join(f'{k}={v}' for k, v in params.items())
+    return redirect(f"{reverse('supplier_payments_list')}?{query}")
 
 
 @login_required
@@ -443,7 +408,10 @@ def mark_service_processed(request, pk):
     service = get_object_or_404(Service, pk=pk)
     service.processed = True
     service.save()
-    return redirect('purchased_services')
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('supplier_payments_list')
 
 
 @login_required
@@ -467,30 +435,30 @@ def service_mark_done(request, pk):
 
 @login_required(login_url="/login/")
 def edit_lead_task(request, pk):
-    instance = get_object_or_404(
-        LeadTask.objects.select_related('lead').prefetch_related('lead__passengers'),
-        pk=pk,
-    )
-    services = Service.objects.filter(leadtask=instance)
+    instance = get_leadtask_for_edit(pk)
+    services = services_for_leadtask(instance)
     lead_task_payments = Payment.objects.filter(leadtask=instance)
     attachments = Attachment.objects.filter(parentleadtask=instance)
 
     if request.method == 'POST':
-        old_status = instance.status
-        form = LeadTaskForm(request.POST, instance=instance)
-        if form.is_valid():
-            updated = form.save()
-            lead = updated.lead
-            lead.finalization_notes = form.cleaned_data.get('finalization_notes', '') or ''
-            lead.save(update_fields=['finalization_notes'])
-            if old_status != 'cancelled' and updated.status == 'cancelled':
-                # Delete related supplier payment events when order is cancelled.
-                Event.objects.filter(service__leadtask=updated).delete()
+        updated, form = save_invoice_from_post(request, instance)
+        if updated:
+            return redirect('edit_lead_tasks', pk)
     else:
         form = LeadTaskForm(instance=instance)
 
     supplier_choices = get_supplier_choices()
+    service_choices = get_service_choices()
+    from display.models import get_destination_choices
+    destination_choices = get_destination_choices()
     predefined_supplier_values = [v for v, _ in supplier_choices]
+    predefined_service_values = [v for v, _ in service_choices]
+    predefined_destination_values = [v for v, _ in destination_choices if v]
+    services_total = services.count()
+    services_issued = services.filter(is_checked=True).count()
+    total_net = sum(parse_money(effective_service_net(s)) for s in services)
+    total_selling = parse_money(instance.lead.selling_price)
+    total_profit = total_selling - total_net
     media_upload_links = ClientMediaUploadLink.objects.filter(leadtask=instance)
     return render(request, 'edit_leadtask.html', {
         'form': form,
@@ -501,6 +469,15 @@ def edit_lead_task(request, pk):
         'attachments': attachments,
         'predefined_suppliers': supplier_choices,
         'predefined_supplier_values': predefined_supplier_values,
+        'predefined_services': service_choices,
+        'predefined_service_values': predefined_service_values,
+        'destination_choices': destination_choices,
+        'predefined_destination_values': predefined_destination_values,
+        'services_total': services_total,
+        'services_issued': services_issued,
+        'total_net': total_net,
+        'total_selling': total_selling,
+        'total_profit': total_profit,
         'media_upload_links': media_upload_links,
         'supplier_form': SupplierForm(),
     })
@@ -521,351 +498,44 @@ def update_service_supplier(request, pk):
 
 @login_required
 def generate_pdf(request, pk):
-    lead_task = get_object_or_404(LeadTask, pk=pk)
+    from tasks.models import Attachment
+    from tasks.pdf_template import build_internal_invoice_pdf
+
+    lead_task = get_object_or_404(
+        LeadTask.objects.select_related('lead', 'assigned_to').prefetch_related('lead__passengers'),
+        pk=pk,
+    )
+    services = Service.objects.filter(leadtask=lead_task).order_by('pk')
+    payments = Payment.objects.filter(leadtask=lead_task).order_by('date')
+    attachments = Attachment.objects.filter(parentleadtask=lead_task).order_by('-uploaded_at')
+
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Invoice - {lead_task.lead.name}.pdf"'
-
-    doc = SimpleDocTemplate(response, pagesize=landscape(A4), rightMargin=28, leftMargin=28, topMargin=24, bottomMargin=24)
-    styles = getSampleStyleSheet()
-    custom_colors = {'blue': '#0f4c81', 'light_blue': '#f5f7fa', 'grey': '#334e68'}
-
-    # Custom styles
-    styles.add(ParagraphStyle(name='MyTitleStyle', parent=styles['Title'], fontSize=16, leading=20, alignment=TA_CENTER, textColor=colors.HexColor(custom_colors['blue'])))
-    styles.add(ParagraphStyle(name='MyHeading2', parent=styles['Heading2'], fontSize=12, leading=16, spaceBefore=10, spaceAfter=6, textColor=colors.HexColor(custom_colors['grey'])))
-    styles.add(ParagraphStyle(name='MyBodyText', parent=styles['BodyText'], fontSize=9, leading=11, textColor=colors.HexColor(custom_colors['grey'])))
-
-    story = []
-
-    # Function to add headers and footers
-    def on_every_page(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 9)
-        canvas.drawString(inch, 0.75 * inch, f"Page {doc.page}")
-        canvas.restoreState()
-
-    doc.build_on_first_page = on_every_page
-    doc.build_on_later_pages = on_every_page
-
-    services = Service.objects.filter(leadtask=lead_task)
-    payments = Payment.objects.filter(leadtask=lead_task)
-
-    # Add logo to the top left corner
-    logo_path = 'ghaithleads/static/images/logo.png'  # Update this to the actual path of your logo
-    story.append(Image(logo_path, width=100, height=100))  # Adjust width and height as needed
-    story.append(Spacer(1, 12))
-
-    # Title
-    story.append(Paragraph(f'Order Details for {lead_task.lead.name}', styles['MyTitleStyle']))
-    story.append(Spacer(1, 12))
-
-    # LeadTask ID
-    story.append(Paragraph(f'Invoice ID: {lead_task.pk}', styles['MyBodyText']))
-    story.append(Spacer(1, 12))
-
-    # Creation date and assigned user
-    today = datetime.now().strftime("%Y-%m-%d")
-    created_by = lead_task.assigned_to.username
-    story.append(Paragraph(f"Created By: {created_by}", styles['MyBodyText']))
-    story.append(Paragraph(f"Date Created: {today}", styles['MyBodyText']))
-    if lead_task.travel_date:
-        travel_date = lead_task.travel_date.strftime('%Y-%m-%d')
-        story.append(Paragraph(f"Exact Travel Date: {travel_date}", styles['MyBodyText']))
-    story.append(Spacer(1, 12))
-
-    # Client Details
-    story.append(Paragraph('Client Details', styles['MyHeading2']))
-    client_details = [
-        f"Name: {lead_task.lead.name}",
-        f"Phone: {lead_task.lead.phone}",
-        f"Channel: {lead_task.lead.channel}",
-        f"Destination: {lead_task.lead.destination}",
-        f"Special Request: {lead_task.lead.special_request}",
-        f"Finalization Notes: {lead_task.lead.finalization_notes}"
-    ]
-    for detail in client_details:
-        story.append(Paragraph(detail, styles['MyBodyText']))
-    story.append(Spacer(1, 12))
-
-    # Services
-    if services.exists():
-        story.append(Paragraph('Services', styles['MyHeading2']))
-        services_data = [['Service Name', 'Supplier', 'Details', 'Net', 'Selling', 'Due Time', 'Checked']]
-        for service in services:
-            services_data.append([
-                service.service_name, service.supplier, service.details,
-                f"${service.net}", f"${service.selling}",
-                service.due_time.strftime('%Y-%m-%d') if service.due_time else 'N/A',
-                'Yes' if service.is_checked else 'No'
-            ])
-        services_table = Table(services_data, spaceBefore=6)
-        services_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['blue'])),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(custom_colors['light_blue'])]),
-        ]))
-        story.append(services_table)
-        story.append(Spacer(1, 12))
-
-    # Payments
-    if payments.exists():
-        story.append(Paragraph('Payments', styles['MyHeading2']))
-        payments_data = [['Date', 'Amount', 'Paid']]
-        for payment in payments:
-            payments_data.append([
-                payment.date.strftime('%Y-%m-%d'), f"${payment.amount}",
-                'Yes' if payment.is_checked else 'No'
-            ])
-        payments_table = Table(payments_data, spaceBefore=6)
-        payments_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(custom_colors['blue'])),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor(custom_colors['light_blue'])]),
-        ]))
-        story.append(payments_table)
-        story.append(Spacer(1, 12))
-    
-    # Add selling price to the payments section
-    story.append(Paragraph(f"Selling Price: {lead_task.lead.selling_price}", styles['MyBodyText']))
-    story.append(Spacer(1, 12))
-
-    doc.build(story)
-    return response
+    return build_internal_invoice_pdf(
+        response=response,
+        lead_task=lead_task,
+        services=services,
+        payments=payments,
+        attachments=attachments,
+    )
 
 
 @login_required
 def generate_client_pdf(request, pk):
+    from tasks.pdf_template import build_client_invoice_pdf
+
     lead_task = get_object_or_404(LeadTask, pk=pk)
     services = Service.objects.filter(leadtask=lead_task, send_to_client=True)
-    payments = Payment.objects.filter(leadtask=lead_task).order_by("date")
+    payments = Payment.objects.filter(leadtask=lead_task).order_by('date')
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Client Invoice - {lead_task.lead.name}.pdf"'
-
-    doc = SimpleDocTemplate(
-        response,
-        pagesize=landscape(A4),
-        rightMargin=28,
-        leftMargin=28,
-        topMargin=24,
-        bottomMargin=24
+    return build_client_invoice_pdf(
+        response=response,
+        lead_task=lead_task,
+        services=services,
+        payments=payments,
     )
-
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(
-        name='ClientTitleStyle',
-        parent=styles['Title'],
-        fontSize=16,
-        leading=20,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor('#0f4c81')
-    ))
-    styles.add(ParagraphStyle(
-        name='ClientHeading',
-        parent=styles['Heading2'],
-        fontSize=12,
-        leading=16,
-        spaceBefore=10,
-        spaceAfter=6,
-        textColor=colors.HexColor('#334e68')
-    ))
-    styles.add(ParagraphStyle(
-        name='ClientBody',
-        parent=styles['BodyText'],
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor('#334e68')
-    ))
-    styles.add(ParagraphStyle(
-        name='PolicyBody',
-        parent=styles['BodyText'],
-        fontSize=8.5,
-        leading=11,
-        textColor=colors.HexColor('#334e68')
-    ))
-
-    story = []
-    logo_path = 'ghaithleads/static/images/logo.png'
-    story.append(Image(logo_path, width=100, height=100))
-    story.append(Spacer(1, 8))
-
-    story.append(Paragraph(f'Invoice for {lead_task.lead.name}', styles['ClientTitleStyle']))
-    story.append(Spacer(1, 10))
-
-    created_by = lead_task.assigned_to.get_full_name() or lead_task.assigned_to.username
-    issue_date = timezone.now().strftime("%Y-%m-%d")
-    exact_travel_date = lead_task.travel_date.strftime('%Y-%m-%d') if lead_task.travel_date else 'N/A'
-
-    summary_data = [
-        ['Invoice ID', str(lead_task.pk)],
-        ['Created By', created_by],
-        ['Issue Date', issue_date],
-        ['Exact Travel Date', exact_travel_date],
-    ]
-    summary_table = Table(summary_data, colWidths=[160, 420], hAlign='LEFT')
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f7fa')),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#334e68')),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    story.append(summary_table)
-    story.append(Spacer(1, 10))
-
-    story.append(Paragraph('Client Details', styles['ClientHeading']))
-    client_fields = [
-        ('Name', lead_task.lead.name),
-        ('Phone', lead_task.lead.phone),
-        ('Email', getattr(lead_task.lead, 'email', None)),
-        ('Channel', lead_task.lead.channel),
-        ('Destination', lead_task.lead.destination),
-        ('Request Details', lead_task.lead.special_request),
-        ('Invoice Notes', lead_task.notes),
-        ('Return Date', lead_task.return_date.strftime('%Y-%m-%d') if lead_task.return_date else None),
-        ('Date of Birth', lead_task.date_of_birth.strftime('%Y-%m-%d') if lead_task.date_of_birth else None),
-        ('Passport Expiry Date', lead_task.passport_expiry_date.strftime('%Y-%m-%d') if lead_task.passport_expiry_date else None),
-        ('Payment Type', lead_task.payment),
-    ]
-    client_data = [[label, str(value)] for label, value in client_fields if value not in [None, '']]
-    if client_data:
-        client_table = Table(client_data, colWidths=[180, 560], hAlign='LEFT')
-        client_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f7fa')),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#334e68')),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ]))
-        story.append(client_table)
-        story.append(Spacer(1, 10))
-
-    story.append(Paragraph('Services', styles['ClientHeading']))
-    if services.exists():
-        service_data = [['#', 'Service Type', 'Service Details']]
-        for idx, service in enumerate(services, 1):
-            service_data.append([str(idx), service.service_name or '—', service.details or '—'])
-        service_table = Table(service_data, colWidths=[40, 220, 480], hAlign='LEFT')
-        service_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f4c81')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7fa')]),
-        ]))
-        story.append(service_table)
-    else:
-        story.append(Paragraph('No services added.', styles['ClientBody']))
-    story.append(Spacer(1, 10))
-
-    story.append(Paragraph('Payments', styles['ClientHeading']))
-    if payments.exists():
-        payment_data = [['Date', 'Amount', 'Paid']]
-        for payment in payments:
-            payment_data.append([
-                payment.date.strftime('%Y-%m-%d'),
-                f"${payment.amount}",
-                'Yes' if payment.is_checked else 'No',
-            ])
-        payment_table = Table(payment_data, colWidths=[180, 180, 120], hAlign='LEFT')
-        payment_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f4c81')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7fa')]),
-        ]))
-        story.append(payment_table)
-    else:
-        story.append(Paragraph('No payments added.', styles['ClientBody']))
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(f'Total Selling Price: {lead_task.lead.selling_price or "N/A"}', styles['ClientBody']))
-
-    story.append(PageBreak())
-    story.append(Paragraph('GHAITH TRAVEL - BOOKING TERMS & TRAVEL POLICY', styles['ClientHeading']))
-    policy_lines = [
-        "Dear Valued Client,",
-        "Thank you for choosing Ghaith Travel to plan your vacation.",
-        "We are honored to be part of your travel journey, and our priority is always to provide you with a smooth, secure, and enjoyable experience.",
-        "To ensure complete clarity and transparency, we kindly ask you to review the following booking terms.",
-        "These policies are designed not to worry you, but to help you clearly understand how your travel arrangements are protected and managed with professionalism and care.",
-        "Our team is always here to guide you, support you, and provide the best possible solutions whenever changes arise.",
-        "",
-        "1. Booking Types: Refundable & Non-Refundable",
-        "Travel services vary depending on airline, hotel, destination, and supplier conditions.",
-        "Flights:",
-        "- Charter flights, low-cost airlines, promotional fares, and special offers are generally non-refundable",
-        "- Regular international airline tickets may be refundable depending on airline fare rules",
-        "Hotels:",
-        "- Hotel cancellation and refund conditions depend on each hotel's own policy",
-        "Visa Fees:",
-        "- Visa fees become non-refundable once the application has been submitted",
-        "Tours & Activities:",
-        "- Usually refundable up to 15 days before travel date",
-        "- Some online or third-party booked activities may be non-refundable",
-        "Before confirming your booking, our travel consultants will always explain the applicable conditions clearly.",
-        "",
-        "2. If an Airline Cancels Your Flight",
-        "In case of airline cancellation, we work immediately to protect your travel plans and offer the best available solutions.",
-        "Option 1: Alternative Travel Route",
-        "- New routing depends on airline availability",
-        "- Any fare difference will be communicated clearly before confirmation",
-        "Option 2: Reschedule Your Trip",
-        "- Within the same travel season, usually without extra charges",
-        "- Voucher may be issued valid for up to 1 year",
-        "Important: If new travel dates fall into high season (July, August, December), fare differences may apply.",
-        "Option 3: Refund",
-        "- Refund will be processed with a deduction of $250 total (office fees + international processing charges)",
-        "Conditions:",
-        "- Visa refundable only if not yet applied",
-        "- Hotels refunded according to hotel booking rules",
-        "- Non-refundable hotel rates remain non-refundable",
-        "- Tours & transfers refunded where applicable",
-        "",
-        "3. If You Decide to Cancel Your Trip",
-        "Flights: Airline cancellation rules apply; cancellation charges depend on fare type and airline conditions.",
-        "Hotels: Hotel cancellation policy applies based on booking terms.",
-        "Visa: Non-refundable once applied.",
-        "Tours & Activities: Subject to supplier cancellation rules.",
-        "A full booking invoice including payment deadlines and cancellation conditions will always be sent to you after confirmation.",
-        "",
-        "4. Charter & Low-Cost Packages (Including Sharm, Turkey, Georgia & Similar Destinations)",
-        "These bookings are non-refundable, non-changeable, non-transferable, and non-voidable once confirmed.",
-        "If Airline Cancels Charter Flight:",
-        "Option A: Refund - deduction of $50 per person, remaining balance refunded.",
-        "Option B: Reschedule - to another available date if possible, subject to airline approval and availability.",
-        "",
-        "5. Payment Commitment & Reservation Guarantee",
-        "Payments must be completed according to agreed deadlines to secure reservation exactly as requested.",
-        "Delayed payments may affect price and availability; we will always do our best to assist with alternatives.",
-        "",
-        "6. Refund Processing Timeline",
-        "Approved refunds usually take between 60 to 90 days depending on airlines, hotels, embassies, and suppliers.",
-        "Our Accounting Department will contact you with refund amount confirmation and expected refund timeline.",
-        "",
-        "7. Confirmation of Agreement",
-        "Once payment is made, this confirms acceptance of all booking terms, cancellation and refund policies, and authorization for Ghaith Travel to proceed with reservations on your behalf.",
-        "",
-        "Our Commitment to You",
-        "At Ghaith Travel, our role is not only to book your trip - it is to stand by your side before, during, and after your journey.",
-        "We are committed to full transparency, honest guidance, fast support when changes happen, and protecting your travel investment as much as possible.",
-        "",
-        "Thank you for trusting us.",
-        "Warm regards,",
-        "Ghaith Travel Team",
-    ]
-
-    for line in policy_lines:
-        safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        story.append(Paragraph(safe_line if safe_line else "&nbsp;", styles['PolicyBody']))
-
-    doc.build(story)
-    return response
 
 
 @login_required(login_url="/login/")
@@ -936,6 +606,7 @@ def add_payment(request, pk):
             payment = form.save(commit=False)
             payment.leadtask = leadtask
             payment.save()
+            sync_payment_event(payment)
             return redirect("edit_lead_tasks", pk=pk)
     else:
         form = PaymentForm()
@@ -944,52 +615,30 @@ def add_payment(request, pk):
 
 @login_required(login_url="/login/")
 def client_payments(request):
-    if request.user.is_staff:
-        payments = Payment.objects.all().order_by('date')
-    else:
-        payments = Payment.objects.filter(leadtask__assigned_to=request.user).order_by('date')
-
-    search_query = request.GET.get('search', '')
-    filter_status = request.GET.get('filter', '')
-    show_cancelled = request.GET.get('show_cancelled', '') == 'on'
-
-    # Hide cancelled orders by default.
-    if not show_cancelled:
-        payments = payments.exclude(leadtask__status='cancelled')
-
-    if search_query:
-        payments = payments.filter(
-            Q(leadtask__lead__name__icontains=search_query) |
-            Q(leadtask__lead__passengers__name__icontains=search_query) |
-            Q(leadtask__lead__phone__icontains=search_query) |
-            Q(leadtask__lead__channel__icontains=search_query)
-        ).distinct()
-
-    if filter_status:
-        if filter_status == 'paid':
-            payments = payments.filter(is_checked=True)
-        elif filter_status == 'unpaid':
-            payments = payments.filter(is_checked=False)
-        elif filter_status == 'overdue':
-            payments = payments.filter(date__lt=timezone.now(), is_checked=False)
-        elif filter_status == 'processed':
-            payments = payments.filter(processed=True)
-        elif filter_status == 'unprocessed':
-            payments = payments.filter(processed=False)
-    else:
-        # Hide processed if no filter
-        payments = payments.filter(processed=False)
-
-    return render(request, 'client_payments.html', {
-        'payments': payments,
-        'now': timezone.now(),
-        'show_cancelled': show_cancelled,
-    })
+    """Legacy URL — use calendar client payments list."""
+    params = {}
+    legacy = request.GET.get('filter', '').strip()
+    if legacy == 'paid':
+        params['issued'] = 'issued'
+    elif legacy == 'unpaid':
+        params['issued'] = 'unissued'
+    elif legacy == 'overdue':
+        params['overdue'] = 'on'
+    if request.GET.get('show_cancelled') == 'on':
+        params['show_cancelled'] = 'on'
+    query = '&'.join(f'{k}={v}' for k, v in params.items())
+    url = reverse('client_payments_list')
+    if query:
+        url = f'{url}?{query}'
+    return redirect(url)
 
 
 @login_required(login_url="/login/")
 def travellers_list(request):
-    """List leadtasks with a travel date (travellers). Shows all orders with travel date, not only done."""
+    """List leadtasks with a travel date (travellers)."""
+    from django.db.models import Count, Q
+    from datetime import datetime as dt
+
     now = timezone.now()
     today = now.date() if hasattr(now, 'date') else now
 
@@ -1001,16 +650,19 @@ def travellers_list(request):
             assigned_to=request.user,
         ).select_related('lead', 'assigned_to')
 
+    qs = qs.annotate(
+        services_total=Count('service', distinct=True),
+        services_issued=Count('service', filter=Q(service__is_checked=True), distinct=True),
+    )
+
     show_cancellations = request.GET.get('show_cancellations', '') == 'on'
     if not show_cancellations:
         qs = qs.exclude(status='cancelled')
 
-    # Filter: destination (dropdown, exact match)
     destination = request.GET.get('destination', '').strip()
     if destination:
         qs = qs.filter(lead__destination=destination)
 
-    # Filter: month (YYYY-MM)
     month_str = request.GET.get('month', '').strip()
     if month_str:
         try:
@@ -1019,34 +671,35 @@ def travellers_list(request):
         except (ValueError, TypeError):
             pass
 
-    # Filter: travel date (exact)
-    travel_date_str = request.GET.get('travel_date', '').strip()
-    if travel_date_str:
+    travel_from = request.GET.get('travel_from', '').strip()
+    travel_to = request.GET.get('travel_to', '').strip()
+    if travel_from:
         try:
-            from datetime import datetime as dt
-            parsed = dt.strptime(travel_date_str, '%Y-%m-%d').date()
-            qs = qs.filter(travel_date__date=parsed)
+            parsed = dt.strptime(travel_from, '%Y-%m-%d').date()
+            qs = qs.filter(travel_date__date__gte=parsed)
+        except ValueError:
+            pass
+    if travel_to:
+        try:
+            parsed = dt.strptime(travel_to, '%Y-%m-%d').date()
+            qs = qs.filter(travel_date__date__lte=parsed)
         except ValueError:
             pass
 
-    # Filter: exclude already traveled (past travel date)
     show_past = request.GET.get('show_past', '') == 'on'
     if not show_past:
         qs = qs.filter(travel_date__date__gte=today)
 
-    # Filter: return date from–to (date range)
     return_from = request.GET.get('return_from', '').strip()
     return_to = request.GET.get('return_to', '').strip()
     if return_from:
         try:
-            from datetime import datetime as dt
             parsed = dt.strptime(return_from, '%Y-%m-%d').date()
             qs = qs.filter(return_date__date__gte=parsed)
         except ValueError:
             pass
     if return_to:
         try:
-            from datetime import datetime as dt
             parsed = dt.strptime(return_to, '%Y-%m-%d').date()
             qs = qs.filter(return_date__date__lte=parsed)
         except ValueError:
@@ -1054,7 +707,6 @@ def travellers_list(request):
 
     travellers = qs.order_by('travel_date')
 
-    # Destination filter dropdown: use Destination model (admin panel) so new destinations appear without restart
     from display.models import Destination
     destinations = list(Destination.objects.all().order_by('name').values_list('name', flat=True))
 
@@ -1065,12 +717,113 @@ def travellers_list(request):
         'destinations': destinations,
         'request_destination': destination,
         'request_month': month_str,
-        'request_travel_date': travel_date_str,
+        'travel_from': travel_from,
+        'travel_to': travel_to,
         'show_past': show_past,
         'return_from': return_from,
         'return_to': return_to,
         'show_cancellations': show_cancellations,
     })
+
+
+@login_required(login_url="/login/")
+def travellers_pdf(request):
+    from datetime import datetime as dt
+    from django.db.models import Count, Q
+    from tasks.pdf_template import build_report_pdf, travellers_applied_filters
+
+    now = timezone.now()
+    today = now.date()
+
+    if request.user.is_staff:
+        qs = LeadTask.objects.filter(travel_date__isnull=False).select_related('lead', 'assigned_to')
+    else:
+        qs = LeadTask.objects.filter(
+            travel_date__isnull=False,
+            assigned_to=request.user,
+        ).select_related('lead', 'assigned_to')
+
+    qs = qs.annotate(
+        services_total=Count('service', distinct=True),
+        services_issued=Count('service', filter=Q(service__is_checked=True), distinct=True),
+    )
+
+    show_cancellations = request.GET.get('show_cancellations', '') == 'on'
+    if not show_cancellations:
+        qs = qs.exclude(status='cancelled')
+
+    destination = request.GET.get('destination', '').strip()
+    if destination:
+        qs = qs.filter(lead__destination=destination)
+
+    month_str = request.GET.get('month', '').strip()
+    if month_str:
+        try:
+            year, month = (int(x) for x in month_str.split('-'))
+            qs = qs.filter(travel_date__year=year, travel_date__month=month)
+        except (ValueError, TypeError):
+            pass
+
+    travel_from = request.GET.get('travel_from', '').strip()
+    travel_to = request.GET.get('travel_to', '').strip()
+    if travel_from:
+        try:
+            parsed = dt.strptime(travel_from, '%Y-%m-%d').date()
+            qs = qs.filter(travel_date__date__gte=parsed)
+        except ValueError:
+            pass
+    if travel_to:
+        try:
+            parsed = dt.strptime(travel_to, '%Y-%m-%d').date()
+            qs = qs.filter(travel_date__date__lte=parsed)
+        except ValueError:
+            pass
+
+    show_past = request.GET.get('show_past', '') == 'on'
+    if not show_past:
+        qs = qs.filter(travel_date__date__gte=today)
+
+    return_from = request.GET.get('return_from', '').strip()
+    return_to = request.GET.get('return_to', '').strip()
+    if return_from:
+        try:
+            parsed = dt.strptime(return_from, '%Y-%m-%d').date()
+            qs = qs.filter(return_date__date__gte=parsed)
+        except ValueError:
+            pass
+    if return_to:
+        try:
+            parsed = dt.strptime(return_to, '%Y-%m-%d').date()
+            qs = qs.filter(return_date__date__lte=parsed)
+        except ValueError:
+            pass
+
+    qs = qs.order_by('travel_date')
+    applied_filters = travellers_applied_filters(request.GET)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="travellers-report.pdf"'
+
+    rows = [
+        [
+            lt.lead.name,
+            lt.lead.destination or '—',
+            lt.travel_date.strftime('%Y-%m-%d') if lt.travel_date else '—',
+            lt.return_date.strftime('%Y-%m-%d') if lt.return_date else '—',
+            f'{lt.services_issued} / {lt.services_total}',
+            lt.assigned_to.get_full_name() or lt.assigned_to.username,
+            str(lt.pk),
+        ]
+        for lt in qs[:500]
+    ]
+    build_report_pdf(
+        response=response,
+        doc_title='Travellers',
+        applied_filters=applied_filters,
+        headers=['Client', 'Destination', 'Travel', 'Return', 'Services', 'Assigned', 'Order'],
+        rows=rows,
+    )
+    return response
 
 
 @login_required
@@ -1079,7 +832,7 @@ def mark_payment_processed(request, pk):
     payment = get_object_or_404(Payment, pk=pk)
     payment.processed = True
     payment.save()
-    return redirect('client_payments')
+    return redirect('client_payments_list')
 
 
 # create attachment and upload

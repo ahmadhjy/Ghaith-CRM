@@ -35,7 +35,7 @@ class LeadTaskForm(forms.ModelForm):
 
     class Meta:
         model = LeadTask
-        fields = ['payment', 'status', 'notes', 'travel_date', 'return_date', 'date_of_birth', 'passport_expiry_date', 'service_checked', 'payment_checked', 'assigned_to']
+        fields = ['payment', 'status', 'notes', 'travel_date', 'return_date', 'service_checked', 'payment_checked', 'assigned_to']
         widgets = {
             'travel_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'return_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -53,7 +53,7 @@ class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
         fields = [
-            'service_name', 'supplier', 'details', 'net', 'selling',
+            'service_name', 'supplier', 'details', 'net', 'issue_price', 'selling',
             'due_time', 'voucher_id', 'is_checked', 'send_to_client',
         ]
         widgets = {

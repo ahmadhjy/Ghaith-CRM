@@ -31,6 +31,27 @@ class Event(models.Model):
         on_delete=models.CASCADE,
         related_name='calendar_event',
     )
+    payment = models.OneToOneField(
+        'tasks.Payment',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='calendar_event',
+    )
+    leadtask = models.ForeignKey(
+        'tasks.LeadTask',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='calendar_events',
+    )
+    lead = models.ForeignKey(
+        'display.Lead',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='followup_events',
+    )
 
     def save(self, *args, **kwargs):
         """
@@ -47,11 +68,23 @@ class Event(models.Model):
 
     @property
     def get_html_url(self):
+        if self.leadtask_id:
+            invoice_url = reverse('edit_lead_tasks', args=(self.leadtask_id,))
+            edit_url = reverse('event_edit', args=(self.id,))
+            if not self.done:
+                done_url = reverse('event_done', args=(self.id,))
+                return (
+                    f'<a href="{invoice_url}" class="event-link event-link--invoice">{self.title}</a> '
+                    f'<a href="{edit_url}" class="event-link event-link--edit" title="Edit reminder"><i class="fas fa-pen"></i></a> '
+                    f'<a href="{done_url}" class="done-link" style="color: white;">&times;</a>'
+                )
+            return (
+                f'<a href="{invoice_url}" class="event-link done-event">{self.title}</a>'
+            )
         edit_url = reverse('event_edit', args=(self.id,))
         done_url = reverse('event_done', args=(self.id,))
 
         if not self.done:
-            # Show "Done" link
             return f'''
                 <a href="{edit_url}" class="event-link">{self.title}</a> |
             <a href="{done_url}" class="done-link" style="color: white;">&times;</a>

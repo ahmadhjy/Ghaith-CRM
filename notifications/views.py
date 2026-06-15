@@ -4,6 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -33,6 +34,16 @@ def _json_body(request):
         return {}
 
 
+REMINDER_SYNC_CACHE_KEY = 'notifications:sync_reminders'
+REMINDER_SYNC_INTERVAL_SEC = 300
+
+
+def _maybe_sync_reminder_notifications():
+    """Run reminder sync at most once every few minutes (badge poll + list open)."""
+    if cache.add(REMINDER_SYNC_CACHE_KEY, 1, timeout=REMINDER_SYNC_INTERVAL_SEC):
+        sync_reminder_notifications()
+
+
 @login_required(login_url='/login/')
 def chat_page(request):
     users = User.objects.filter(is_active=True).exclude(pk=request.user.pk).order_by('username')
@@ -49,7 +60,8 @@ def chat_page(request):
 @login_required(login_url='/login/')
 @require_GET
 def api_count(request):
-    """Lightweight badge poll — no reminder sync, no list payload."""
+    """Lightweight badge poll — also triggers throttled reminder sync."""
+    _maybe_sync_reminder_notifications()
     return JsonResponse({
         'unread_count': unread_count(request.user),
         'unread_messages': unread_message_count(request.user),
@@ -65,7 +77,7 @@ def api_list(request):
             'unread_messages': unread_message_count(request.user),
         })
 
-    sync_reminder_notifications()
+    _maybe_sync_reminder_notifications()
 
     notifications = (
         UserNotification.objects.filter(recipient=request.user)

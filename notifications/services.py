@@ -12,38 +12,31 @@ def active_users():
     return User.objects.filter(is_active=True)
 
 
-def staff_users():
-    return active_users().filter(is_staff=True)
-
-
-def admin_users():
-    """Staff and superusers — always receive payment notifications."""
-    return active_users().filter(Q(is_staff=True) | Q(is_superuser=True))
-
-
-def administration_users():
-    return active_users().filter(administration=True)
-
-
-def recipients_for_payment_notifications():
-    """Payment due alerts: administration role + staff + superusers only."""
-    users = set(admin_users())
-    for user in administration_users():
+def privileged_notification_users():
+    """Staff, superusers, and administration — broader notification access."""
+    users = set(
+        active_users().filter(Q(is_staff=True) | Q(is_superuser=True))
+    )
+    for user in active_users().filter(administration=True):
         users.add(user)
     return users
 
 
-def recipients_for_assigned_lead(lead, leadtask=None):
-    """Admins plus the user assigned to the lead/order."""
-    users = set(staff_users())
+def recipients_for_payment_notifications():
+    """Payment due alerts: administration + staff + superusers only."""
+    return privileged_notification_users()
+
+
+def recipients_for_assigned_agent(lead, leadtask=None):
+    """Only the agent assigned to this lead or order (LeadTask assignee wins)."""
     assigned = None
     if leadtask and leadtask.assigned_to_id:
         assigned = leadtask.assigned_to
     elif lead and lead.assigned_to_id:
         assigned = lead.assigned_to
     if assigned and assigned.is_active:
-        users.add(assigned)
-    return users
+        return {assigned}
+    return set()
 
 
 def create_notification(
@@ -108,6 +101,7 @@ def notify_all_users(*, kind, title, message='', url='', lead=None, leadtask=Non
 
 
 def notify_takeover_lead(lead):
+    """Shared takeover pool — all active agents can claim these leads."""
     notify_all_users(
         kind=NotificationKind.TAKEOVER_LEAD,
         title=f'New lead on Take Over: {lead.name}',
@@ -118,8 +112,40 @@ def notify_takeover_lead(lead):
     )
 
 
+def notify_lead_assigned(lead):
+    """Notify the agent who owns this lead (not while it is still on takeover)."""
+    user = lead.assigned_to
+    if not user or not user.is_active or lead.takeover:
+        return
+    create_notification(
+        recipient=user,
+        kind=NotificationKind.LEAD_ASSIGNED,
+        title=f'Lead assigned to you: {lead.name}',
+        message=f'{lead.destination or "No destination"} · {lead.phone}',
+        url=reverse('edit_creation_lead', kwargs={'pk': lead.pk}),
+        lead=lead,
+    )
+
+
+def notify_leadtask_assigned(leadtask):
+    """Notify the agent assigned to this order."""
+    user = leadtask.assigned_to
+    if not user or not user.is_active:
+        return
+    lead = leadtask.lead
+    create_notification(
+        recipient=user,
+        kind=NotificationKind.LEADTASK_ASSIGNED,
+        title=f'Order assigned to you: {lead.name}',
+        message=leadtask.get_status_display(),
+        url=reverse('edit_lead_tasks', kwargs={'pk': leadtask.pk}),
+        lead=lead,
+        leadtask=leadtask,
+    )
+
+
 def notify_media_upload_link(upload_link, *, files_added=0):
-    """One notification per client media page — message shows total file count."""
+    """Assigned agent + privileged roles only."""
     total = upload_link.files.count()
     if total == 0:
         return
@@ -133,7 +159,7 @@ def notify_media_upload_link(upload_link, *, files_added=0):
 
     from .push import send_push_to_user
 
-    for user in active_users():
+    for user in recipients_for_assigned_agent(lead, leadtask):
         dedupe_key = f'media_upload:{upload_link.pk}:{user.pk}'
         notification, created = UserNotification.objects.get_or_create(
             recipient=user,
@@ -188,9 +214,11 @@ def notify_broadcast(*, sender, body):
 
 
 def sync_reminder_notifications():
-    """Create due-soon reminders (24h window). Safe to call on every poll."""
+    """Create due-soon reminders. Safe to call on poll (throttled in views)."""
     now = timezone.now()
     window_end = now + timedelta(hours=24)
+    today = timezone.localdate()
+    passport_window_end = today + timedelta(days=7)
 
     from tasks.models import LeadTask, Payment, Service
 
@@ -255,7 +283,7 @@ def sync_reminder_notifications():
         lead = leadtask.lead
         when = timezone.localtime(leadtask.travel_date).strftime('%d %b %Y %H:%M')
         url = reverse('edit_lead_tasks', kwargs={'pk': leadtask.pk})
-        for user in recipients_for_assigned_lead(lead, leadtask):
+        for user in recipients_for_assigned_agent(lead, leadtask):
             create_notification(
                 recipient=user,
                 kind=NotificationKind.CLIENT_TRAVELLING,
@@ -278,7 +306,7 @@ def sync_reminder_notifications():
         lead = leadtask.lead
         when = timezone.localtime(leadtask.return_date).strftime('%d %b %Y %H:%M')
         url = reverse('edit_lead_tasks', kwargs={'pk': leadtask.pk})
-        for user in recipients_for_assigned_lead(lead, leadtask):
+        for user in recipients_for_assigned_agent(lead, leadtask):
             create_notification(
                 recipient=user,
                 kind=NotificationKind.CLIENT_RETURN,
@@ -288,6 +316,30 @@ def sync_reminder_notifications():
                 lead=lead,
                 leadtask=leadtask,
                 dedupe_key=f'client_return:{leadtask.pk}:{user.pk}',
+            )
+
+    passports = (
+        LeadTask.objects.filter(
+            passport_expiry_date__isnull=False,
+            passport_expiry_date__gte=today,
+            passport_expiry_date__lte=passport_window_end,
+        )
+        .select_related('lead', 'assigned_to')
+    )
+    for leadtask in passports:
+        lead = leadtask.lead
+        expiry = leadtask.passport_expiry_date.strftime('%d %b %Y')
+        url = reverse('edit_lead_tasks', kwargs={'pk': leadtask.pk})
+        for user in recipients_for_assigned_agent(lead, leadtask):
+            create_notification(
+                recipient=user,
+                kind=NotificationKind.PASSPORT_EXPIRING,
+                title=f'Passport expiring soon: {lead.name}',
+                message=f'Expires {expiry}',
+                url=url,
+                lead=lead,
+                leadtask=leadtask,
+                dedupe_key=f'passport_expiring:{leadtask.pk}:{user.pk}',
             )
 
 

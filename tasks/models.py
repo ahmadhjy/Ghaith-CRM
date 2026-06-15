@@ -62,6 +62,17 @@ class LeadTask(models.Model):
         return self.lead.name
 
 
+class ServiceType(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Supplier(models.Model):
     name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True)
@@ -79,6 +90,7 @@ class Service(models.Model):
     supplier = models.CharField(max_length=100, blank=True)
     details = models.TextField(blank=True)
     net = models.CharField(max_length=100, blank=True)
+    issue_price = models.CharField(max_length=100, blank=True, help_text='Actual net at issue date; overrides net when set')
     selling = models.CharField(max_length=100, blank=True)
     due_time = models.DateTimeField(null=True, blank=True)
     voucher_id = models.CharField(max_length=300, blank=True)
@@ -99,6 +111,7 @@ class Payment(models.Model):
     date = models.DateTimeField()
     amount = models.PositiveIntegerField()
     is_checked = models.BooleanField(default=False)
+    is_refund = models.BooleanField(default=False)
     processed = models.BooleanField(default=False)  # Add this field
     created_at = models.DateTimeField(auto_now_add=True, null=True)  # Add this field
 

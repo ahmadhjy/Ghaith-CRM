@@ -23,12 +23,27 @@ DEFAULT_SUPPLIER_NAMES = [
     "Translation",
 ]
 
+DEFAULT_SERVICE_NAMES = [
+    "Ticket",
+    "Hotel",
+    "Transfer",
+    "Tours",
+    "Visa",
+    "Benefits",
+    "Visa Application",
+    "Train",
+    "Travel Insurance",
+    "Ready Package",
+    "Bank Charges",
+    "Commission",
+    "Transfers & Tours",
+    "Crusie",
+    "Translation",
+]
+
 
 def get_supplier_choices():
-    """
-    Supplier choices from admin-managed Supplier model.
-    Falls back to defaults when DB/migrations are not ready.
-    """
+    """Supplier choices from admin-managed Supplier model."""
     try:
         from .models import Supplier
 
@@ -42,3 +57,41 @@ def get_supplier_choices():
     except Exception:
         pass
     return [(n, n) for n in DEFAULT_SUPPLIER_NAMES]
+
+
+def get_service_choices():
+    """Service type choices from admin-managed ServiceType model."""
+    try:
+        from .models import ServiceType
+
+        names = list(
+            ServiceType.objects.filter(is_active=True)
+            .order_by("name")
+            .values_list("name", flat=True)
+        )
+        if names:
+            return [(n, n) for n in names]
+    except Exception:
+        pass
+    return [(n, n) for n in DEFAULT_SERVICE_NAMES]
+
+
+def effective_service_net(service):
+    """Issue price overrides net when set."""
+    issue = (getattr(service, 'issue_price', None) or '').strip()
+    if issue:
+        return issue
+    return (service.net or '').strip()
+
+
+def parse_money(value):
+    if value is None:
+        return 0.0
+    s = str(value).strip()
+    if not s:
+        return 0.0
+    cleaned = ''.join(c for c in s if c.isdigit() or c in '.-')
+    try:
+        return float(cleaned) if cleaned else 0.0
+    except ValueError:
+        return 0.0

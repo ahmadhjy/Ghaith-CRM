@@ -1,23 +1,32 @@
 <div class="req-passengers">
     <div class="req-passengers__head">
-        <span class="req-passengers__label">Other Passengers</span>
-        <button type="button" class="req-btn req-btn--outline req-btn--sm js-add-passenger"><i class="fas fa-plus"></i> Passenger</button>
+        <span class="req-passengers__label">Passenger names</span>
+        <button type="button" class="req-btn req-btn--outline req-btn--sm js-add-passenger"><i class="fas fa-user-plus"></i> Add passenger</button>
     </div>
     <div class="req-passengers__list js-passengers-list">
         {% if passenger_names %}
             {% for name in passenger_names %}
             <div class="req-passengers__row">
-                <input type="text" name="passenger_names" value="{{ name }}" class="req-input" placeholder="Passenger name">
+                <span class="req-passengers__index" aria-hidden="true">{{ forloop.counter }}</span>
+                <input type="text" name="passenger_names" value="{{ name }}" class="req-input" placeholder="Passenger full name">
                 <button type="button" class="req-btn req-btn--ghost req-btn--sm js-remove-passenger" title="Remove"><i class="fas fa-times"></i></button>
             </div>
             {% endfor %}
         {% elif lead.pk %}
             {% for passenger in lead.passengers.all %}
             <div class="req-passengers__row">
-                <input type="text" name="passenger_names" value="{{ passenger.name }}" class="req-input" placeholder="Passenger name">
+                <span class="req-passengers__index" aria-hidden="true">{{ forloop.counter }}</span>
+                <input type="text" name="passenger_names" value="{{ passenger.name }}" class="req-input" placeholder="Passenger full name">
                 <button type="button" class="req-btn req-btn--ghost req-btn--sm js-remove-passenger" title="Remove"><i class="fas fa-times"></i></button>
             </div>
             {% endfor %}
+        {% endif %}
+        {% if not passenger_names and not lead.passengers.all %}
+            <div class="req-passengers__row">
+                <span class="req-passengers__index" aria-hidden="true">1</span>
+                <input type="text" name="passenger_names" class="req-input" placeholder="Passenger full name">
+                <button type="button" class="req-btn req-btn--ghost req-btn--sm js-remove-passenger" title="Remove"><i class="fas fa-times"></i></button>
+            </div>
         {% endif %}
     </div>
 </div>

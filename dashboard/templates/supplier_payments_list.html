@@ -1,17 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Supplier Payments{% endblock %}
+{% block title %}Purchases{% endblock %}
 
 {% block hero %}
 <header class="req-hero">
     <div class="req-hero__bg"></div>
     <div class="req-hero__content">
         <div class="req-hero__eyebrow">Orders</div>
-        <h1 class="req-hero__title">Supplier Payments</h1>
-        <p class="req-hero__sub">Unpaid services and supplier payment schedule.</p>
+        <h1 class="req-hero__title">Purchases</h1>
+        <p class="req-hero__sub">Supplier services to issue or review issued items.</p>
         <div class="req-hero__footer">
             <div class="req-hero__actions">
-                <a href="{% url 'purchased_services' %}" class="req-btn-ghost">Purchased Services</a>
                 <a href="{% url 'supplier_payments_pdf' %}?{{ request.GET.urlencode }}" class="req-btn-ghost"><i class="fas fa-download"></i> PDF</a>
             </div>
         </div>
@@ -35,15 +34,25 @@
                 <option value="{{ value }}" {% if supplier_filter == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-            <label for="paid">Paid:</label>
-            <select name="paid" id="paid" class="filter-select">
+            <label for="service">Service:</label>
+            <select name="service" id="service" class="filter-select">
                 <option value="">All</option>
-                <option value="paid" {% if paid_filter == 'paid' %}selected{% endif %}>Paid</option>
-                <option value="unpaid" {% if paid_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                {% for value, label in service_filter_options %}
+                <option value="{{ value }}" {% if service_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
             </select>
-            <label class="filter-form__checkbox">
-                <input type="checkbox" name="late" {% if late_filter %}checked{% endif %}> Late on payment (unpaid from past dates)
-            </label>
+            <label for="issued">Issued:</label>
+            <select name="issued" id="issued" class="filter-select">
+                <option value="">Unissued (default)</option>
+                <option value="issued" {% if issued_filter == 'issued' %}selected{% endif %}>Issued only</option>
+                <option value="unissued" {% if issued_filter == 'unissued' %}selected{% endif %}>Unissued only</option>
+            </select>
+            {% if issued_count %}
+            <a href="?issued=issued{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--success btn--filter-pill {% if issued_filter == 'issued' %}is-active{% endif %}">{{ issued_count }} Issued</a>
+            {% endif %}
+            {% if overdue_count %}
+            <a href="?overdue=on{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--danger btn--filter-pill {% if overdue_filter %}is-active{% endif %}">{{ overdue_count }} Overdue{{ overdue_count|pluralize }}</a>
+            {% endif %}
             <label class="filter-form__checkbox">
                 <input type="checkbox" name="show_cancelled" {% if show_cancelled %}checked{% endif %}> Show cancelled orders
             </label>
@@ -63,22 +72,27 @@
                     <th>Lead name</th>
                     <th>Amount</th>
                     <th>Due time</th>
-                    <th>Order ID</th>
-                    <th class="list-table__th-mark-paid">Mark paid</th>
+                    <th>Order</th>
+                    <th class="list-table__th-mark-paid">Issue</th>
                 </tr>
             </thead>
             <tbody>
                 {% for service in services %}
-                <tr class="list-table__row {% if service.is_checked %}list-table__row--done{% endif %}">
+                <tr class="list-table__row {% if service.is_checked %}list-table__row--done{% elif service.due_time and service.due_time < now %}list-table__row--overdue{% endif %}">
                     <td data-label="Supplier">{{ service.supplier|default:"—" }}</td>
                     <td data-label="Service">{{ service.service_name|default:"—" }}</td>
                     <td data-label="Lead name">{{ service.leadtask.lead.name }}</td>
-                    <td data-label="Amount">{{ service.net|default:"—" }}</td>
-                    <td data-label="Due time">{{ service.due_time|date:"Y-m-d H:i" }}</td>
-                    <td data-label="Order ID">
+                    <td data-label="Amount">{{ service.issue_price|default:service.net|default:"—" }}</td>
+                    <td data-label="Due time">
+                        {{ service.due_time|date:"Y-m-d H:i" }}
+                        {% if not service.is_checked and service.due_time and service.due_time < now %}
+                        <span class="list-table__overdue-badge">Overdue</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Order">
                         <a href="{% url 'edit_lead_tasks' service.leadtask_id %}" class="list-table__link">#{{ service.leadtask_id }}</a>
                     </td>
-                    <td data-label="Mark paid" class="list-table__td-mark-paid">
+                    <td data-label="Issue" class="list-table__td-mark-paid">
                         <form method="post" action="{% url 'service_mark_done' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
                             {% csrf_token %}
                             <label class="inv-toggle">
@@ -90,7 +104,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="list-table__empty">No supplier payments found.</td>
+                    <td colspan="7" class="list-table__empty">No purchases found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

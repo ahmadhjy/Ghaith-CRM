@@ -49,7 +49,8 @@
 
     <main class="inv-main">
 
-        <!-- Invoice details form -->
+            <form method="post" enctype="multipart/form-data" id="invoiceForm">
+                {% csrf_token %}
         <section id="section-details" class="inv-card">
             <div class="inv-card__head">
                 <div class="inv-card__head-left">
@@ -60,8 +61,6 @@
                     </div>
                 </div>
             </div>
-            <form method="post" enctype="multipart/form-data" id="inputForm">
-                {% csrf_token %}
                 <div class="inv-card__body">
                     <div class="inv-grid inv-grid--2">
                         <div class="inv-field">
@@ -84,14 +83,6 @@
                             <label for="id_return_date">Return Date</label>
                             {{ form.return_date }}
                         </div>
-                        <div class="inv-field">
-                            <label for="id_date_of_birth">Date of Birth</label>
-                            {{ form.date_of_birth }}
-                        </div>
-                        <div class="inv-field">
-                            <label for="id_passport_expiry_date">Passport Expiry</label>
-                            {{ form.passport_expiry_date }}
-                        </div>
                         <div class="inv-field inv-field--full">
                             <label for="id_finalization_notes">What Happened</label>
                             {{ form.finalization_notes }}
@@ -102,10 +93,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="inv-card__foot">
-                    <button type="submit" class="inv-btn inv-btn--primary"><i class="fas fa-save"></i> Save Invoice</button>
-                </div>
-            </form>
         </section>
 
         <!-- Customer details -->
@@ -115,7 +102,7 @@
                     <div class="inv-card__icon inv-card__icon--teal"><i class="fas fa-user-circle"></i></div>
                     <div>
                         <h2 class="inv-card__title">Customer Details</h2>
-                        <p class="inv-card__subtitle">Read-only lead information</p>
+                        <p class="inv-card__subtitle">Client info and passengers on this booking</p>
                     </div>
                 </div>
                 <button type="button" class="inv-collapse-toggle is-open" id="customerToggle" aria-label="Toggle customer details">
@@ -123,34 +110,57 @@
                 </button>
             </div>
             <div class="inv-card__body inv-collapse-body is-open" id="customerBody">
-                <div class="inv-info-grid">
-                    <div class="inv-info-item">
-                        <div class="inv-info-item__label">Name</div>
-                        <div class="inv-info-item__value">{{ lead.name }}</div>
-                    </div>
-                    <div class="inv-info-item">
-                        <div class="inv-info-item__label">Other Passengers</div>
-                        <div class="inv-info-item__value">
-                            {% for p in lead.passengers.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+                <div class="inv-customer-form">
+                    <div class="inv-grid inv-grid--2">
+                        <div class="inv-field">
+                            <label for="lead_name_input">Client name</label>
+                            <input type="text" name="lead_name" id="lead_name_input" class="form-control" value="{{ lead.name }}" placeholder="Full name">
+                        </div>
+                        <div class="inv-field">
+                            <label for="lead_phone_input">Phone</label>
+                            <input type="text" name="lead_phone" id="lead_phone_input" class="form-control" value="{{ lead.phone|default:'' }}" placeholder="Phone number">
+                        </div>
+                        <div class="inv-field">
+                            <label for="lead_channel_input">Channel</label>
+                            <input type="text" name="lead_channel" id="lead_channel_input" class="form-control" value="{{ lead.channel|default:'' }}" placeholder="e.g. Instagram, Referral">
+                        </div>
+                        <div class="inv-field">
+                            <label for="lead_destination_input">Destination</label>
+                            <select name="lead_destination" id="lead_destination_input" class="form-control">
+                                {% for value, label in destination_choices %}
+                                <option value="{{ value }}" {% if lead.destination == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                                {% if lead.destination and lead.destination not in predefined_destination_values %}
+                                <option value="{{ lead.destination }}" selected>{{ lead.destination }} (existing)</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="inv-field">
+                            <label for="lead_date_of_birth">Date of birth</label>
+                            <input type="date" name="lead_date_of_birth" id="lead_date_of_birth" class="form-control" value="{% if form.instance.date_of_birth %}{{ form.instance.date_of_birth|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="inv-field">
+                            <label for="lead_passport_expiry">Passport expiry</label>
+                            <input type="date" name="lead_passport_expiry" id="lead_passport_expiry" class="form-control" value="{% if form.instance.passport_expiry_date %}{{ form.instance.passport_expiry_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="inv-field inv-field--full">
+                            <label for="lead_special_request_input">Request details</label>
+                            <textarea name="lead_special_request" id="lead_special_request_input" class="form-control" rows="3" placeholder="Special requests, preferences, notes…">{{ lead.special_request|default:'' }}</textarea>
                         </div>
                     </div>
-                    <div class="inv-info-item">
-                        <div class="inv-info-item__label">Phone</div>
-                        <div class="inv-info-item__value">{{ lead.phone|default:"—" }}</div>
-                    </div>
-                    <div class="inv-info-item">
-                        <div class="inv-info-item__label">Channel</div>
-                        <div class="inv-info-item__value">{{ lead.channel|default:"—" }}</div>
-                    </div>
-                    <div class="inv-info-item">
-                        <div class="inv-info-item__label">Destination</div>
-                        <div class="inv-info-item__value">{{ lead.destination|default:"—" }}</div>
-                    </div>
-                    <div class="inv-info-item" style="grid-column:1/-1">
-                        <div class="inv-info-item__label">Request Details</div>
-                        <div class="inv-info-item__value">{{ lead.special_request|default:"—" }}</div>
+
+                    <div class="inv-passengers-panel">
+                        <div class="inv-passengers-panel__head">
+                            <div>
+                                <h3 class="inv-passengers-panel__title">Passengers</h3>
+                                <p class="inv-passengers-panel__sub">Add every traveller on this invoice (client can be listed here too)</p>
+                            </div>
+                        </div>
+                        {% include 'shared/passengers_field.html' with lead=lead %}
                     </div>
                 </div>
+                <input type="hidden" name="refund_amount" id="refund_amount_hidden">
+                <input type="hidden" name="refund_date" id="refund_date_hidden">
             </div>
         </section>
 
@@ -161,13 +171,30 @@
                     <div class="inv-card__icon inv-card__icon--purple"><i class="fas fa-concierge-bell"></i></div>
                     <div>
                         <h2 class="inv-card__title">Services</h2>
-                        <p class="inv-card__subtitle">{{ services|length }} service{{ services|length|pluralize }} on this invoice</p>
+                        <p class="inv-card__subtitle">{{ services_issued }} issued out of {{ services_total }} service{{ services_total|pluralize }}</p>
                     </div>
                 </div>
             </div>
-            <form method="post" id="update_service_form" action="{% url 'save_all_services' leadid %}">
-                {% csrf_token %}
-                <div class="inv-card__body" style="padding-top:0">
+            <div class="inv-finance-strip">
+                <div class="inv-finance-card inv-finance-card--selling">
+                    <span class="inv-finance-card__label">Total selling</span>
+                    <div class="inv-finance-card__input-wrap">
+                        <span class="inv-finance-card__prefix">$</span>
+                        <input type="text" name="lead_selling_price" id="lead_selling_price" class="inv-finance-card__input" value="{{ lead.selling_price|default:'' }}" placeholder="0" inputmode="decimal">
+                    </div>
+                </div>
+                <div class="inv-finance-card inv-finance-card--net">
+                    <span class="inv-finance-card__label">Total net</span>
+                    <strong class="inv-finance-card__amount" id="disp-total-net">${{ total_net|floatformat:2 }}</strong>
+                    <span class="inv-finance-card__hint">Sum of service nets</span>
+                </div>
+                <div class="inv-finance-card inv-finance-card--profit">
+                    <span class="inv-finance-card__label">Profit</span>
+                    <strong class="inv-finance-card__amount" id="disp-total-profit">${{ total_profit|floatformat:2 }}</strong>
+                    <span class="inv-finance-card__hint">Selling − net</span>
+                </div>
+            </div>
+            <div class="inv-card__body" style="padding-top:0">
                     <div class="services-table-scroll">
                         <table id="servicesTable" class="services-table">
                             <thead>
@@ -176,11 +203,12 @@
                                     <th>Supplier</th>
                                     <th>Details</th>
                                     <th>Net</th>
+                                    <th>Issue Price</th>
                                     <th>Selling</th>
                                     <th>Due</th>
                                     <th>Voucher</th>
                                     <th>Send to Client</th>
-                                    <th>Paid</th>
+                                    <th>Issued</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -189,18 +217,19 @@
                             <tr class="service-view-row {{ service.is_checked|yesno:'checked,' }}" data-service-id="{{ service.pk }}">
                                 <td class="service-name">
                                     <strong>{{ service.service_name|default:"—" }}</strong>
-                                    <input type="hidden" name="service_{{ service.pk }}_service_name" value="{{ service.service_name|default:'' }}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_details" value="{{ service.details|default:'' }}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_net" value="{{ service.net|default:'' }}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_selling" value="{{ service.selling|default:'' }}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="update_service_form" data-service-inputs="view">
-                                    <input type="hidden" name="service_{{ service.pk }}_send_to_client" value="{% if service.send_to_client %}on{% endif %}" form="update_service_form" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_service_name" value="{{ service.service_name|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_details" value="{{ service.details|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_net" value="{{ service.net|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_issue_price" value="{{ service.issue_price|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_selling" value="{{ service.selling|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_due_time" value="{% if service.due_time %}{{ service.due_time|date:'Y-m-d\TH:i' }}{% endif %}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" name="service_{{ service.pk }}_send_to_client" value="{% if service.send_to_client %}on{% endif %}" form="invoiceForm" data-service-inputs="view">
                                 </td>
                                 <td class="service-supplier">
                                     <div class="supplier-field-wrap">
-                                        <select name="service_{{ service.pk }}_supplier" class="form-control supplier-select supplier-select--small" form="update_service_form" data-service-inputs="view">
+                                        <select name="service_{{ service.pk }}_supplier" class="form-control supplier-select supplier-select--small" form="invoiceForm" data-service-inputs="view">
                                             <option value="">—</option>
                                             {% for value, label in predefined_suppliers %}
                                             <option value="{{ value }}" {% if service.supplier == value %}selected{% endif %}>{{ label }}</option>
@@ -216,6 +245,7 @@
                                     <span class="service-details-truncate">{{ service.details|truncatechars:24|default:"—" }}</span>
                                 </td>
                                 <td class="service-net">{{ service.net|default:"—" }}</td>
+                                <td class="service-issue-price">{{ service.issue_price|default:"—" }}</td>
                                 <td class="service-selling">{{ service.selling|default:"—" }}</td>
                                 <td class="service-due-time">{{ service.due_time|date:"M d, H:i"|default:"—" }}</td>
                                 <td class="service-voucher">{{ service.voucher_id|default:"—" }}</td>
@@ -253,10 +283,10 @@
                 </div>
                 <div class="inv-card__foot">
                     <button type="button" class="inv-btn inv-btn--outline" onclick="addRow()"><i class="fas fa-plus"></i> Add Service</button>
-                    <button type="submit" class="inv-btn inv-btn--accent"><i class="fas fa-check"></i> Submit Services</button>
                 </div>
-            </form>
         </section>
+
+            </form>
 
         <!-- Payments -->
         <section id="section-payments" class="inv-card">
@@ -277,7 +307,7 @@
                         <tr>
                             <th>Date</th>
                             <th>Amount</th>
-                            <th>Paid</th>
+                            <th>Received</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -398,6 +428,56 @@
         </section>
 
     </main>
+
+    <footer class="inv-save-bar" aria-label="Save invoice">
+        <div class="inv-save-bar__inner">
+            <p class="inv-save-bar__hint"><i class="fas fa-info-circle"></i> Save when you finish editing details, services, or customer info</p>
+            <button type="submit" form="invoiceForm" class="inv-btn inv-btn--primary inv-btn--lg" id="btnSaveInvoice">
+                <i class="fas fa-save"></i> Save Invoice
+            </button>
+        </div>
+    </footer>
+</div>
+
+<!-- Refund modal (cancelled orders) -->
+<div id="refundModal" class="service-edit-modal refund-modal" aria-hidden="true" role="dialog" aria-labelledby="refundModalTitle" style="display:none">
+    <div class="service-edit-modal__overlay" onclick="closeRefundModal()"></div>
+    <div class="service-edit-modal__box refund-modal__box">
+        <div class="refund-modal__header">
+            <div class="refund-modal__icon" aria-hidden="true">
+                <i class="fas fa-undo"></i>
+            </div>
+            <div class="refund-modal__head-text">
+                <h3 id="refundModalTitle" class="refund-modal__title">Refund required</h3>
+                <p class="refund-modal__subtitle">This order was marked <strong>Cancelled</strong></p>
+            </div>
+        </div>
+        <div class="refund-modal__body">
+            <div class="refund-modal__notice">
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                <p>Enter refund details below. They will be tracked on <strong>Client Payments</strong> when you save.</p>
+            </div>
+            <div class="service-edit-modal__fields refund-modal__fields">
+                <div class="refund-modal__field">
+                    <label for="refund_amount">Refunded amount (USD)</label>
+                    <div class="refund-modal__amount-wrap">
+                        <span class="refund-modal__prefix" aria-hidden="true">$</span>
+                        <input type="number" id="refund_amount" class="form-control refund-modal__amount-input" min="0" step="1" placeholder="0" inputmode="decimal">
+                    </div>
+                </div>
+                <div class="refund-modal__field">
+                    <label for="refund_date">Refund date</label>
+                    <input type="date" id="refund_date" class="form-control">
+                </div>
+            </div>
+        </div>
+        <div class="service-edit-modal__actions refund-modal__actions">
+            <button type="button" class="inv-btn inv-btn--outline" onclick="closeRefundModal()">Cancel</button>
+            <button type="button" class="inv-btn inv-btn--primary" onclick="confirmRefundAndSave()">
+                <i class="fas fa-save"></i> Save with refund
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Edit service modals -->
@@ -409,8 +489,16 @@
         <form method="post" action="{% url 'update_service' service.pk %}" class="service-edit-modal__form">
             {% csrf_token %}
             <div class="service-edit-modal__fields">
-                <label>Service Type / Hotel</label>
-                <input type="text" name="service_name" value="{{ service.service_name|default:'' }}" class="form-control">
+                <label>Service type</label>
+                <select name="service_name" class="form-control service-type-select">
+                    <option value="">—</option>
+                    {% for value, label in predefined_services %}
+                    <option value="{{ value }}" {% if service.service_name == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    {% if service.service_name and service.service_name not in predefined_service_values %}
+                    <option value="{{ service.service_name }}" selected>{{ service.service_name }} (existing)</option>
+                    {% endif %}
+                </select>
                 <label>Supplier</label>
                 <div class="supplier-field-wrap">
                     <select name="supplier" class="form-control supplier-select">
@@ -428,6 +516,8 @@
                 </label>
                 <label>Details</label>
                 <input type="text" name="details" value="{{ service.details|default:'' }}" class="form-control">
+                <label>Issue Price</label>
+                <input type="text" name="issue_price" value="{{ service.issue_price|default:'' }}" class="form-control">
                 <label>Net</label>
                 <input type="text" name="net" value="{{ service.net|default:'' }}" class="form-control">
                 <label>Selling</label>
@@ -470,6 +560,7 @@
     </div>
 </div>
 
+<script src="{% static 'JS/passengers-field.js' %}"></script>
 <script>
 /* ── Customer collapse ── */
 document.getElementById('customerToggle').addEventListener('click', function() {
@@ -521,19 +612,93 @@ function addRow() {
     {% for value, label in predefined_suppliers %}
     supplierOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
     {% endfor %}
+    var serviceOptions = '<option value="">—</option>';
+    {% for value, label in predefined_services %}
+    serviceOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
+    {% endfor %}
     newRow.innerHTML = `
-        <td><input type="text" name="service_name[]" class="form-control" placeholder="Service type"></td>
+        <td><select name="service_name[]" class="form-control">${serviceOptions}</select></td>
         <td><div class="supplier-field-wrap"><select name="supplier[]" class="form-control supplier-select">${supplierOptions}</select><button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button></div></td>
         <td><input type="text" name="details[]" class="form-control" placeholder="Details"></td>
         <td><input type="text" name="net[]" class="form-control" placeholder="Net"></td>
+        <td><input type="text" name="issue_price[]" class="form-control" placeholder="Issue price"></td>
         <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
         <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
         <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher"></td>
         <td><label class="inv-toggle-label"><span class="inv-toggle"><input type="checkbox" name="send_to_client[]" value="on"><span class="inv-toggle__slider"></span></span></label></td>
         <td></td>
-        <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>
+        <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove(); recalcProfit();"><i class="fas fa-times"></i></button></td>
     `;
+    newRow.querySelectorAll('input[name="net[]"]').forEach(function(inp) {
+        inp.addEventListener('input', recalcProfit);
+    });
 }
+
+var initialStatus = document.getElementById('id_status') ? document.getElementById('id_status').value : '';
+document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+    var status = document.getElementById('id_status').value;
+    if (status === 'cancelled' && initialStatus !== 'cancelled' && !document.getElementById('refund_amount_hidden').value) {
+        e.preventDefault();
+        openRefundModal();
+        return false;
+    }
+});
+
+function openRefundModal() {
+    var modal = document.getElementById('refundModal');
+    var dateInput = document.getElementById('refund_date');
+    var amountInput = document.getElementById('refund_amount');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+    }
+    modal.style.display = 'flex';
+    modal.classList.add('service-edit-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+    if (amountInput) {
+        amountInput.focus();
+    }
+}
+
+function closeRefundModal() {
+    var modal = document.getElementById('refundModal');
+    modal.style.display = 'none';
+    modal.classList.remove('service-edit-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+function confirmRefundAndSave() {
+    document.getElementById('refund_amount_hidden').value = document.getElementById('refund_amount').value;
+    document.getElementById('refund_date_hidden').value = document.getElementById('refund_date').value;
+    closeRefundModal();
+    document.getElementById('invoiceForm').submit();
+}
+
+function parseMoney(val) {
+    return parseFloat(String(val || '').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function recalcProfit() {
+    var sellingEl = document.getElementById('lead_selling_price');
+    var netEl = document.getElementById('disp-total-net');
+    var profitEl = document.getElementById('disp-total-profit');
+    if (!sellingEl || !netEl || !profitEl) return;
+    var selling = parseMoney(sellingEl.value);
+    var net = 0;
+    document.querySelectorAll('#servicesTable .service-net').forEach(function(td) {
+        net += parseMoney(td.textContent);
+    });
+    document.querySelectorAll('#servicesTable input[name="net[]"]').forEach(function(inp) {
+        net += parseMoney(inp.value);
+    });
+    netEl.textContent = '$' + net.toFixed(2);
+    profitEl.textContent = '$' + (selling - net).toFixed(2);
+    profitEl.classList.toggle('inv-finance-card__amount--negative', selling - net < 0);
+}
+
+var sellingInput = document.getElementById('lead_selling_price');
+if (sellingInput) {
+    sellingInput.addEventListener('input', recalcProfit);
+}
+recalcProfit();
 
 function updateCheckboxStatus(checkbox) {
     const serviceId = checkbox.getAttribute('data-service-id');

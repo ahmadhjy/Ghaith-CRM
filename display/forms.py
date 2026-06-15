@@ -5,9 +5,8 @@ class CreateLeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'name', 'country_code', 'phone', 'channel', 'reason_of_travel',
+            'name', 'country_code', 'phone', 'channel',
             'assigned_to', 'takeover', 'destination', 'type_of_service',
-            'offer_prepared', 'offer_details'
         ]
         widgets = {
             'reason_of_travel': forms.Textarea(attrs={'class': 'form-control'}),
@@ -30,10 +29,9 @@ class QualificationForm(forms.ModelForm):
         fields = [
             'name', 'destination', 'date_notes',
             'special_request', 'urgent', 'assignment_notes',
-            'assigned_to', 'follow_up', 'reason_of_travel',
+            'assigned_to', 'follow_up',
             'why_this_destination',
             'budget_range_from', 'budget_range_to', 'finalization_notes',
-            'offer_prepared'
         ]
         widgets = {
             'follow_up': forms.DateInput(attrs={'type': 'date'}),

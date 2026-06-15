@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Task, LeadTask, Payment, Tag, Supplier, Service,
+    Task, LeadTask, Payment, Tag, Supplier, ServiceType, Service,
     ClientMediaUploadLink, ClientMediaFile,
 )
 
@@ -11,6 +11,13 @@ admin.site.register(LeadTask)
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active")
+    search_fields = ("name",)
+    list_filter = ("is_active",)
+
+
+@admin.register(ServiceType)
+class ServiceTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "is_active")
     search_fields = ("name",)
     list_filter = ("is_active",)

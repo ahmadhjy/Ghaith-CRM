@@ -4,10 +4,13 @@ from django.db import models
 
 class NotificationKind(models.TextChoices):
     MESSAGE = 'message', 'New message'
+    LEAD_ASSIGNED = 'lead_assigned', 'Lead assigned to you'
+    LEADTASK_ASSIGNED = 'leadtask_assigned', 'Order assigned to you'
     CLIENT_PAYMENT_DUE = 'client_payment_due', 'Client payment due'
     SUPPLIER_PAYMENT_DUE = 'supplier_payment_due', 'Supplier payment due'
     CLIENT_TRAVELLING = 'client_travelling', 'Client travelling'
     CLIENT_RETURN = 'client_return', 'Client return'
+    PASSPORT_EXPIRING = 'passport_expiring', 'Passport expiring'
     MEDIA_UPLOAD = 'media_upload', 'Client media upload'
     TAKEOVER_LEAD = 'takeover_lead', 'Take over list'
     BROADCAST = 'broadcast', 'Notice for all'

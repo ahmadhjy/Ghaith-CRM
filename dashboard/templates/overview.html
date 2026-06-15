@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Overview — Business Intelligence{% endblock %}
+
+{% block hero %}
+<header class="req-hero">
+    <div class="req-hero__bg"></div>
+    <div class="req-hero__content">
+        <div class="req-hero__eyebrow">Staff</div>
+        <h1 class="req-hero__title">Business Intelligence</h1>
+        <p class="req-hero__sub">Period: {{ date_from }} – {{ date_to }}</p>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/overview-dashboard.css' %}">
+
+<div class="ov-wrap">
+    <form method="get" class="ov-filters">
+        <label>Preset
+            <select name="preset" class="ov-input">
+                <option value="ytd" {% if preset == 'ytd' %}selected{% endif %}>Year to date</option>
+                <option value="month" {% if preset == 'month' %}selected{% endif %}>This month</option>
+                <option value="last30" {% if preset == 'last30' %}selected{% endif %}>Last 30 days</option>
+                <option value="custom" {% if preset == 'custom' %}selected{% endif %}>Custom</option>
+            </select>
+        </label>
+        <label>From <input type="date" name="date_from" value="{{ date_from }}" class="ov-input"></label>
+        <label>To <input type="date" name="date_to" value="{{ date_to }}" class="ov-input"></label>
+        <button type="submit" class="req-btn req-btn--primary req-btn--sm">Apply</button>
+        <a href="{% url 'overview_dashboard' %}" class="req-btn req-btn--outline req-btn--sm">Clear</a>
+    </form>
+
+    {% if overdue_receivables %}
+    <a href="{% url 'client_payments_list' %}?overdue=on" class="ov-alert ov-alert--danger">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ overdue_receivables }} overdue receivable{{ overdue_receivables|pluralize }} — view table
+    </a>
+    {% endif %}
+    {% if overdue_payables %}
+    <a href="{% url 'supplier_payments_list' %}?overdue=on" class="ov-alert ov-alert--warning">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ overdue_payables }} overdue purchase{{ overdue_payables|pluralize }} — view table
+    </a>
+    {% endif %}
+
+    <div class="ov-kpi-grid">
+        <div class="ov-kpi"><span class="ov-kpi__label">Revenue (USD)</span><strong class="ov-kpi__value">{{ revenue|floatformat:2 }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Gross Profit</span><strong class="ov-kpi__value">{{ gross_profit|floatformat:2 }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Cost</span><strong class="ov-kpi__value">{{ cost|floatformat:2 }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Outstanding A/R</span><strong class="ov-kpi__value ov-kpi__value--warn">{{ overdue_receivables }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Outstanding Purchases</span><strong class="ov-kpi__value ov-kpi__value--warn">{{ overdue_payables }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Active Leads</span><strong class="ov-kpi__value">{{ active_leads }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Active Orders</span><strong class="ov-kpi__value">{{ orders_active }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Takeover Pool</span><strong class="ov-kpi__value">{{ takeover_count }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Sold (period)</span><strong class="ov-kpi__value">{{ sold_count }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Travelling (30d)</span><strong class="ov-kpi__value">{{ upcoming_travel }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Refunds total</span><strong class="ov-kpi__value">{{ refund_total }}</strong></div>
+        <div class="ov-kpi"><span class="ov-kpi__label">Cancelled orders</span><strong class="ov-kpi__value">{{ orders_cancelled }}</strong></div>
+    </div>
+
+    <div class="ov-charts">
+        <div class="ov-card ov-card--wide">
+            <h3>Total sales <small>last 6 months</small></h3>
+            <canvas id="salesChart" height="120"></canvas>
+        </div>
+        <div class="ov-card">
+            <h3>Lead status</h3>
+            <canvas id="statusChart" height="200"></canvas>
+        </div>
+        <div class="ov-card">
+            <h3>Top destinations</h3>
+            <canvas id="destChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <div class="ov-card">
+        <h3>Salesman performance</h3>
+        <table class="req-table">
+            <thead><tr><th>Salesman</th><th>Sales</th><th>Cost</th><th>Profit</th></tr></thead>
+            <tbody>
+            {% for row in salesman_stats %}
+            <tr>
+                <td>{{ row.user.get_full_name|default:row.user.username }}</td>
+                <td>{{ row.sales|floatformat:2 }}</td>
+                <td>{{ row.cost|floatformat:2 }}</td>
+                <td>{{ row.profit|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No sales data in this period.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="ov-card">
+        <h3>Top supplier balances (unissued)</h3>
+        <ul class="ov-supplier-list">
+            {% for name, amount in top_suppliers %}
+            <li><span>{{ name }}</span><strong>${{ amount|floatformat:2 }}</strong></li>
+            {% empty %}
+            <li>No outstanding purchases.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const teal = '#1a5f6b';
+    const blue = '#2563eb';
+    const labels = {{ sales_chart_labels|safe }};
+    const salesData = {{ sales_chart_values|safe }};
+    if (document.getElementById('salesChart')) {
+        new Chart(document.getElementById('salesChart'), {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: 'Sales', data: salesData, backgroundColor: blue }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+    const statusLabels = [{% for k,v in status_counts.items %}'{{ k }}',{% endfor %}];
+    const statusData = [{% for k,v in status_counts.items %}{{ v }},{% endfor %}];
+    if (document.getElementById('statusChart') && statusLabels.length) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: { labels: statusLabels, datasets: [{ data: statusData, backgroundColor: ['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#64748b'] }] }
+        });
+    }
+    const destLabels = [{% for d in dest_counts %}'{{ d.destination }}',{% endfor %}];
+    const destData = [{% for d in dest_counts %}{{ d.c }},{% endfor %}];
+    if (document.getElementById('destChart') && destLabels.length) {
+        new Chart(document.getElementById('destChart'), {
+            type: 'bar',
+            data: { labels: destLabels, datasets: [{ data: destData, backgroundColor: teal }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+    }
+})();
+</script>
+{% endblock %}
