@@ -1,6 +1,6 @@
 from django.contrib import admin
-from django.db import models
-from ckeditor.widgets import CKEditorWidget
+from django import forms
+from .admin_widgets import RichTextAdminWidget
 from .models import (
     Task, LeadTask, Payment, Tag, Supplier, ServiceType, Service,
     ClientMediaUploadLink, ClientMediaFile, PdfPolicy,
@@ -48,6 +48,15 @@ class ClientMediaUploadLinkAdmin(admin.ModelAdmin):
 
 @admin.register(PdfPolicy)
 class PdfPolicyAdmin(admin.ModelAdmin):
+    class PdfPolicyForm(forms.ModelForm):
+        class Meta:
+            model = PdfPolicy
+            fields = '__all__'
+            widgets = {
+                'content': RichTextAdminWidget(),
+            }
+
+    form = PdfPolicyForm
     list_display = (
         'title', 'is_active', 'sort_order',
         'show_on_client_invoice', 'show_on_internal_invoice',
@@ -77,7 +86,3 @@ class PdfPolicyAdmin(admin.ModelAdmin):
             'description': 'Tick every PDF export that should include this policy section.',
         }),
     )
-
-    formfield_overrides = {
-        models.TextField: {'widget': CKEditorWidget(config_name='pdf_policy')},
-    }

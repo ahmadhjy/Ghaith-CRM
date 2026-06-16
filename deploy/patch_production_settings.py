@@ -54,6 +54,11 @@ def patch_settings(path: Path) -> list[str]:
         text = text[:insert_at] + "\n    'notifications'," + text[insert_at:]
         changes.append("added 'notifications' to INSTALLED_APPS")
 
+    # Remove legacy ckeditor entry if a previous deploy added it without working templates.
+    if "'ckeditor'" in text or '"ckeditor"' in text:
+        text = re.sub(r"\n\s*['\"]ckeditor['\"],?", '', text)
+        changes.append("removed 'ckeditor' from INSTALLED_APPS (using TinyMCE in admin)")
+
     if 'VAPID_PUBLIC_KEY' not in text or 'CRM_SITE_URL' not in text:
         if 'import os' not in text:
             text = 'import os\n' + text
