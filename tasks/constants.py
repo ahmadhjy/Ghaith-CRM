@@ -95,3 +95,11 @@ def parse_money(value):
         return float(cleaned) if cleaned else 0.0
     except ValueError:
         return 0.0
+
+
+def service_has_issue_override(service):
+    """True when a service has an issue price that differs from its booking net."""
+    issue = (getattr(service, 'issue_price', None) or '').strip()
+    if not issue:
+        return False
+    return parse_money(issue) != parse_money(getattr(service, 'net', '') or '')

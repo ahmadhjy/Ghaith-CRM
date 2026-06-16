@@ -12,7 +12,12 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 TEAL = colors.HexColor('#1a5f6b')
 TEAL_LIGHT = colors.HexColor('#e8f4f6')
 GREY = colors.HexColor('#627d98')
-ROW_ALT = colors.HexColor('#f5f7fa')
+ROW_ALT = colors.HexColor('#f3f8f9')
+INK = colors.HexColor('#0f2a3a')
+BORDER = colors.HexColor('#cddde2')
+
+# Usable content width on landscape A4 with 28pt left/right margins.
+FULL_WIDTH = landscape(A4)[0] - 56
 
 COMPANY = {
     'name': 'Ghaith Travel',
@@ -142,12 +147,14 @@ def travellers_applied_filters(params):
     return filters
 
 
-def make_document_header(doc_title, styles=None):
-    """Teal title band + company contact lines (shared across all CRM PDFs)."""
+def make_document_header(doc_title, styles=None, subtitle=''):
+    """Modern full-width title band + company contact bar (shared across CRM PDFs)."""
     styles = styles or _styles()
     return [
-        _header_table(doc_title, company_contact_lines(), styles),
-        Spacer(1, 8),
+        _header_band(doc_title, subtitle, styles),
+        Spacer(1, 10),
+        _company_bar(styles),
+        Spacer(1, 12),
     ]
 
 
@@ -155,103 +162,182 @@ def _styles():
     base = getSampleStyleSheet()
     return {
         'title': ParagraphStyle(
-            'InvTitle', parent=base['Heading1'], fontSize=22, textColor=colors.white,
-            fontName='Helvetica-Bold', spaceAfter=0,
+            'InvTitle', parent=base['Heading1'], fontSize=30, leading=34,
+            textColor=colors.white, fontName='Helvetica-Bold', spaceAfter=0,
         ),
-        'company': ParagraphStyle(
-            'InvCompany', parent=base['Normal'], fontSize=9, textColor=colors.white,
-            alignment=2, leading=12,
+        'subtitle': ParagraphStyle(
+            'InvSubtitle', parent=base['Normal'], fontSize=12, leading=16,
+            textColor=colors.HexColor('#cfe6ea'),
         ),
-        'label': ParagraphStyle(
-            'InvLabel', parent=base['Normal'], fontSize=8, textColor=GREY,
-            fontName='Helvetica-Bold',
+        'company_name': ParagraphStyle(
+            'InvCoName', parent=base['Normal'], fontSize=12.5, leading=16,
+            textColor=TEAL, fontName='Helvetica-Bold',
         ),
-        'value': ParagraphStyle(
-            'InvValue', parent=base['Normal'], fontSize=9, textColor=colors.HexColor('#102a43'),
+        'company_line': ParagraphStyle(
+            'InvCoLine', parent=base['Normal'], fontSize=9.5, leading=14, textColor=GREY,
+        ),
+        'section': ParagraphStyle(
+            'InvSection', parent=base['Heading2'], fontSize=13.5, leading=16,
+            textColor=TEAL, fontName='Helvetica-Bold', spaceBefore=0, spaceAfter=0,
+        ),
+        'kv_label': ParagraphStyle(
+            'InvKvLabel', parent=base['Normal'], fontSize=10, leading=13,
+            textColor=GREY, fontName='Helvetica-Bold',
+        ),
+        'kv_value': ParagraphStyle(
+            'InvKvValue', parent=base['Normal'], fontSize=10.5, leading=14, textColor=INK,
+        ),
+        'meta': ParagraphStyle(
+            'InvMeta', parent=base['Normal'], fontSize=10, leading=15, textColor=INK,
         ),
         'policy': ParagraphStyle(
-            'InvPolicy', parent=base['Normal'], fontSize=8.5, leading=11,
+            'InvPolicy', parent=base['Normal'], fontSize=10, leading=14,
             textColor=colors.HexColor('#334e68'),
+        ),
+        # legacy aliases (kept for any external callers)
+        'label': ParagraphStyle(
+            'InvLabel', parent=base['Normal'], fontSize=10, textColor=GREY, fontName='Helvetica-Bold',
+        ),
+        'value': ParagraphStyle(
+            'InvValue', parent=base['Normal'], fontSize=10.5, textColor=INK, leading=14,
+        ),
+        'company': ParagraphStyle(
+            'InvCompany', parent=base['Normal'], fontSize=9.5, textColor=colors.white, leading=13,
         ),
     }
 
 
-def _header_table(title, company_lines, styles):
-    company_html = '<br/>'.join(company_lines)
-    data = [[
-        Paragraph(title.upper(), styles['title']),
-        Paragraph(company_html, styles['company']),
-    ]]
-    t = Table(data, colWidths=[4.2 * inch, 3.3 * inch])
+def _header_band(title, subtitle, styles):
+    """Full-width teal band: big left-aligned title with optional subtitle."""
+    cell = [Paragraph(title.upper(), styles['title'])]
+    if subtitle:
+        cell.append(Spacer(1, 3))
+        cell.append(Paragraph(subtitle, styles['subtitle']))
+    t = Table([[cell]], colWidths=[FULL_WIDTH])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), TEAL),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (0, 0), 16),
-        ('RIGHTPADDING', (1, 0), (1, 0), 16),
-        ('TOPPADDING', (0, 0), (-1, -1), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+        ('LEFTPADDING', (0, 0), (-1, -1), 22),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 22),
+        ('TOPPADDING', (0, 0), (-1, -1), 20),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+    ]))
+    return t
+
+
+def _company_bar(styles):
+    """Full-width light contact strip below the header (aligned, not on the side)."""
+    name = Paragraph(COMPANY['name'], styles['company_name'])
+    details = '&nbsp;&nbsp;|&nbsp;&nbsp;'.join([
+        f"{COMPANY['address_line1']}, {COMPANY['address_line2']}",
+        f"Tel: {COMPANY['phone']}",
+        f"Email: {COMPANY['email']}",
+        f"Reception: {COMPANY['hours']}",
+        COMPANY['website'],
+    ])
+    line = Paragraph(details, styles['company_line'])
+    t = Table([[[name, Spacer(1, 2), line]]], colWidths=[FULL_WIDTH])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), TEAL_LIGHT),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 16),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 16),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('LINEBELOW', (0, 0), (-1, -1), 2, TEAL),
+    ]))
+    return t
+
+
+def _info_stack(pairs, styles):
+    """Full-width, left-aligned label/value rows (stacked, never on the side)."""
+    rows = [
+        [Paragraph(str(label), styles['kv_label']), Paragraph(str(value), styles['kv_value'])]
+        for label, value in pairs if value not in (None, '')
+    ]
+    if not rows:
+        return Spacer(0, 0)
+    label_w = 2.3 * inch
+    t = Table(rows, colWidths=[label_w, FULL_WIDTH - label_w])
+    t.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.5, BORDER),
     ]))
     return t
 
 
 def _info_row(left_pairs, right_pairs, styles):
-    left = '<br/>'.join(
-        f'<b>{k}:</b> {v}' for k, v in left_pairs
-    )
-    right = '<br/>'.join(
-        f'<b>{k}:</b> {v}' for k, v in right_pairs
-    )
-    data = [[
-        Paragraph(left, styles['value']),
-        Paragraph(right, styles['value']),
-    ]]
-    t = Table(data, colWidths=[3.75 * inch, 3.75 * inch])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), TEAL_LIGHT),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    return t
+    """Legacy signature: render all details as one aligned full-width stack."""
+    return _info_stack(list(left_pairs) + list(right_pairs), styles)
 
 
-def _data_table(headers, rows, compact=False):
-    data = [headers] + rows
-    head_size = 8 if compact else 9
-    body_size = 7 if compact else 8
-    t = Table(data, repeatRows=1)
+def _data_table(headers, rows, compact=False, col_widths=None):
+    base = getSampleStyleSheet()
+    th = ParagraphStyle(
+        'Th', parent=base['Normal'], fontName='Helvetica-Bold',
+        fontSize=9.5 if compact else 10.5, leading=13, textColor=colors.white,
+    )
+    td = ParagraphStyle(
+        'Td', parent=base['Normal'], fontName='Helvetica',
+        fontSize=8.6 if compact else 10, leading=12.5, textColor=INK,
+    )
+    ncols = len(headers)
+    if col_widths is None:
+        widths = [FULL_WIDTH / ncols] * ncols
+    else:
+        scale = FULL_WIDTH / float(sum(col_widths))
+        widths = [w * scale for w in col_widths]
+    header_cells = [Paragraph(str(h), th) for h in headers]
+    body = [[Paragraph('' if c is None else str(c), td) for c in r] for r in rows]
+    data = [header_cells] + body
+    pad = 6 if compact else 9
+    t = Table(data, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#d9e8ec')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#102a43')),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), head_size),
-        ('FONTSIZE', (0, 1), (-1, -1), body_size),
-        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#bcccdc')),
+        ('BACKGROUND', (0, 0), (-1, 0), TEAL),
+        ('TOPPADDING', (0, 0), (-1, 0), pad + 1),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), pad + 1),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, ROW_ALT]),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 9),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 1), (-1, -1), pad),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), pad),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, BORDER),
+        ('BOX', (0, 0), (-1, -1), 0.6, BORDER),
     ]))
     return t
 
 
 def _totals_table(lines, total_label, total_value):
-    data = []
-    for label, val in lines:
-        data.append([label, val])
-    data.append(['', ''])
-    data.append([total_label, total_value])
-    t = Table(data, colWidths=[2.5 * inch, 1.2 * inch])
-    t.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#cce5ff')),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
+    """Full-width totals: secondary rows then a highlighted teal total bar."""
+    base = getSampleStyleSheet()
+    lab = ParagraphStyle('TtlLab', parent=base['Normal'], fontSize=10.5, leading=14, textColor=GREY)
+    val = ParagraphStyle('TtlVal', parent=base['Normal'], fontSize=10.5, leading=14, textColor=INK, alignment=2)
+    tlab = ParagraphStyle('TtlTLab', parent=base['Normal'], fontSize=13, leading=16,
+                          textColor=colors.white, fontName='Helvetica-Bold')
+    tval = ParagraphStyle('TtlTVal', parent=base['Normal'], fontSize=15, leading=18,
+                          textColor=colors.white, fontName='Helvetica-Bold', alignment=2)
+    data = [[Paragraph(str(label), lab), Paragraph(str(value), val)] for label, value in lines]
+    data.append([Paragraph(str(total_label), tlab), Paragraph(str(total_value), tval)])
+    t = Table(data, colWidths=[FULL_WIDTH * 0.7, FULL_WIDTH * 0.3])
+    last = len(data) - 1
+    style = [
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 14),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 14),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('BACKGROUND', (0, last), (-1, last), TEAL),
+        ('TOPPADDING', (0, last), (-1, last), 11),
+        ('BOTTOMPADDING', (0, last), (-1, last), 11),
+    ]
+    for i in range(last):
+        style.append(('LINEBELOW', (0, i), (-1, i), 0.5, BORDER))
+    t.setStyle(TableStyle(style))
     return t
 
 
@@ -261,17 +347,17 @@ def _meta_block(generated_at, applied_filters, styles, detail_lines=None):
     if detail_lines:
         lines.extend(detail_lines)
     if applied_filters:
-        lines.append(f'<b>Filters:</b> {" · ".join(applied_filters)}')
+        lines.append(f'<b>Filters:</b> {" &nbsp;·&nbsp; ".join(applied_filters)}')
     html = '<br/>'.join(lines)
-    data = [[Paragraph(html, styles['value'])]]
-    t = Table(data, colWidths=[7.5 * inch])
+    t = Table([[Paragraph(html, styles['meta'])]], colWidths=[FULL_WIDTH])
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), TEAL_LIGHT),
+        ('BACKGROUND', (0, 0), (-1, -1), ROW_ALT),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 14),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 14),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('LINEBELOW', (0, 0), (-1, -1), 2, TEAL),
     ]))
     return t
 
@@ -289,37 +375,25 @@ def build_report_pdf(
     totals=None,
     landscape_mode=True,
 ):
-    """Build a PDF matching the invoice template style."""
+    """Build a modern, full-width report PDF (Purchases, Client Payments, Travellers)."""
     styles = _styles()
     pagesize = landscape(A4) if landscape_mode else A4
     doc = SimpleDocTemplate(
         response, pagesize=pagesize,
-        leftMargin=28, rightMargin=28, topMargin=20, bottomMargin=20,
+        leftMargin=28, rightMargin=28, topMargin=22, bottomMargin=24,
     )
-    company = company_contact_lines()
-    if left_info is None and right_info is None:
-        pairs = company_info_pairs()
-        left_info = pairs[:2]
-        right_info = pairs[2:]
-    elif left_info is None:
-        left_info = company_info_pairs()[:2]
-    elif right_info is None:
-        right_info = company_info_pairs()[2:]
+    generated_at = subtitle or timezone.now().strftime('%Y-%m-%d %H:%M')
     story = [
-        _header_table(doc_title, company, styles),
-        Spacer(1, 8),
+        _header_band(doc_title, '', styles),
+        Spacer(1, 10),
+        _company_bar(styles),
+        Spacer(1, 12),
+        _meta_block(generated_at, applied_filters, styles),
+        Spacer(1, 12),
+        _data_table(headers, rows),
     ]
-    if left_info or right_info:
-        story.append(_info_row(left_info or [], right_info or [], styles))
-        story.append(Spacer(1, 8))
-    generated_at = timezone.now().strftime('%Y-%m-%d %H:%M')
-    if subtitle:
-        generated_at = subtitle
-    story.append(_meta_block(generated_at, applied_filters, styles))
-    story.append(Spacer(1, 10))
-    story.append(_data_table(headers, rows))
     if totals:
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 12))
         story.append(_totals_table(
             totals.get('lines', []),
             totals.get('total_label', 'Total'),
@@ -403,7 +477,15 @@ CLIENT_POLICY_LINES = [
 
 
 def _section_heading(text, styles):
-    return [Paragraph(text, styles['label']), Spacer(1, 4)]
+    t = Table([[Paragraph(text.upper(), styles['section'])]], colWidths=[FULL_WIDTH])
+    t.setStyle(TableStyle([
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LINEBELOW', (0, 0), (-1, -1), 1.4, TEAL),
+    ]))
+    return [t, Spacer(1, 8)]
 
 
 def _fmt_datetime(value):
@@ -438,66 +520,47 @@ def _policy_paragraphs(lines, styles):
 
 
 def build_client_invoice_pdf(*, response, lead_task, services, payments):
-    """Client-facing invoice PDF using the shared teal report layout."""
+    """Client-facing invoice PDF — modern, full-width, aligned layout."""
     styles = _styles()
     lead = lead_task.lead
     doc = SimpleDocTemplate(
         response, pagesize=landscape(A4),
-        leftMargin=28, rightMargin=28, topMargin=20, bottomMargin=20,
+        leftMargin=28, rightMargin=28, topMargin=22, bottomMargin=24,
     )
 
     created_by = lead_task.assigned_to.get_full_name() or lead_task.assigned_to.username
     issue_date = timezone.now().strftime('%Y-%m-%d')
-    travel_date = lead_task.travel_date.strftime('%Y-%m-%d') if lead_task.travel_date else '—'
-    return_date = lead_task.return_date.strftime('%Y-%m-%d') if lead_task.return_date else '—'
-    generated_at = timezone.now().strftime('%Y-%m-%d %H:%M')
-
-    pairs = company_info_pairs()
-    detail_lines = [
-        f'<b>Invoice #:</b> {lead_task.pk} &nbsp;&nbsp; <b>Client:</b> {lead.name}',
-        f'<b>Prepared by:</b> {created_by} &nbsp;&nbsp; <b>Issue date:</b> {issue_date}',
-    ]
+    payment_label = lead_task.get_payment_display() if lead_task.payment else '—'
 
     story = [
-        _header_table('CLIENT INVOICE', company_contact_lines(), styles),
-        Spacer(1, 8),
-        _info_row(pairs[:2], pairs[2:], styles),
-        Spacer(1, 8),
-        _meta_block(generated_at, None, styles, detail_lines=detail_lines),
-        Spacer(1, 8),
-        _info_row(
-            [
-                ('Travel date', travel_date),
-                ('Return date', return_date),
-                ('Payment', lead_task.payment or '—'),
-            ],
-            [
-                ('Destination', lead.destination or '—'),
-                ('Channel', lead.channel or '—'),
-            ],
-            styles,
-        ),
+        _header_band('CLIENT INVOICE', f'Invoice #{lead_task.pk}  •  {lead.name}', styles),
         Spacer(1, 10),
+        _company_bar(styles),
+        Spacer(1, 14),
+        _info_stack([
+            ('Issue date', issue_date),
+            ('Prepared by', created_by),
+            ('Destination', lead.destination or '—'),
+            ('Travel date', _fmt_date(lead_task.travel_date)),
+            ('Return date', _fmt_date(lead_task.return_date)),
+            ('Payment', payment_label),
+            ('Channel', lead.channel or '—'),
+        ], styles),
+        Spacer(1, 16),
     ]
 
-    client_rows = []
-    for label, value in [
+    story.extend(_section_heading('Client Details', styles))
+    story.append(_info_stack([
         ('Name', lead.name),
         ('Phone', lead.phone),
         ('Email', getattr(lead, 'email', None)),
         ('Request details', lead.special_request),
         ('Date of birth', lead_task.date_of_birth.strftime('%Y-%m-%d') if lead_task.date_of_birth else None),
         ('Passport expiry', lead_task.passport_expiry_date.strftime('%Y-%m-%d') if lead_task.passport_expiry_date else None),
-    ]:
-        if value not in (None, ''):
-            client_rows.append([label, str(value)])
+    ], styles))
+    story.append(Spacer(1, 16))
 
-    if client_rows:
-        story.extend(_section_heading('CLIENT DETAILS', styles))
-        story.append(_data_table(['Field', 'Value'], client_rows))
-        story.append(Spacer(1, 10))
-
-    story.extend(_section_heading('SERVICES', styles))
+    story.extend(_section_heading('Services', styles))
     if services:
         service_rows = [
             [str(idx), service.service_name or '—', service.details or '—']
@@ -505,30 +568,26 @@ def build_client_invoice_pdf(*, response, lead_task, services, payments):
         ]
     else:
         service_rows = [['—', 'No services on this invoice', '—']]
-    story.append(_data_table(['#', 'Service', 'Details'], service_rows))
-    story.append(Spacer(1, 10))
+    story.append(_data_table(['#', 'Service', 'Details'], service_rows, col_widths=[0.7, 3, 8]))
+    story.append(Spacer(1, 16))
 
-    story.extend(_section_heading('PAYMENTS', styles))
+    story.extend(_section_heading('Payments', styles))
     if payments:
         payment_rows = [
-            [
-                payment.date.strftime('%Y-%m-%d'),
-                f'${payment.amount}',
-                'Yes' if payment.is_checked else 'No',
-            ]
+            [_fmt_date(payment.date), f'${payment.amount}', 'Yes' if payment.is_checked else 'No']
             for payment in payments
         ]
     else:
         payment_rows = [['—', '—', 'No payments']]
-    story.append(_data_table(['Date', 'Amount', 'Received'], payment_rows))
-    story.append(Spacer(1, 10))
+    story.append(_data_table(['Date', 'Amount', 'Received'], payment_rows, col_widths=[3, 3, 3]))
+    story.append(Spacer(1, 16))
 
     total = lead.selling_price
-    total_str = f'${total}' if total is not None else 'N/A'
-    story.append(_totals_table([], 'Total selling price', total_str))
+    total_str = _money_display(total) if total not in (None, '') else 'N/A'
+    story.append(_totals_table([], 'Total Selling Price', total_str))
 
     story.append(PageBreak())
-    story.extend(_section_heading('BOOKING TERMS & TRAVEL POLICY', styles))
+    story.extend(_section_heading('Booking Terms & Travel Policy', styles))
     story.extend(_policy_paragraphs(CLIENT_POLICY_LINES, styles))
 
     doc.build(story)
@@ -536,14 +595,14 @@ def build_client_invoice_pdf(*, response, lead_task, services, payments):
 
 
 def build_internal_invoice_pdf(*, response, lead_task, services, payments, attachments=None):
-    """Staff-facing invoice PDF with full booking, finance, and service detail."""
-    from tasks.constants import effective_service_net, parse_money
+    """Staff-facing invoice PDF — modern layout with full booking and finance detail."""
+    from tasks.constants import effective_service_net, parse_money, service_has_issue_override
 
     styles = _styles()
     lead = lead_task.lead
     doc = SimpleDocTemplate(
         response, pagesize=landscape(A4),
-        leftMargin=28, rightMargin=28, topMargin=20, bottomMargin=20,
+        leftMargin=28, rightMargin=28, topMargin=22, bottomMargin=24,
     )
 
     assigned = lead_task.assigned_to.get_full_name() or lead_task.assigned_to.username
@@ -552,77 +611,67 @@ def build_internal_invoice_pdf(*, response, lead_task, services, payments, attac
     payment_label = lead_task.get_payment_display() if lead_task.payment else '—'
     services_list = list(services)
     services_issued = sum(1 for s in services_list if s.is_checked)
-    total_net = sum(parse_money(effective_service_net(s)) for s in services_list)
+    # Profit uses booking net only; post-issue profit uses issue prices when they differ.
+    total_net = sum(parse_money(s.net) for s in services_list)
     total_selling = parse_money(lead.selling_price)
     total_profit = total_selling - total_net
-
-    pairs = company_info_pairs()
-    detail_lines = [
-        f'<b>Invoice #:</b> {lead_task.pk} &nbsp;&nbsp; <b>Client:</b> {lead.name} &nbsp;&nbsp; <b>Status:</b> {status_label}',
-        f'<b>Assigned to:</b> {assigned} &nbsp;&nbsp; <b>Payment:</b> {payment_label}',
-    ]
+    total_issue_net = sum(parse_money(effective_service_net(s)) for s in services_list)
+    has_mismatch = any(service_has_issue_override(s) for s in services_list)
+    post_issue_profit = total_selling - total_issue_net
 
     story = [
-        _header_table('INTERNAL INVOICE', company_contact_lines(), styles),
-        Spacer(1, 8),
-        _info_row(pairs[:2], pairs[2:], styles),
-        Spacer(1, 8),
-        _meta_block(generated_at, None, styles, detail_lines=detail_lines),
-        Spacer(1, 8),
-        _info_row(
-            [
-                ('Travel date', _fmt_datetime(lead_task.travel_date)),
-                ('Return date', _fmt_datetime(lead_task.return_date)),
-                ('Services issued', f'{services_issued} / {len(services_list)}'),
-            ],
-            [
-                ('Lead created', _fmt_datetime(lead.created_at)),
-                ('Last updated', _fmt_datetime(lead.last_modified)),
-                ('Passengers', str(lead.passengers.count())),
-            ],
-            styles,
-        ),
+        _header_band('INTERNAL INVOICE', f'Invoice #{lead_task.pk}  •  {lead.name}  •  {status_label}', styles),
         Spacer(1, 10),
+        _company_bar(styles),
+        Spacer(1, 12),
+        _meta_block(
+            generated_at, None, styles,
+            detail_lines=[f'<b>Assigned to:</b> {assigned} &nbsp;&nbsp; <b>Payment:</b> {payment_label}'],
+        ),
+        Spacer(1, 14),
+        _info_stack([
+            ('Travel date', _fmt_datetime(lead_task.travel_date)),
+            ('Return date', _fmt_datetime(lead_task.return_date)),
+            ('Services issued', f'{services_issued} / {len(services_list)}'),
+            ('Lead created', _fmt_datetime(lead.created_at)),
+            ('Last updated', _fmt_datetime(lead.last_modified)),
+            ('Passengers', str(lead.passengers.count())),
+        ], styles),
+        Spacer(1, 16),
     ]
 
-    invoice_rows = _kv_rows([
+    story.extend(_section_heading('Invoice Details', styles))
+    story.append(_info_stack([
         ('Status', status_label),
         ('Assigned to', assigned),
         ('Payment type', payment_label),
-        ('Travel date', _fmt_datetime(lead_task.travel_date)),
-        ('Return date', _fmt_datetime(lead_task.return_date)),
         ('Invoice notes', lead_task.notes),
         ('What happened', lead.finalization_notes),
-    ])
-    if invoice_rows:
-        story.extend(_section_heading('INVOICE DETAILS', styles))
-        story.append(_data_table(['Field', 'Value'], invoice_rows))
-        story.append(Spacer(1, 10))
+    ], styles))
+    story.append(Spacer(1, 16))
 
     passenger_names = [p.name for p in lead.passengers.all()]
-    customer_rows = _kv_rows([
+    story.extend(_section_heading('Customer Details', styles))
+    story.append(_info_stack([
         ('Name', lead.name),
         ('Phone', lead.phone),
         ('Email', getattr(lead, 'email', None)),
         ('Channel', lead.channel),
         ('Destination', lead.destination),
-        ('Date of birth', _fmt_date(lead_task.date_of_birth)),
-        ('Passport expiry', _fmt_date(lead_task.passport_expiry_date)),
+        ('Date of birth', lead_task.date_of_birth.strftime('%Y-%m-%d') if lead_task.date_of_birth else None),
+        ('Passport expiry', lead_task.passport_expiry_date.strftime('%Y-%m-%d') if lead_task.passport_expiry_date else None),
         ('Request details', lead.special_request),
         ('Passengers', ', '.join(passenger_names) if passenger_names else None),
-    ])
-    if customer_rows:
-        story.extend(_section_heading('CUSTOMER DETAILS', styles))
-        story.append(_data_table(['Field', 'Value'], customer_rows))
-        story.append(Spacer(1, 10))
+    ], styles))
+    story.append(Spacer(1, 16))
 
-    story.extend(_section_heading('SERVICES', styles))
+    story.extend(_section_heading('Services', styles))
     if services_list:
         service_rows = [
             [
                 service.service_name or '—',
                 service.supplier or '—',
-                (service.details or '—')[:120],
+                service.details or '—',
                 _money_display(service.net),
                 _money_display(service.issue_price),
                 _money_display(service.selling),
@@ -639,21 +688,34 @@ def build_internal_invoice_pdf(*, response, lead_task, services, payments, attac
         ['Service', 'Supplier', 'Details', 'Net', 'Issue', 'Selling', 'Due', 'Voucher', 'Client', 'Issued'],
         service_rows,
         compact=True,
+        col_widths=[1.5, 1.3, 2.4, 0.9, 0.9, 1.0, 1.4, 1.2, 0.8, 0.8],
     ))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 16))
 
-    story.extend(_section_heading('FINANCE SUMMARY', styles))
-    story.append(_totals_table(
-        [
-            ('Total net (services)', f'${total_net:,.2f}'),
-            ('Total selling', _money_display(lead.selling_price)),
-        ],
-        'Profit',
-        f'${total_profit:,.2f}',
-    ))
-    story.append(Spacer(1, 10))
+    story.extend(_section_heading('Finance Summary', styles))
+    if has_mismatch:
+        story.append(_totals_table(
+            [
+                ('Total net (services)', f'${total_net:,.2f}'),
+                ('Total selling', _money_display(lead.selling_price)),
+                ('Profit (net basis)', f'${total_profit:,.2f}'),
+                ('Total net at issue price', f'${total_issue_net:,.2f}'),
+            ],
+            'Post Issue Profit',
+            f'${post_issue_profit:,.2f}',
+        ))
+    else:
+        story.append(_totals_table(
+            [
+                ('Total net (services)', f'${total_net:,.2f}'),
+                ('Total selling', _money_display(lead.selling_price)),
+            ],
+            'Profit',
+            f'${total_profit:,.2f}',
+        ))
+    story.append(Spacer(1, 16))
 
-    story.extend(_section_heading('PAYMENTS', styles))
+    story.extend(_section_heading('Payments', styles))
     payments_list = list(payments)
     if payments_list:
         payment_rows = [
@@ -667,13 +729,16 @@ def build_internal_invoice_pdf(*, response, lead_task, services, payments, attac
         ]
     else:
         payment_rows = [['—', '—', 'No payments', '—']]
-    story.append(_data_table(['Date', 'Amount', 'Received', 'Refund'], payment_rows))
-    story.append(Spacer(1, 10))
+    story.append(_data_table(['Date', 'Amount', 'Received', 'Refund'], payment_rows, col_widths=[3, 2, 2, 2]))
 
     if attachments:
-        attachment_rows = [[a.attachment_name or '—', _fmt_datetime(a.uploaded_at)] for a in attachments]
-        story.extend(_section_heading('ATTACHMENTS', styles))
-        story.append(_data_table(['File', 'Uploaded'], attachment_rows))
+        story.append(Spacer(1, 16))
+        story.extend(_section_heading('Attachments', styles))
+        story.append(_data_table(
+            ['File', 'Uploaded'],
+            [[a.attachment_name or '—', _fmt_datetime(a.uploaded_at)] for a in attachments],
+            col_widths=[6, 4],
+        ))
 
     doc.build(story)
     return response

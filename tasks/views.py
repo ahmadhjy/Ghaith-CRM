@@ -28,7 +28,7 @@ from reportlab.lib import colors
 from django.http import HttpResponse
 from datetime import datetime  # Make sure this line is included
 from dashboard.models import Event
-from .constants import get_supplier_choices, get_service_choices, effective_service_net, parse_money
+from .constants import get_supplier_choices, get_service_choices, effective_service_net, parse_money, service_has_issue_override
 from .calendar_sync import sync_payment_event, sync_service_event
 from .invoice_save import save_invoice_from_post
 from .datetime_safety import get_leadtask_for_edit, services_for_leadtask
@@ -456,9 +456,15 @@ def edit_lead_task(request, pk):
     predefined_destination_values = [v for v, _ in destination_choices if v]
     services_total = services.count()
     services_issued = services.filter(is_checked=True).count()
-    total_net = sum(parse_money(effective_service_net(s)) for s in services)
+    services_list = list(services)
+    # Profit uses the booking net only (issue price excluded).
+    total_net = sum(parse_money(s.net) for s in services_list)
     total_selling = parse_money(instance.lead.selling_price)
     total_profit = total_selling - total_net
+    # Post-issue profit recalculates using issue prices when they differ from net.
+    total_issue_net = sum(parse_money(effective_service_net(s)) for s in services_list)
+    has_issue_mismatch = any(service_has_issue_override(s) for s in services_list)
+    post_issue_profit = total_selling - total_issue_net
     media_upload_links = ClientMediaUploadLink.objects.filter(leadtask=instance)
     return render(request, 'edit_leadtask.html', {
         'form': form,
@@ -478,6 +484,9 @@ def edit_lead_task(request, pk):
         'total_net': total_net,
         'total_selling': total_selling,
         'total_profit': total_profit,
+        'total_issue_net': total_issue_net,
+        'has_issue_mismatch': has_issue_mismatch,
+        'post_issue_profit': post_issue_profit,
         'media_upload_links': media_upload_links,
         'supplier_form': SupplierForm(),
     })

@@ -193,6 +193,11 @@
                     <strong class="inv-finance-card__amount" id="disp-total-profit">${{ total_profit|floatformat:2 }}</strong>
                     <span class="inv-finance-card__hint">Selling − net</span>
                 </div>
+                <div class="inv-finance-card inv-finance-card--profit-issue" id="post-issue-profit-card" {% if not has_issue_mismatch %}style="display:none"{% endif %}>
+                    <span class="inv-finance-card__label">Post Issue Profit</span>
+                    <strong class="inv-finance-card__amount" id="disp-post-issue-profit">${{ post_issue_profit|floatformat:2 }}</strong>
+                    <span class="inv-finance-card__hint">Selling − issue price</span>
+                </div>
             </div>
             <div class="inv-card__body" style="padding-top:0">
                     <div class="services-table-scroll">
@@ -629,7 +634,7 @@ function addRow() {
         <td></td>
         <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove(); recalcProfit();"><i class="fas fa-times"></i></button></td>
     `;
-    newRow.querySelectorAll('input[name="net[]"]').forEach(function(inp) {
+    newRow.querySelectorAll('input[name="net[]"], input[name="issue_price[]"]').forEach(function(inp) {
         inp.addEventListener('input', recalcProfit);
     });
 }
@@ -676,22 +681,56 @@ function parseMoney(val) {
     return parseFloat(String(val || '').replace(/[^0-9.-]/g, '')) || 0;
 }
 
+function moneyHasValue(raw) {
+    return raw != null && String(raw).replace(/[^0-9.\-]/g, '') !== '';
+}
+
 function recalcProfit() {
     var sellingEl = document.getElementById('lead_selling_price');
     var netEl = document.getElementById('disp-total-net');
     var profitEl = document.getElementById('disp-total-profit');
     if (!sellingEl || !netEl || !profitEl) return;
     var selling = parseMoney(sellingEl.value);
-    var net = 0;
-    document.querySelectorAll('#servicesTable .service-net').forEach(function(td) {
-        net += parseMoney(td.textContent);
+
+    var net = 0;          // booking net only (profit basis)
+    var issueNet = 0;     // effective net using issue price when set
+    var hasMismatch = false;
+
+    document.querySelectorAll('#servicesTable tbody tr').forEach(function(row) {
+        var netInput = row.querySelector('input[name="net[]"]');
+        var issueInput = row.querySelector('input[name="issue_price[]"]');
+        var netCell = row.querySelector('.service-net');
+        var issueCell = row.querySelector('.service-issue-price');
+
+        var netRaw = netInput ? netInput.value : (netCell ? netCell.textContent : null);
+        var issueRaw = issueInput ? issueInput.value : (issueCell ? issueCell.textContent : null);
+
+        var hasNet = moneyHasValue(netRaw);
+        var hasIssue = moneyHasValue(issueRaw);
+        if (!hasNet && !hasIssue) return;
+
+        var rowNet = parseMoney(netRaw);
+        var rowIssue = parseMoney(issueRaw);
+        net += rowNet;
+        issueNet += hasIssue ? rowIssue : rowNet;
+        if (hasIssue && rowIssue !== rowNet) hasMismatch = true;
     });
-    document.querySelectorAll('#servicesTable input[name="net[]"]').forEach(function(inp) {
-        net += parseMoney(inp.value);
-    });
+
     netEl.textContent = '$' + net.toFixed(2);
     profitEl.textContent = '$' + (selling - net).toFixed(2);
     profitEl.classList.toggle('inv-finance-card__amount--negative', selling - net < 0);
+
+    var postCard = document.getElementById('post-issue-profit-card');
+    var postEl = document.getElementById('disp-post-issue-profit');
+    if (postCard && postEl) {
+        if (hasMismatch) {
+            postCard.style.display = '';
+            postEl.textContent = '$' + (selling - issueNet).toFixed(2);
+            postEl.classList.toggle('inv-finance-card__amount--negative', selling - issueNet < 0);
+        } else {
+            postCard.style.display = 'none';
+        }
+    }
 }
 
 var sellingInput = document.getElementById('lead_selling_price');
