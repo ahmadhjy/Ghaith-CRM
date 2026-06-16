@@ -162,47 +162,47 @@ def _styles():
     base = getSampleStyleSheet()
     return {
         'title': ParagraphStyle(
-            'InvTitle', parent=base['Heading1'], fontSize=30, leading=34,
+            'InvTitle', parent=base['Heading1'], fontSize=32, leading=36,
             textColor=colors.white, fontName='Helvetica-Bold', spaceAfter=0,
         ),
         'subtitle': ParagraphStyle(
-            'InvSubtitle', parent=base['Normal'], fontSize=12, leading=16,
+            'InvSubtitle', parent=base['Normal'], fontSize=13, leading=17,
             textColor=colors.HexColor('#cfe6ea'),
         ),
         'company_name': ParagraphStyle(
-            'InvCoName', parent=base['Normal'], fontSize=12.5, leading=16,
+            'InvCoName', parent=base['Normal'], fontSize=14, leading=18,
             textColor=TEAL, fontName='Helvetica-Bold',
         ),
         'company_line': ParagraphStyle(
-            'InvCoLine', parent=base['Normal'], fontSize=9.5, leading=14, textColor=GREY,
+            'InvCoLine', parent=base['Normal'], fontSize=11, leading=15, textColor=GREY,
         ),
         'section': ParagraphStyle(
-            'InvSection', parent=base['Heading2'], fontSize=13.5, leading=16,
+            'InvSection', parent=base['Heading2'], fontSize=15.5, leading=19,
             textColor=TEAL, fontName='Helvetica-Bold', spaceBefore=0, spaceAfter=0,
         ),
         'kv_label': ParagraphStyle(
-            'InvKvLabel', parent=base['Normal'], fontSize=10, leading=13,
+            'InvKvLabel', parent=base['Normal'], fontSize=11.5, leading=15,
             textColor=GREY, fontName='Helvetica-Bold',
         ),
         'kv_value': ParagraphStyle(
-            'InvKvValue', parent=base['Normal'], fontSize=10.5, leading=14, textColor=INK,
+            'InvKvValue', parent=base['Normal'], fontSize=12.5, leading=16, textColor=INK,
         ),
         'meta': ParagraphStyle(
-            'InvMeta', parent=base['Normal'], fontSize=10, leading=15, textColor=INK,
+            'InvMeta', parent=base['Normal'], fontSize=11.5, leading=16, textColor=INK,
         ),
         'policy': ParagraphStyle(
-            'InvPolicy', parent=base['Normal'], fontSize=10, leading=14,
+            'InvPolicy', parent=base['Normal'], fontSize=12, leading=16,
             textColor=colors.HexColor('#334e68'),
         ),
         # legacy aliases (kept for any external callers)
         'label': ParagraphStyle(
-            'InvLabel', parent=base['Normal'], fontSize=10, textColor=GREY, fontName='Helvetica-Bold',
+            'InvLabel', parent=base['Normal'], fontSize=11.5, textColor=GREY, fontName='Helvetica-Bold',
         ),
         'value': ParagraphStyle(
-            'InvValue', parent=base['Normal'], fontSize=10.5, textColor=INK, leading=14,
+            'InvValue', parent=base['Normal'], fontSize=12.5, textColor=INK, leading=16,
         ),
         'company': ParagraphStyle(
-            'InvCompany', parent=base['Normal'], fontSize=9.5, textColor=colors.white, leading=13,
+            'InvCompany', parent=base['Normal'], fontSize=11, textColor=colors.white, leading=14,
         ),
     }
 
@@ -279,11 +279,11 @@ def _data_table(headers, rows, compact=False, col_widths=None):
     base = getSampleStyleSheet()
     th = ParagraphStyle(
         'Th', parent=base['Normal'], fontName='Helvetica-Bold',
-        fontSize=9.5 if compact else 10.5, leading=13, textColor=colors.white,
+        fontSize=10.5 if compact else 12, leading=14, textColor=colors.white,
     )
     td = ParagraphStyle(
         'Td', parent=base['Normal'], fontName='Helvetica',
-        fontSize=8.6 if compact else 10, leading=12.5, textColor=INK,
+        fontSize=10 if compact else 11.5, leading=14, textColor=INK,
     )
     ncols = len(headers)
     if col_widths is None:
@@ -315,11 +315,11 @@ def _data_table(headers, rows, compact=False, col_widths=None):
 def _totals_table(lines, total_label, total_value):
     """Full-width totals: secondary rows then a highlighted teal total bar."""
     base = getSampleStyleSheet()
-    lab = ParagraphStyle('TtlLab', parent=base['Normal'], fontSize=10.5, leading=14, textColor=GREY)
-    val = ParagraphStyle('TtlVal', parent=base['Normal'], fontSize=10.5, leading=14, textColor=INK, alignment=2)
-    tlab = ParagraphStyle('TtlTLab', parent=base['Normal'], fontSize=13, leading=16,
+    lab = ParagraphStyle('TtlLab', parent=base['Normal'], fontSize=12, leading=15, textColor=GREY)
+    val = ParagraphStyle('TtlVal', parent=base['Normal'], fontSize=12, leading=15, textColor=INK, alignment=2)
+    tlab = ParagraphStyle('TtlTLab', parent=base['Normal'], fontSize=14, leading=17,
                           textColor=colors.white, fontName='Helvetica-Bold')
-    tval = ParagraphStyle('TtlTVal', parent=base['Normal'], fontSize=15, leading=18,
+    tval = ParagraphStyle('TtlTVal', parent=base['Normal'], fontSize=16, leading=19,
                           textColor=colors.white, fontName='Helvetica-Bold', alignment=2)
     data = [[Paragraph(str(label), lab), Paragraph(str(value), val)] for label, value in lines]
     data.append([Paragraph(str(total_label), tlab), Paragraph(str(total_value), tval)])
@@ -374,6 +374,7 @@ def build_report_pdf(
     rows,
     totals=None,
     landscape_mode=True,
+    pdf_target=None,
 ):
     """Build a modern, full-width report PDF (Purchases, Client Payments, Travellers)."""
     styles = _styles()
@@ -399,81 +400,13 @@ def build_report_pdf(
             totals.get('total_label', 'Total'),
             totals.get('total_value', ''),
         ))
+    if pdf_target:
+        from tasks.pdf_policy import append_policies_to_story, get_pdf_policies
+        if get_pdf_policies(pdf_target).exists():
+            story.append(PageBreak())
+            append_policies_to_story(story, pdf_target, styles, _section_heading)
     doc.build(story)
     return response
-
-
-CLIENT_POLICY_LINES = [
-    "Dear Valued Client,",
-    "Thank you for choosing Ghaith Travel to plan your vacation.",
-    "We are honored to be part of your travel journey, and our priority is always to provide you with a smooth, secure, and enjoyable experience.",
-    "To ensure complete clarity and transparency, we kindly ask you to review the following booking terms.",
-    "These policies are designed not to worry you, but to help you clearly understand how your travel arrangements are protected and managed with professionalism and care.",
-    "Our team is always here to guide you, support you, and provide the best possible solutions whenever changes arise.",
-    "",
-    "1. Booking Types: Refundable & Non-Refundable",
-    "Travel services vary depending on airline, hotel, destination, and supplier conditions.",
-    "Flights:",
-    "- Charter flights, low-cost airlines, promotional fares, and special offers are generally non-refundable",
-    "- Regular international airline tickets may be refundable depending on airline fare rules",
-    "Hotels:",
-    "- Hotel cancellation and refund conditions depend on each hotel's own policy",
-    "Visa Fees:",
-    "- Visa fees become non-refundable once the application has been submitted",
-    "Tours & Activities:",
-    "- Usually refundable up to 15 days before travel date",
-    "- Some online or third-party booked activities may be non-refundable",
-    "Before confirming your booking, our travel consultants will always explain the applicable conditions clearly.",
-    "",
-    "2. If an Airline Cancels Your Flight",
-    "In case of airline cancellation, we work immediately to protect your travel plans and offer the best available solutions.",
-    "Option 1: Alternative Travel Route",
-    "- New routing depends on airline availability",
-    "- Any fare difference will be communicated clearly before confirmation",
-    "Option 2: Reschedule Your Trip",
-    "- Within the same travel season, usually without extra charges",
-    "- Voucher may be issued valid for up to 1 year",
-    "Important: If new travel dates fall into high season (July, August, December), fare differences may apply.",
-    "Option 3: Refund",
-    "- Refund will be processed with a deduction of $250 total (office fees + international processing charges)",
-    "Conditions:",
-    "- Visa refundable only if not yet applied",
-    "- Hotels refunded according to hotel booking rules",
-    "- Non-refundable hotel rates remain non-refundable",
-    "- Tours & transfers refunded where applicable",
-    "",
-    "3. If You Decide to Cancel Your Trip",
-    "Flights: Airline cancellation rules apply; cancellation charges depend on fare type and airline conditions.",
-    "Hotels: Hotel cancellation policy applies based on booking terms.",
-    "Visa: Non-refundable once applied.",
-    "Tours & Activities: Subject to supplier cancellation rules.",
-    "A full booking invoice including payment deadlines and cancellation conditions will always be sent to you after confirmation.",
-    "",
-    "4. Charter & Low-Cost Packages (Including Sharm, Turkey, Georgia & Similar Destinations)",
-    "These bookings are non-refundable, non-changeable, non-transferable, and non-voidable once confirmed.",
-    "If Airline Cancels Charter Flight:",
-    "Option A: Refund - deduction of $50 per person, remaining balance refunded.",
-    "Option B: Reschedule - to another available date if possible, subject to airline approval and availability.",
-    "",
-    "5. Payment Commitment & Reservation Guarantee",
-    "Payments must be completed according to agreed deadlines to secure reservation exactly as requested.",
-    "Delayed payments may affect price and availability; we will always do our best to assist with alternatives.",
-    "",
-    "6. Refund Processing Timeline",
-    "Approved refunds usually take between 60 to 90 days depending on airlines, hotels, embassies, and suppliers.",
-    "Our Accounting Department will contact you with refund amount confirmation and expected refund timeline.",
-    "",
-    "7. Confirmation of Agreement",
-    "Once payment is made, this confirms acceptance of all booking terms, cancellation and refund policies, and authorization for Ghaith Travel to proceed with reservations on your behalf.",
-    "",
-    "Our Commitment to You",
-    "At Ghaith Travel, our role is not only to book your trip - it is to stand by your side before, during, and after your journey.",
-    "We are committed to full transparency, honest guidance, fast support when changes happen, and protecting your travel investment as much as possible.",
-    "",
-    "Thank you for trusting us.",
-    "Warm regards,",
-    "Ghaith Travel Team",
-]
 
 
 def _section_heading(text, styles):
@@ -509,14 +442,6 @@ def _money_display(value):
 
 def _kv_rows(pairs):
     return [[label, str(value)] for label, value in pairs if value not in (None, '')]
-
-
-def _policy_paragraphs(lines, styles):
-    story = []
-    for line in lines:
-        safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        story.append(Paragraph(safe_line if safe_line else '&nbsp;', styles['policy']))
-    return story
 
 
 def build_client_invoice_pdf(*, response, lead_task, services, payments):
@@ -586,9 +511,10 @@ def build_client_invoice_pdf(*, response, lead_task, services, payments):
     total_str = _money_display(total) if total not in (None, '') else 'N/A'
     story.append(_totals_table([], 'Total Selling Price', total_str))
 
-    story.append(PageBreak())
-    story.extend(_section_heading('Booking Terms & Travel Policy', styles))
-    story.extend(_policy_paragraphs(CLIENT_POLICY_LINES, styles))
+    from tasks.pdf_policy import PDF_TARGET_CLIENT_INVOICE, append_policies_to_story, get_pdf_policies
+    if get_pdf_policies(PDF_TARGET_CLIENT_INVOICE).exists():
+        story.append(PageBreak())
+        append_policies_to_story(story, PDF_TARGET_CLIENT_INVOICE, styles, _section_heading)
 
     doc.build(story)
     return response
@@ -739,6 +665,11 @@ def build_internal_invoice_pdf(*, response, lead_task, services, payments, attac
             [[a.attachment_name or '—', _fmt_datetime(a.uploaded_at)] for a in attachments],
             col_widths=[6, 4],
         ))
+
+    from tasks.pdf_policy import PDF_TARGET_INTERNAL_INVOICE, append_policies_to_story, get_pdf_policies
+    if get_pdf_policies(PDF_TARGET_INTERNAL_INVOICE).exists():
+        story.append(PageBreak())
+        append_policies_to_story(story, PDF_TARGET_INTERNAL_INVOICE, styles, _section_heading)
 
     doc.build(story)
     return response

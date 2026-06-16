@@ -177,3 +177,36 @@ class ClientMediaFile(models.Model):
             ('.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v')
         )
 
+
+class PdfPolicy(models.Model):
+    """Rich-text policy block attachable to one or more CRM PDF exports."""
+
+    title = models.CharField(max_length=200, default='Booking Terms & Travel Policy')
+    content = models.TextField(blank=True, help_text='Formatted policy text (edited with the rich text editor).')
+    show_on_client_invoice = models.BooleanField(
+        default=False, verbose_name='Client invoice PDF',
+        help_text='Append to the client invoice downloaded from edit invoice.',
+    )
+    show_on_internal_invoice = models.BooleanField(
+        default=False, verbose_name='Internal invoice PDF',
+    )
+    show_on_purchases_report = models.BooleanField(
+        default=False, verbose_name='Purchases report PDF',
+    )
+    show_on_client_payments_report = models.BooleanField(
+        default=False, verbose_name='Client payments report PDF',
+    )
+    show_on_travellers_report = models.BooleanField(
+        default=False, verbose_name='Travellers report PDF',
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'title']
+        verbose_name = 'PDF policy'
+        verbose_name_plural = 'PDF policies'
+
+    def __str__(self):
+        return self.title
+

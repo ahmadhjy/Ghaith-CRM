@@ -826,12 +826,14 @@ def travellers_pdf(request):
         ]
         for lt in qs[:500]
     ]
+    from tasks.pdf_policy import PDF_TARGET_TRAVELLERS_REPORT
     build_report_pdf(
         response=response,
         doc_title='Travellers',
         applied_filters=applied_filters,
         headers=['Client', 'Destination', 'Travel', 'Return', 'Services', 'Assigned', 'Order'],
         rows=rows,
+        pdf_target=PDF_TARGET_TRAVELLERS_REPORT,
     )
     return response
 

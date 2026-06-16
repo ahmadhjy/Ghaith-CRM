@@ -29,7 +29,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 
-def _build_modern_pdf(title, headers, rows, filename, applied_filters=None):
+def _build_modern_pdf(title, headers, rows, filename, applied_filters=None, pdf_target=None):
     from tasks.pdf_template import build_report_pdf
 
     response = HttpResponse(content_type="application/pdf")
@@ -40,6 +40,7 @@ def _build_modern_pdf(title, headers, rows, filename, applied_filters=None):
         applied_filters=applied_filters,
         headers=headers,
         rows=rows,
+        pdf_target=pdf_target,
     )
     return response
 
@@ -370,12 +371,14 @@ def supplier_payments_pdf(request):
         ]
         for s in services
     ]
+    from tasks.pdf_policy import PDF_TARGET_PURCHASES_REPORT
     return _build_modern_pdf(
         "Purchases Report",
         ["Supplier", "Service", "Lead name", "Amount", "Due time", "Order ID", "Issued", "Order status"],
         rows,
         "supplier-payments-report.pdf",
         applied_filters=applied_filters,
+        pdf_target=PDF_TARGET_PURCHASES_REPORT,
     )
 
 
@@ -497,6 +500,7 @@ def client_payments_pdf(request):
         ]
         for p in payments
     ]
+    from tasks.pdf_policy import PDF_TARGET_CLIENT_PAYMENTS_REPORT
     title = "Refunds Report" if _ctx.get('refund_filter') else "Client Payments Report"
     return _build_modern_pdf(
         title,
@@ -504,4 +508,5 @@ def client_payments_pdf(request):
         rows,
         "client-payments-report.pdf",
         applied_filters=applied_filters,
+        pdf_target=PDF_TARGET_CLIENT_PAYMENTS_REPORT,
     )

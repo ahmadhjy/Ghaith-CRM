@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'tasks',
     'dashboard',
     'notifications',
+    'ckeditor',
 ]
 
 MIDDLEWARE = [
@@ -174,3 +175,18 @@ VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtrav
 # Full site URL for browser push icons (production: https://ghaithtravel.pythonanywhere.com)
 CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'http://127.0.0.1:8000')
 CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
+
+CKEDITOR_CONFIGS = {
+    'pdf_policy': {
+        'toolbar': 'full',
+        'height': 420,
+        'width': '100%',
+        'removePlugins': 'stylesheetparser',
+        'allowedContent': True,
+    },
+    'default': {
+        'toolbar': 'full',
+        'height': 300,
+        'width': '100%',
+    },
+}
