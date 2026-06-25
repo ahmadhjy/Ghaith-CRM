@@ -57,10 +57,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'display',
     'tasks',
     'dashboard',
     'notifications',
+    'accounts_core.apps.AccountsCoreConfig',
+    'catalog',
+    'sales',
+    'purchases',
+    'treasury',
+    'expenses',
+    'reporting',
+    'auditlog',
+    'api',
+    'accounting_bridge.apps.AccountingBridgeConfig',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +82,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'accounting_bridge.middleware.AccountingAccessMiddleware',
+    'reporting.middleware.ReportDateDefaultsMiddleware',
 ]
 
 ROOT_URLCONF = 'system.urls'
@@ -78,7 +91,7 @@ ROOT_URLCONF = 'system.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'ghaith_accounting' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -86,6 +99,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accounts_core.context_processors.pdf_branding',
+                'accounting_bridge.context_processors.app_shell',
             ],
         },
     },
@@ -150,7 +165,11 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_ROOT = BASE_DIR / 'static_root/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+if 'test' in os.sys.argv:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Browser push (Web Push / VAPID). Generate with: python manage.py generate_vapid_keys --write
 def _load_vapid_env():
@@ -174,3 +193,23 @@ VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtrav
 # Full site URL for browser push icons (production: https://ghaithtravel.pythonanywhere.com)
 CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'http://127.0.0.1:8000')
 CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
+
+# Embedded accounting module (Ghaith branding — no Sama references)
+COMPANY_LEGAL_NAME = os.environ.get('COMPANY_LEGAL_NAME', 'Ghaith Travel')
+COMPANY_ADDRESS = os.environ.get('COMPANY_ADDRESS', 'Bechara El Khoury Highway, Beirut, Lebanon')
+COMPANY_PHONE = os.environ.get('COMPANY_PHONE', '+961-81456406')
+COMPANY_EMAIL = os.environ.get('COMPANY_EMAIL', 'info@ghaithtravel.com')
+COMPANY_FINANCIAL_ACCOUNT = os.environ.get('COMPANY_FINANCIAL_ACCOUNT', '')
+COMPANY_FOOTER_TEXT = os.environ.get('COMPANY_FOOTER_TEXT', '© Ghaith Travel. All rights reserved.')
+COMPANY_TAGLINE = os.environ.get('COMPANY_TAGLINE', 'Ghaith Travel & Tourism')
+COMPANY_DEFAULT_CURRENCY = os.environ.get('COMPANY_DEFAULT_CURRENCY', 'USD')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}

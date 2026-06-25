@@ -1,5 +1,8 @@
 # Deploy Ghaith CRM on PythonAnywhere — Step by Step
 
+> **For day-to-day deploys:** use **`docs/PYTHONANYWHERE_DEPLOY.md`** — PythonAnywhere commands only.  
+> GitHub commits and pushes are handled on the dev machine.
+
 Your confirmed paths (from the Web tab):
 
 | Setting | Path |
@@ -148,17 +151,9 @@ tail -50 /var/log/ghaithtravel.pythonanywhere.com.error.log
 
 ---
 
-## Part B — Every future deploy (after you push to GitHub)
+## Part B — Every future deploy (after dev pushes to GitHub)
 
-### On your PC
-
-```bash
-cd path/to/Ghaith-CRM
-git pull origin main
-git push origin main   # after your commits
-```
-
-### On PythonAnywhere Bash
+Dev pushes to `main` on GitHub first. Then on PythonAnywhere Bash:
 
 ```bash
 cd /home/ghaithtravel/ghaithleads

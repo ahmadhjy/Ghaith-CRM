@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ghaith Accounting{% endblock %}</title>
+    {% load static %}
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    {% if is_pdf %}
+    <link rel="stylesheet" href="{% static 'ghaith_accounting/css/pdf.css' %}">
+    {% else %}
+    <link rel="stylesheet" href="{% static 'ghaith_accounting/css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'ghaith_accounting/css/hub.css' %}">
+    {% endif %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if is_pdf %}is-pdf{% else %}has-unified-nav ghaith-accounting{% endif %}">
+    {% if not is_pdf %}
+    {% include 'navbar.html' %}
+    <link rel="stylesheet" href="{% static 'ghaith_accounting/css/crm-shell.css' %}">
+    {% endif %}
+
+    {% if messages and not is_pdf %}
+    <div class="app-messages acc-messages">
+        {% for message in messages %}
+        <div class="alert alert--{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</body>
+{% if not is_pdf %}
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+window.initSearchableSelect = function(el) {
+    if (!el || typeof Choices === "undefined") return null;
+    if (el.name && el.name.endsWith("-DELETE")) return null;
+    if (el.closest && el.closest(".hub-hero__filters")) return null;
+    if (el.classList.contains("hub-preset-select")) return null;
+    if (el.classList.contains("destination-select")) return null;
+    if (el.dataset.choicesInitialized && el._choicesInstance) return el._choicesInstance;
+    if (el._choicesInstance) {
+        window.destroySearchableSelect(el);
+    }
+    el._choicesInstance = new Choices(el, {
+        searchEnabled: true,
+        itemSelectText: "",
+        shouldSort: false,
+        searchResultLimit: 50,
+        searchPlaceholderValue: "Type to search…",
+        allowHTML: false,
+    });
+    el.dataset.choicesInitialized = "1";
+    return el._choicesInstance;
+};
+
+window.destroySearchableSelect = function(el) {
+    if (!el) return;
+    if (el._choicesInstance) {
+        try { el._choicesInstance.destroy(); } catch (e) {}
+        el._choicesInstance = null;
+    }
+    delete el.dataset.choicesInitialized;
+};
+
+window.refreshSearchableSelect = function(select, selectedId) {
+    if (!select) return null;
+    if (selectedId != null && selectedId !== "") select.value = String(selectedId);
+    if (select._choicesInstance || select.dataset.choicesInitialized) {
+        window.destroySearchableSelect(select);
+    }
+    var instance = window.initSearchableSelect(select);
+    var val = selectedId != null && selectedId !== "" ? String(selectedId) : (select.value || "");
+    if (instance && val) {
+        try { instance.setChoiceByValue(val); } catch (e) { select.value = val; }
+    }
+    return instance;
+};
+
+window.appendSelectChoice = function(select, id, label) {
+    if (!select) return;
+    id = String(id);
+    label = String(label || id);
+    var exists = false;
+    for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === id) {
+            exists = true;
+            select.options[i].textContent = label;
+            break;
+        }
+    }
+    if (!exists) {
+        var opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = label;
+        select.appendChild(opt);
+    }
+    window.refreshSearchableSelect(select, id);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+window.initSearchableSelects = function(root) {
+    (root || document).querySelectorAll("select").forEach(window.initSearchableSelect);
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+    window.initSearchableSelects(document);
+});
+</script>
+<script src="{% static 'ghaith_accounting/js/table-cells.js' %}"></script>
+{% endif %}
+</html>

@@ -79,9 +79,16 @@ def create_notification(
         )
 
     if send_push:
-        from .push import send_push_to_user
+        try:
+            from .push import send_push_to_user
 
-        send_push_to_user(recipient, title, message or title, url)
+            send_push_to_user(recipient, title, message or title, url)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                'Push notification failed for %s (in-app notification still saved)',
+                getattr(recipient, 'username', recipient),
+            )
 
     return notification
 

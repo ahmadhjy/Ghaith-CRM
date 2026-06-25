@@ -1,0 +1,184 @@
+"""CRM ↔ accounting invoice sync and filter/export button styles."""
+
+body.has-unified-nav.ghaith-accounting {
+    font-family: var(--req-font, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+body.has-unified-nav.ghaith-accounting .hub,
+body.has-unified-nav.ghaith-accounting .app-page,
+body.has-unified-nav.ghaith-accounting .acc-messages {
+    max-width: 1280px;
+}
+
+body.has-unified-nav.ghaith-accounting .layout {
+    display: block;
+    min-height: auto;
+}
+
+body.has-unified-nav.ghaith-accounting .sidebar {
+    display: none;
+}
+
+body.has-unified-nav.ghaith-accounting .content {
+    padding: 0;
+    background: transparent;
+    min-width: 0;
+}
+
+body.has-unified-nav.ghaith-accounting .app-messages,
+body.has-unified-nav.ghaith-accounting .acc-messages {
+    margin-bottom: 16px;
+}
+
+body.has-unified-nav.ghaith-accounting .panel,
+body.has-unified-nav.ghaith-accounting .hub-hero,
+body.has-unified-nav.ghaith-accounting .hub-body {
+    border-radius: var(--req-radius, 12px);
+}
+
+/* ── Override CRM global .btn rules (app-modern-global.css loads via navbar) ── */
+
+body.has-unified-nav.ghaith-accounting a.btn.btn-export,
+body.has-unified-nav.ghaith-accounting .btn.btn-export,
+body.has-unified-nav.ghaith-accounting .btn-export {
+    background: #fff !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 3px rgba(15, 39, 68, 0.06) !important;
+    font-weight: 600;
+}
+
+body.has-unified-nav.ghaith-accounting a.btn.btn-export:hover,
+body.has-unified-nav.ghaith-accounting .btn.btn-export:hover,
+body.has-unified-nav.ghaith-accounting .btn-export:hover {
+    background: #f1f5f9 !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+}
+
+body.has-unified-nav.ghaith-accounting a.btn.btn-clear,
+body.has-unified-nav.ghaith-accounting a.btn.hub-btn-clear,
+body.has-unified-nav.ghaith-accounting .panel.filter-bar .btn-clear,
+body.has-unified-nav.ghaith-accounting .panel.filter-bar .hub-btn-clear,
+body.has-unified-nav.ghaith-accounting .page-toolbar .btn-clear {
+    background: #fff !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 3px rgba(15, 39, 68, 0.06) !important;
+    font-weight: 600;
+}
+
+body.has-unified-nav.ghaith-accounting a.btn.btn-clear:hover,
+body.has-unified-nav.ghaith-accounting a.btn.hub-btn-clear:hover,
+body.has-unified-nav.ghaith-accounting .panel.filter-bar .btn-clear:hover,
+body.has-unified-nav.ghaith-accounting .panel.filter-bar .hub-btn-clear:hover {
+    background: #f1f5f9 !important;
+    color: #0e1f3d !important;
+}
+
+body.has-unified-nav.ghaith-accounting .hub-hero a.btn.btn-export,
+body.has-unified-nav.ghaith-accounting .hub-hero .btn-export {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+body.has-unified-nav.ghaith-accounting .hub-hero .btn.hub-btn-apply,
+body.has-unified-nav.ghaith-accounting .hub-hero .hub-btn-apply {
+    background: #fff !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+    border: none !important;
+}
+
+body.has-unified-nav.ghaith-accounting .hub-hero a.btn.btn-clear,
+body.has-unified-nav.ghaith-accounting .hub-hero a.btn.hub-btn-clear {
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #0e1f3d !important;
+    -webkit-text-fill-color: #0e1f3d !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+}
+
+body.has-unified-nav.ghaith-accounting .btn.btn-secondary,
+body.has-unified-nav.ghaith-accounting a.btn.btn-secondary {
+    background: #fff !important;
+    color: #2563eb !important;
+    -webkit-text-fill-color: #2563eb !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+}
+
+body.has-unified-nav.ghaith-accounting .btn.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.78rem;
+}
+
+/* Filter bars on light panels — keep labels/inputs readable */
+body.has-unified-nav.ghaith-accounting .panel.filter-bar label {
+    color: #64748b !important;
+}
+
+body.has-unified-nav.ghaith-accounting .panel.filter-bar input,
+body.has-unified-nav.ghaith-accounting .panel.filter-bar select {
+    background: #fff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+body.has-unified-nav.ghaith-accounting .panel.filter-bar .btn[type="submit"],
+body.has-unified-nav.ghaith-accounting .panel.filter-bar button.btn {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    border: none !important;
+}
+
+/* Page toolbar row (New invoice + export buttons) */
+body.has-unified-nav.ghaith-accounting .page-toolbar,
+body.has-unified-nav.ghaith-accounting h1 + p,
+body.has-unified-nav.ghaith-accounting .title + p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+body.has-unified-nav.ghaith-accounting .hub-hero__filters .btn-export i,
+body.has-unified-nav.ghaith-accounting .btn-export i,
+body.has-unified-nav.ghaith-accounting .hub-btn-clear i {
+    color: inherit !important;
+    opacity: 0.9;
+}
+
+/* Accounting invoice form — CRM-style services table inside unified nav */
+body.has-unified-nav.ghaith-accounting .edit-invoice-page.acc-invoice-form {
+    max-width: 100%;
+    min-width: 0;
+}
+
+body.has-unified-nav.ghaith-accounting .edit-invoice-page.acc-invoice-form .panel {
+    overflow: hidden;
+}
+
+body.has-unified-nav.ghaith-accounting .edit-invoice-page.acc-invoice-form .inv-card {
+    margin-top: 0;
+    border: 1px solid var(--inv-border, #e2e8f0);
+    overflow: hidden;
+}
+
+body.has-unified-nav.ghaith-accounting .edit-invoice-page.acc-invoice-form #invoice-form > p {
+    display: grid;
+    grid-template-columns: minmax(120px, 160px) 1fr;
+    gap: 8px 16px;
+    align-items: center;
+    margin: 0 0 12px;
+}
+
+@media (max-width: 640px) {
+    body.has-unified-nav.ghaith-accounting .edit-invoice-page.acc-invoice-form #invoice-form > p {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Review CRM invoice #{{ leadtask.pk }} | Ghaith Accounting{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Review CRM invoice #{{ leadtask.pk }}</h1>
+    <p class="muted">{{ lead.name }} · {{ lead.phone }}</p>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+    <h2>CRM summary</h2>
+    <p><strong>Destination:</strong> {{ lead.destination|default:"—" }}</p>
+    <p><strong>Service type:</strong> {{ lead.type_of_service|default:"—" }}</p>
+    <p><strong>Total selling:</strong> {{ lead.selling_price|default:"—" }}</p>
+    {% if client_link %}
+    <p><strong>Accounting client:</strong> {{ client_link.client.client_code }} — {{ client_link.client.name_en }}</p>
+    {% endif %}
+</div>
+
+<div class="hub-table-wrap">
+<table class="data-table crm-services-table">
+    <thead>
+        <tr>
+            <th>Service</th>
+            <th>Supplier</th>
+            <th>Details</th>
+            <th>Net</th>
+            <th>Issue Price</th>
+            <th>Selling</th>
+            <th>Due</th>
+            <th>Voucher</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for service in services %}
+        <tr>
+            <td>{{ service.service_name|default:"—" }}</td>
+            <td>{{ service.supplier|default:"—" }}</td>
+            <td class="col-detail">{{ service.details|default:"—" }}</td>
+            <td>{{ service.net|default:"—" }}</td>
+            <td>{{ service.issue_price|default:"—" }}</td>
+            <td>{{ service.selling|default:"—" }}</td>
+            <td>{{ service.due_time|date:"M d, H:i"|default:"—" }}</td>
+            <td>{{ service.voucher_id|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No services on this invoice.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% if queue.status == 'PENDING_REVIEW' %}
+<form method="post" action="{% url 'accounting_bridge:review_approve' queue.pk %}" style="margin-top:1rem;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--primary" name="publish" value="0">Approve as accounting draft</button>
+    <button type="submit" class="btn btn--primary" name="publish" value="1">Approve &amp; publish</button>
+</form>
+<form method="post" action="{% url 'accounting_bridge:review_reject' queue.pk %}" style="margin-top:1rem;">
+    {% csrf_token %}
+    <label>Rejection notes</label>
+    <textarea name="review_notes" rows="3" class="form-control"></textarea>
+    <button type="submit" class="btn btn--ghost">Reject</button>
+</form>
+{% else %}
+<p><strong>Status:</strong> {{ queue.get_status_display }}</p>
+{% if queue.sales_invoice %}
+<p><a href="{% url 'sales:invoice_open' queue.sales_invoice.pk %}">Open accounting invoice</a></p>
+{% endif %}
+{% if queue.review_notes %}<p><strong>Notes:</strong> {{ queue.review_notes }}</p>{% endif %}
+{% endif %}
+
+<p style="margin-top:1.5rem;"><a href="{% url 'accounting_bridge:review_queue' %}">← Back to queue</a></p>
+{% endblock %}

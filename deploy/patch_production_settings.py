@@ -39,6 +39,59 @@ CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 '''
 
 
+ACCOUNTING_APPS = [
+    'rest_framework',
+    'accounts_core.apps.AccountsCoreConfig',
+    'catalog',
+    'sales',
+    'purchases',
+    'treasury',
+    'expenses',
+    'reporting',
+    'auditlog',
+    'api',
+    'accounting_bridge.apps.AccountingBridgeConfig',
+]
+
+ACCOUNTING_SETTINGS_BLOCK = '''
+
+# Embedded accounting module (patched by deploy/patch_production_settings.py)
+ACCOUNTING_TEMPLATE_DIR = BASE_DIR / 'ghaith_accounting' / 'templates'
+if str(ACCOUNTING_TEMPLATE_DIR) not in [str(p) for p in TEMPLATES[0].get('DIRS', [])]:
+    TEMPLATES[0]['DIRS'] = list(TEMPLATES[0].get('DIRS', [])) + [ACCOUNTING_TEMPLATE_DIR]
+
+if 'accounting_bridge.middleware.AccountingAccessMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.append('accounting_bridge.middleware.AccountingAccessMiddleware')
+if 'reporting.middleware.ReportDateDefaultsMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.append('reporting.middleware.ReportDateDefaultsMiddleware')
+
+for _cp in (
+    'accounts_core.context_processors.pdf_branding',
+    'accounting_bridge.context_processors.app_shell',
+):
+    if _cp not in TEMPLATES[0]['OPTIONS']['context_processors']:
+        TEMPLATES[0]['OPTIONS']['context_processors'].append(_cp)
+
+COMPANY_LEGAL_NAME = os.environ.get('COMPANY_LEGAL_NAME', 'Ghaith Travel')
+COMPANY_ADDRESS = os.environ.get('COMPANY_ADDRESS', 'Bechara El Khoury Highway, Beirut, Lebanon')
+COMPANY_PHONE = os.environ.get('COMPANY_PHONE', '+961-81456406')
+COMPANY_EMAIL = os.environ.get('COMPANY_EMAIL', 'info@ghaithtravel.com')
+COMPANY_FOOTER_TEXT = os.environ.get('COMPANY_FOOTER_TEXT', '© Ghaith Travel. All rights reserved.')
+COMPANY_TAGLINE = os.environ.get('COMPANY_TAGLINE', 'Ghaith Travel & Tourism')
+COMPANY_DEFAULT_CURRENCY = os.environ.get('COMPANY_DEFAULT_CURRENCY', 'USD')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+'''
+
+
 def patch_settings(path: Path) -> list[str]:
     changes: list[str] = []
     text = path.read_text(encoding='utf-8')
@@ -73,6 +126,18 @@ def patch_settings(path: Path) -> list[str]:
                 "CRM_PUSH_ICON_URL = '/static/img/favicon.svg'\n"
             )
             changes.append('added CRM_SITE_URL for push notifications')
+
+    for app in ACCOUNTING_APPS:
+        if f"'{app}'" not in text and f'"{app}"' not in text:
+            match = re.search(r"(INSTALLED_APPS\s*=\s*\[[\s\S]*?)(\n\])", text)
+            if match:
+                insert_at = match.start(2)
+                text = text[:insert_at] + f"\n    '{app}'," + text[insert_at:]
+                changes.append(f"added '{app}' to INSTALLED_APPS")
+
+    if 'accounting_bridge.middleware.AccountingAccessMiddleware' not in text:
+        text = text.rstrip() + ACCOUNTING_SETTINGS_BLOCK + '\n'
+        changes.append('added accounting module settings block')
 
     if changes:
         path.write_text(text, encoding='utf-8')

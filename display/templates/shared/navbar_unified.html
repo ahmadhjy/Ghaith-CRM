@@ -28,11 +28,6 @@
 
   <nav class="app-nav__menu" aria-label="Main">
     <div class="app-nav__section-label">Main</div>
-    {% if user.is_staff or user.is_superuser %}
-    <a class="app-nav__item" href="{% url 'overview_dashboard' %}">
-      <i class="fas fa-chart-pie"></i><span>Overview</span>
-    </a>
-    {% endif %}
     <a class="app-nav__item" href="{% url 'stats_dashboard' %}">
       <i class="fas fa-chart-line"></i><span>Ghaith Dashboard</span>
     </a>
@@ -71,6 +66,12 @@
     </details>
 
     <div class="app-nav__section-label">Tools</div>
+
+    {% if user_is_accountant %}
+    <a class="app-nav__item{% if app_zone == 'accounting' %} is-active{% endif %}" href="/accounting/">
+      <i class="fas fa-calculator"></i><span>Accounting</span>
+    </a>
+    {% endif %}
 
     {% if user.is_staff %}
     <a class="app-nav__item" href="{% url 'admin:index' %}">

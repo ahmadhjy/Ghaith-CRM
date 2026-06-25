@@ -1,0 +1,100 @@
+{% extends "page/layout.html" %}
+{% load formatting %}
+{% block title %}Invoice {{ invoice.invoice_no }}{% endblock %}
+{% block page_content %}
+<h1 class="title">Invoice {{ invoice.invoice_no }}</h1>
+<div class="panel">
+    <p><strong>Client:</strong> {{ invoice.client.name_en|default:"—" }}</p>
+    <p><strong>Status:</strong>
+        {% if invoice.status == "VOIDED" %}
+        <span class="badge badge-VOIDED">Voided</span>
+        {% else %}
+        <span class="badge badge-POSTED">Active</span>
+        {% endif %}
+        {% if invoice.package_type %}<span class="invoice-list-service">{{ invoice.get_package_type_display }}</span>{% endif %}
+    </p>
+    <p><strong>Issue / Due:</strong> {{ invoice.issue_date }} / {{ invoice.due_date }}</p>
+    <p><strong>Currency:</strong> {{ invoice.currency }}
+        {% if invoice.exchange_rate_to_usd %}
+        <span class="muted">— Rate to USD: {{ invoice.exchange_rate_to_usd }} (USD = amount × rate)</span>
+        {% endif %}
+    </p>
+    <p><strong>Total selling (document):</strong> {{ invoice.grand_total }} {{ invoice.currency }}
+        <span class="muted">(sum of service line selling prices)</span></p>
+    <p><strong>Total selling (USD):</strong> {{ invoice.grand_total_usd }} USD</p>
+    <p><strong>Total cost (document):</strong> {{ invoice.total_line_cost }} {{ invoice.currency }}</p>
+    <p><strong>Total cost (USD):</strong> {{ invoice.total_line_cost_usd }} USD</p>
+    <p><strong>Profit (USD):</strong> {{ invoice.profit_amount }} USD</p>
+</div>
+
+<h3>Service Lines</h3>
+<div class="hub-table-wrap">
+<table class="table-compact">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Service</th>
+            <th>Details</th>
+            <th>Destination</th>
+            <th>Supplier</th>
+            <th>Employee</th>
+            <th class="num">Qty</th>
+            <th class="num">Net</th>
+            <th class="num">Selling</th>
+            <th class="num">Sell USD</th>
+            <th class="num">Cost USD</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for line in lines %}
+        <tr>
+            <td class="cell-nowrap">{{ line.effective_service_date|date:"d/m/Y" }}</td>
+            <td>{{ line.service_type.name|default:"—" }}</td>
+            <td class="col-detail">{{ line.notes|default:line.statement_line_details|truncate_detail }}</td>
+            <td>{{ line.destination.name|default:"—" }}</td>
+            <td>{{ line.supplier.name|default:"—" }}</td>
+            <td>{{ line.line_employee.name|default:"—" }}</td>
+            <td class="num">{{ line.qty }}</td>
+            <td class="num">{{ line.cost_price }}</td>
+            <td class="num">{{ line.sell_price }}</td>
+            <td class="num">{{ line.sell_price_usd }}</td>
+            <td class="num">{{ line.cost_price_usd }}</td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="11">No lines.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="detail-actions" style="margin-top:14px;">
+    <a class="btn" href="{% url 'sales:invoice_pdf' invoice.id %}?version=client">PDF (Client)</a>
+    <a class="btn" href="{% url 'sales:invoice_pdf' invoice.id %}?version=accountant">PDF (Accountant)</a>
+    {% if can_edit %}
+    <a class="btn" href="{% url 'sales:invoice_edit' invoice.id %}">Edit</a>
+    {% endif %}
+    {% if can_void %}
+    <form method="post" action="{% url 'sales:void_invoice' invoice.id %}" class="inline-form" onsubmit="return confirm('Void this invoice? This cannot be undone.');">
+        {% csrf_token %}
+        <input type="hidden" name="reason" value="Void from invoice view">
+        <button type="submit" class="btn">Void</button>
+    </form>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="{% url 'sales:invoice_delete' invoice.id %}" class="inline-form" onsubmit="return confirm('Delete this invoice permanently?');">
+        {% csrf_token %}
+        <button type="submit" class="btn">Delete</button>
+    </form>
+    {% endif %}
+    <a class="btn" href="{% url 'sales:invoice_list' %}">Back to list</a>
+</div>
+
+{% if attachments %}
+<h3>Attachments</h3>
+<ul class="attachment-list">
+    {% for att in attachments %}
+    <li><a href="{{ att.file.url }}" target="_blank">{{ att.original_name|default:att.file.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

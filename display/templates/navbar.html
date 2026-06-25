@@ -1,1 +1,5 @@
-{% include 'shared/navbar_unified.html' %}
+{% if app_zone == 'accounting' %}
+  {% include 'shared/navbar_accounting.html' %}
+{% else %}
+  {% include 'shared/navbar_unified.html' %}
+{% endif %}

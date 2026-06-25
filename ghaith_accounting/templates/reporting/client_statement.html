@@ -1,0 +1,41 @@
+{% extends "hub/layout.html" %}
+{% load formatting %}
+{% block title %}Client Statement{% endblock %}
+{% block hub_title %}Statement of account — {{ client.name_en }}{% endblock %}
+{% block hub_subtitle %}Service lines and payments; running balance in USD.{% endblock %}
+{% block hub_extra_actions %}
+{% include "partials/export_buttons.html" %}
+{% endblock %}
+{% block hub_body %}
+<div class="hub-table-wrap">
+<table>
+    <thead><tr><th>Date</th><th>Service</th><th>Description</th><th>Destination</th><th>Ref</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+        <tr{% if row.is_pending %} class="statement-row--pending"{% endif %}>
+            <td class="cell-nowrap">{{ row.date|date:"d/m/Y" }}</td>
+            <td>{{ row.type }}</td>
+            <td class="col-detail">{{ row.description|default:"—"|truncate_detail }}</td>
+            <td>{{ row.destination|default:"—" }}</td>
+            <td>{% include "reporting/partials/statement_ref.html" %}</td>
+            <td class="num">{{ row.debit }}</td>
+            <td class="num">{{ row.credit }}</td>
+            <td class="num">{{ row.running_balance }}</td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">No statement entries.</td></tr>
+    {% endfor %}
+    </tbody>
+    {% if rows %}
+    <tfoot>
+        <tr>
+            <th colspan="5">Totals</th>
+            <th class="num">{{ tot_dr|money }}</th>
+            <th class="num">{{ tot_cr|money }}</th>
+            <th class="num">{{ closing_balance|money }}</th>
+        </tr>
+    </tfoot>
+    {% endif %}
+</table>
+</div>
+{% endblock %}

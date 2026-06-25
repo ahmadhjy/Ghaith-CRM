@@ -1,0 +1,43 @@
+{% extends "page/layout.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block page_content %}
+<h1 class="title">Suppliers</h1>
+<p>
+    <a class="btn" href="{% url 'accounts_core:supplier_create' %}">New Supplier</a>
+    <a class="btn" href="{% url 'reporting:all_suppliers_statement' %}">All suppliers statement</a>
+    {% include "partials/export_buttons.html" %}
+</p>
+<form method="get" class="panel filter-bar">
+    <label>Search <input name="q" value="{{ request.GET.q }}" placeholder="Name or code"></label>
+    <label>Min balance owed <input name="min_balance" value="{{ min_balance }}" placeholder="0"></label>
+    <label>Sort
+        <select name="sort">
+            <option value="name" {% if sort == 'name' %}selected{% endif %}>Name</option>
+            <option value="balance" {% if sort == 'balance' %}selected{% endif %}>Highest balance</option>
+        </select>
+    </label>
+    <button class="btn" type="submit">Filter</button>
+    <a class="btn btn-clear hub-btn-clear" href="{% url 'accounts_core:suppliers_list' %}"><i class="fa-solid fa-filter-circle-xmark"></i> Clear filters</a>
+</form>
+<table>
+    <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Managing #</th><th>Accounting #</th><th class="num">Balance owed</th><th></th></tr></thead>
+    <tbody>
+    {% for row in supplier_rows %}
+        <tr>
+            <td>{{ row.supplier.supplier_code }}</td>
+            <td><a href="{% url 'accounts_core:supplier_detail' row.supplier.id %}">{{ row.supplier.name }}</a></td>
+            <td>{{ row.supplier.get_type_display }}</td>
+            <td>{{ row.supplier.managing_number|default:"-" }}</td>
+            <td>{{ row.supplier.accounting_number|default:"-" }}</td>
+            <td class="num">{{ row.balance }}</td>
+            <td>
+                <a class="btn" href="{% url 'accounts_core:supplier_edit' row.supplier.id %}">Edit</a>
+                <a class="btn" href="{% url 'reporting:supplier_statement' row.supplier.id %}">Statement</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="6">No suppliers found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

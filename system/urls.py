@@ -9,5 +9,6 @@ urlpatterns = [
     path('sw.js', service_worker, name='service_worker'),
     path('', include('display.urls')),
     path('tasks/', include('tasks.urls')),
+    path('accounting/', include('system.accounting_urls')),
     path('admin/', admin.site.urls),
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

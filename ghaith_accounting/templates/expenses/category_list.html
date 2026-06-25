@@ -1,0 +1,23 @@
+{% extends "page/layout.html" %}
+{% block title %}Expense Categories{% endblock %}
+{% block page_content %}
+<h1 class="title">Operating Expense Categories</h1>
+<p>
+    <a class="btn" href="{% url 'expenses:expense_category_create' %}">New Category</a>
+    <a class="btn" href="{% url 'expenses:expense_list' %}">Operating Expenses</a>
+</p>
+<table>
+    <thead><tr><th>Code</th><th>Name</th><th></th></tr></thead>
+    <tbody>
+    {% for cat in categories %}
+    <tr>
+        <td>{{ cat.code }}</td>
+        <td>{{ cat.name }}</td>
+        <td><a class="btn" href="{% url 'expenses:expense_category_edit' cat.id %}">Edit</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">No categories.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

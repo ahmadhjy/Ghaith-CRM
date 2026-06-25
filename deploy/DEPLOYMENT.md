@@ -214,3 +214,121 @@ bash deploy/deploy.sh
 | `setup_git_on_pythonanywhere.sh` | One-time git initialization |
 | `wsgi_reference.py` | Documentation of current WSGI |
 | `DEPLOYMENT.md` | This guide |
+
+---
+
+## Accounting module — first-time go-live
+
+Use this **after** the code is on GitHub and a normal `deploy.sh` run has applied all migrations.
+
+### Pre-deploy (local / dev)
+
+1. Run checks and tests:
+
+```bash
+python manage.py check
+python manage.py test
+python manage.py migrate --plan   # confirm no pending migrations
+```
+
+2. **Commit and push everything** — the accounting apps (`accounting_bridge`, `accounts_core`, `sales`, `treasury`, `catalog`, `reporting`, `ghaith_accounting/`, etc.) must be in git. Untracked files will not reach PythonAnywhere.
+
+```bash
+git add -A
+git status   # review; never commit secrets (.env, vapid keys, production settings)
+git commit -m "Add embedded accounting module and CRM bridge"
+git push origin main
+```
+
+### Deploy code (PythonAnywhere)
+
+```bash
+cd /home/ghaithtravel/ghaithleads
+bash deploy/deploy.sh
+```
+
+The script will:
+
+- Pull latest `main`
+- Sync `system/` → `ghaithleads/` (preserves production `settings.py`)
+- Patch `ghaithleads/settings.py` for accounting apps, middleware, templates, REST framework
+- `pip install -r requirements.txt`
+- Run **all pending migrations** (including `accounting_bridge`, `sales`, `accounts_core`, etc.)
+- Reload the web app
+
+### Post-deploy bootstrap (one-time, on server)
+
+Activate venv and run from project root:
+
+```bash
+source /home/ghaithtravel/djangenv/bin/activate
+cd /home/ghaithtravel/ghaithleads
+export DJANGO_SETTINGS_MODULE=ghaithleads.settings
+```
+
+**1. Set go-live date** (critical — controls auto invoice sync):
+
+Django admin → **Accounting integration settings** → set **Invoice sync from** to your go-live date (e.g. `2026-06-24`). Orders **before** this date are **not** auto-synced; use opening balances + manual sync instead.
+
+Or via shell:
+
+```bash
+python manage.py shell -c "
+from accounting_bridge.models import AccountingConfig
+from datetime import date
+c = AccountingConfig.load()
+c.invoice_sync_from = date(2026, 6, 24)   # <-- your go-live date
+c.master_data_sync_enabled = True
+c.save()
+print(c)
+"
+```
+
+**2. Sync master data from CRM orders:**
+
+```bash
+python manage.py sync_crm_to_accounting
+```
+
+Creates accounting clients (from order leads only), suppliers, destinations, service types, and employees. Does **not** import historical invoices.
+
+**3. Enter opening balances** (main accountant):
+
+Open `/accounting/bridge/opening-balances/` and add debit/credit per client and supplier for pre-go-live history.
+
+| Party | Debit | Credit |
+|-------|-------|--------|
+| Client | What they owe you | Prepayments / credits |
+| Supplier | Paid on account | What you owe them |
+
+**4. Grant main accountant access:**
+
+Django admin → **User profiles** → set **Is main accountant** for the accountant user(s). Only these users see the Accounting nav link and can access `/accounting/`.
+
+**5. (Optional) Sync old invoices manually:**
+
+On each pre-cutoff CRM order, open the invoice and click **Sync with accounting** (main accountant only).
+
+### Ongoing operations
+
+| Task | How |
+|------|-----|
+| New orders on/after go-live date | Auto-sync to accounting draft on save |
+| CRM invoice edits (linked orders) | Sync via signals |
+| Issued / sent-to-client / issue price | Sticky OR sync; accounting can push flags back to CRM |
+| Statements | Client: all posted lines; Supplier: `crm_issued=True` lines only |
+| Accounting dashboard | `/accounting/` (main accountant) |
+
+### Post-go-live verification checklist
+
+- [ ] `/accounting/` loads for main accountant; blocked for other users
+- [ ] CRM navbar shows **Accounting** only for main accountant
+- [ ] Opening balances appear on client/supplier statements (ref `OPEN`)
+- [ ] New order after cutoff creates accounting draft (`TMP-…` number)
+- [ ] Manual **Sync with accounting** works on an old order
+- [ ] Client statement highlights pending (before due date) lines
+- [ ] Supplier statement excludes non-issued lines
+
+### Rollback note
+
+If accounting deploy breaks the site, use the standard rollback in this doc (restore DB backup + git checkout). Opening balances and sync links live in the same database — restore the pre-deploy backup to undo migration data changes.

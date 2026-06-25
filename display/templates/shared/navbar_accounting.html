@@ -1,0 +1,96 @@
+{% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="{% static 'css/navbar-unified.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/requests-modern.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/app-modern-global.css' %}">
+
+{% include 'shared/notification_bell.html' %}
+
+<button class="app-nav__toggle" id="appNavToggle" aria-label="Open menu" aria-expanded="false">
+  <i class="fas fa-bars"></i>
+</button>
+<div class="app-nav__backdrop" id="appNavBackdrop"></div>
+
+<aside class="app-nav" id="appNav">
+  <div class="app-nav__header">
+    <div class="app-nav__brand">
+      <span class="app-nav__brand-mark" aria-hidden="true">G</span>
+      <div class="app-nav__brand-text">
+        <strong>Ghaith Accounting</strong>
+        <small>Finance &amp; Reports</small>
+      </div>
+    </div>
+    <button class="app-nav__close" id="appNavClose" aria-label="Close menu">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <nav class="app-nav__menu" aria-label="Accounting">
+    <div class="app-nav__section-label">Switch</div>
+    <a class="app-nav__item" href="{% url 'calendar' %}">
+      <i class="fas fa-arrow-left"></i><span>Back to CRM</span>
+    </a>
+
+    <div class="app-nav__section-label">Overview</div>
+    <a class="app-nav__item{% if request.path == '/accounting/' or request.path == '/accounting' %} is-active{% endif %}" href="{% url 'accounts_core:dashboard' %}">
+      <i class="fas fa-chart-line"></i><span>Dashboard</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/bridge/review/' in request.path %} is-active{% endif %}" href="{% url 'accounting_bridge:review_queue' %}">
+      <i class="fas fa-clipboard-check"></i><span>CRM invoice review</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/bridge/opening-balances/' in request.path %} is-active{% endif %}" href="{% url 'accounting_bridge:opening_balances' %}">
+      <i class="fas fa-balance-scale"></i><span>Opening balances</span>
+    </a>
+
+    <div class="app-nav__section-label">Sales</div>
+    <a class="app-nav__item{% if '/accounting/clients/' in request.path %} is-active{% endif %}" href="{% url 'accounts_core:clients_list' %}">
+      <i class="fas fa-users"></i><span>Clients</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/sales/invoices/' in request.path %} is-active{% endif %}" href="{% url 'sales:invoice_list' %}">
+      <i class="fas fa-file-invoice"></i><span>Invoices</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/employees/' in request.path %} is-active{% endif %}" href="{% url 'accounts_core:employees_list' %}">
+      <i class="fas fa-id-badge"></i><span>Employees</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/catalog/service-types/' in request.path %} is-active{% endif %}" href="{% url 'catalog:service_types_list' %}">
+      <i class="fas fa-tags"></i><span>Service types</span>
+    </a>
+
+    <div class="app-nav__section-label">Purchasing</div>
+    <a class="app-nav__item{% if '/accounting/suppliers/' in request.path %} is-active{% endif %}" href="{% url 'accounts_core:suppliers_list' %}">
+      <i class="fas fa-truck"></i><span>Suppliers</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/purchases/bills/' in request.path %} is-active{% endif %}" href="{% url 'purchases:bill_list' %}">
+      <i class="fas fa-receipt"></i><span>Supplier bills</span>
+    </a>
+
+    <div class="app-nav__section-label">Treasury</div>
+    <a class="app-nav__item{% if '/accounting/treasury/accounts/' in request.path %} is-active{% endif %}" href="{% url 'treasury:money_accounts_list' %}">
+      <i class="fas fa-university"></i><span>Money accounts</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/treasury/payments/' in request.path %} is-active{% endif %}" href="{% url 'treasury:payment_list' %}">
+      <i class="fas fa-money-bill-wave"></i><span>Payments</span>
+    </a>
+
+    <div class="app-nav__section-label">Finance</div>
+    <a class="app-nav__item{% if '/accounting/expenses/' in request.path %} is-active{% endif %}" href="{% url 'expenses:expense_list' %}">
+      <i class="fas fa-wallet"></i><span>Operating expenses</span>
+    </a>
+    <a class="app-nav__item{% if '/accounting/reporting/' in request.path %} is-active{% endif %}" href="{% url 'reporting:reports_home' %}">
+      <i class="fas fa-chart-pie"></i><span>Reports</span>
+    </a>
+
+    <div class="app-nav__section-label">Tools</div>
+    {% if user.is_staff %}
+    <a class="app-nav__item" href="{% url 'admin:index' %}">
+      <i class="fas fa-cog"></i><span>Admin</span>
+    </a>
+    {% endif %}
+    <a class="app-nav__item app-nav__item--danger" href="{% url 'logout-user' %}">
+      <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+    </a>
+  </nav>
+</aside>
+
+<script src="{% static 'JS/navbar-unified.js' %}"></script>

@@ -4,6 +4,7 @@ from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMo
 from django.db.models import Q, Sum
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from accounts_core.models import UserProfile
 
 class IsOverdueFilter(admin.SimpleListFilter):
     title = 'overdue'
@@ -103,7 +104,16 @@ class UserMonthlyTargetAdmin(admin.ModelAdmin):
     list_filter = ['user__username', 'month']
     ordering = ['-month']
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    fk_name = 'user'
+    verbose_name_plural = 'Accounting profile'
+    fields = ('is_main_accountant', 'is_accountant')
+
+
 class CustomUserAdmin(UserAdmin):
+    inlines = list(getattr(UserAdmin, 'inlines', ()) or ()) + [UserProfileInline]
     list_display = UserAdmin.list_display + ('is_sales', 'administration')
     list_filter = UserAdmin.list_filter + ('is_sales', 'administration')
     fieldsets = UserAdmin.fieldsets + (

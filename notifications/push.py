@@ -55,7 +55,10 @@ def normalize_vapid_private_pem(key: str) -> str:
 
 def load_vapid_credentials():
     """Return a py_vapid.Vapid instance; raises ValueError if key is invalid."""
-    from py_vapid import Vapid
+    try:
+        from py_vapid import Vapid
+    except ImportError as exc:
+        raise ValueError('py-vapid is not installed (pip install py-vapid pywebpush)') from exc
 
     pem = normalize_vapid_private_pem(get_vapid_private_key())
     try:

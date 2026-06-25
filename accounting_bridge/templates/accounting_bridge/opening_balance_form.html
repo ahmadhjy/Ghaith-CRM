@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} | Ghaith Accounting{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ title }}</h1>
+    <p class="muted"><a href="{% url 'accounting_bridge:opening_balances' %}">← Back to opening balances</a></p>
+</div>
+<form method="post" class="panel">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <ul class="errorlist">{% for err in form.non_field_errors %}<li>{{ err }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% for field in form %}
+    <p>
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
+    </p>
+    {% endfor %}
+    <button class="btn" type="submit">Save</button>
+</form>
+<script>
+(function() {
+    var typeField = document.getElementById('id_party_type');
+    var clientWrap = document.getElementById('id_client') && document.getElementById('id_client').closest('p');
+    var supplierWrap = document.getElementById('id_supplier') && document.getElementById('id_supplier').closest('p');
+    function syncPartyFields() {
+        var val = typeField ? typeField.value : '';
+        if (clientWrap) clientWrap.style.display = val === 'CLIENT' ? '' : 'none';
+        if (supplierWrap) supplierWrap.style.display = val === 'SUPPLIER' ? '' : 'none';
+    }
+    if (typeField) {
+        typeField.addEventListener('change', syncPartyFields);
+        syncPartyFields();
+    }
+})();
+</script>
+{% endblock %}

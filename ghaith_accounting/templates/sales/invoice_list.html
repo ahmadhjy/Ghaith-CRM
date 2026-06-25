@@ -1,0 +1,59 @@
+{% extends "page/layout.html" %}
+{% block title %}Sales Invoices{% endblock %}
+{% block page_content %}
+<h1 class="title">Sales Invoices</h1>
+<p>
+    <a class="btn" href="{% url 'sales:invoice_create' %}">New Invoice</a>
+    {% include "partials/export_buttons.html" %}
+</p>
+<form method="get" class="panel filter-bar">
+    <label>Search <input name="q" value="{{ request.GET.q }}" placeholder="Invoice / client"></label>
+    <label>From <input type="date" name="date_from" value="{{ request.GET.date_from }}"></label>
+    <label>To <input type="date" name="date_to" value="{{ request.GET.date_to }}"></label>
+    <button class="btn" type="submit">Filter</button>
+    <a class="btn btn-clear hub-btn-clear" href="{% url 'sales:invoice_list' %}?{{ default_filter_query }}"><i class="fa-solid fa-filter-circle-xmark"></i> Clear filters</a>
+</form>
+<div class="hub-table-wrap">
+<table class="table-compact invoice-list-table">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th>Client</th>
+            <th>Date</th>
+            <th>Service</th>
+            <th class="num">Total</th>
+            <th class="num">Cost</th>
+            <th class="num">Profit</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for invoice in invoices %}
+        <tr{% if invoice.status == "VOIDED" %} class="row-voided"{% endif %}>
+            <td>
+                {{ invoice.invoice_no }}
+                {% if invoice.status == "VOIDED" %}<span class="badge badge-VOIDED">Voided</span>{% endif %}
+            </td>
+            <td>{{ invoice.client.name_en|default:"—" }}</td>
+            <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
+            <td class="invoice-list-service">{% if invoice.package_type %}{{ invoice.get_package_type_display }}{% else %}—{% endif %}</td>
+            <td class="num">
+                {{ invoice.grand_total }} {{ invoice.currency }}
+                {% if invoice.currency != "USD" %}<span class="muted block-sub">{{ invoice.grand_total_usd }} USD</span>{% endif %}
+            </td>
+            <td class="num">{{ invoice.total_line_cost|floatformat:2 }} {{ invoice.currency }}</td>
+            <td class="num">{{ invoice.profit_amount|floatformat:2 }} USD</td>
+            <td class="table-actions">
+                <a class="btn btn-sm" href="{% url 'sales:invoice_open' invoice.id %}">View</a>
+                {% if invoice.status != "VOIDED" %}
+                <a class="btn btn-sm" href="{% url 'sales:invoice_edit' invoice.id %}">Edit</a>
+                {% endif %}
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">No invoices found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

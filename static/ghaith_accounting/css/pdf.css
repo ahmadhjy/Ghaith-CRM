@@ -1,0 +1,523 @@
+/* =========================================================================
+   Ghaith Accounting — Corporate PDF stylesheet (WeasyPrint paged media)
+   Rebuilt to match the Statement of Account design language.
+   ========================================================================= */
+
+:root {
+    --pdf-navy: #0e2a55;
+    --pdf-navy-soft: #1f4a8a;
+    --pdf-ink: #1e293b;
+    --pdf-muted: #5b6b82;
+    --pdf-line: #e2e8f0;
+    --pdf-table-head: #143a6b;
+    --pdf-debit: #d23b3b;
+    --pdf-debit-bg: #fdecec;
+    --pdf-credit: #1f9d57;
+    --pdf-credit-bg: #e8f6ef;
+    --pdf-balance: #0e2a55;
+    --pdf-balance-bg: #eef2fb;
+}
+
+@page {
+    size: A4;
+    margin: 48mm 14mm 30mm 14mm;
+
+    @top-center {
+        content: element(pdf-header);
+        width: 100%;
+    }
+    @bottom-left {
+        content: element(pdf-footer);
+        width: 78%;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        font-size: 7pt;
+        color: #5b6b82;
+        vertical-align: bottom;
+    }
+}
+
+html,
+body.is-pdf {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: var(--pdf-ink);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+}
+
+body.is-pdf .layout,
+body.is-pdf .sidebar,
+body.is-pdf .alert,
+body.is-pdf script,
+body.is-pdf .filter-bar,
+body.is-pdf .btn,
+body.is-pdf .title,
+body.is-pdf .report-groups {
+    display: none !important;
+}
+
+body.is-pdf .content,
+.pdf-body {
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    box-shadow: none;
+}
+
+/* ============================ Running header ============================ */
+.pdf-running-header {
+    position: running(pdf-header);
+    width: 100%;
+}
+
+.pdf-head {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-bottom: 2.5px solid var(--pdf-navy);
+    padding-bottom: 8px;
+}
+
+.pdf-head__brand,
+.pdf-head__meta {
+    display: table-cell;
+    vertical-align: top;
+}
+
+.pdf-head__brand {
+    width: 56%;
+}
+
+.pdf-head__meta {
+    width: 44%;
+    text-align: right;
+}
+
+.pdf-brand-row {
+    display: table;
+    width: 100%;
+}
+
+.pdf-brand-logo-cell {
+    display: table-cell;
+    width: 56px;
+    vertical-align: top;
+}
+
+.pdf-brand-text-cell {
+    display: table-cell;
+    vertical-align: top;
+    padding-left: 12px;
+}
+
+.pdf-brand-logo {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+}
+
+.pdf-brand-name {
+    font-size: 16pt;
+    font-weight: 800;
+    color: var(--pdf-navy);
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.pdf-brand-line {
+    font-size: 7.6pt;
+    color: var(--pdf-muted);
+    line-height: 1.45;
+}
+
+.pdf-brand-line .ic {
+    color: var(--pdf-navy-soft);
+    margin-right: 4px;
+}
+
+.pdf-head__title {
+    font-size: 19pt;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    color: var(--pdf-navy);
+    text-transform: uppercase;
+    line-height: 1.05;
+    margin-bottom: 8px;
+}
+
+.pdf-head__period {
+    font-size: 8.5pt;
+    color: var(--pdf-muted);
+    margin-bottom: 8px;
+}
+
+.pdf-head__account {
+    font-size: 9pt;
+    color: var(--pdf-ink);
+}
+
+.pdf-head__account strong {
+    color: var(--pdf-navy);
+    font-weight: 800;
+}
+
+/* ============================ Running footer ============================ */
+.pdf-running-footer {
+    position: running(pdf-footer);
+    width: 100%;
+}
+
+.pdf-foot {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-top: 1px solid var(--pdf-line);
+    padding-top: 6px;
+    font-size: 7pt;
+    color: var(--pdf-muted);
+}
+
+.pdf-foot__left,
+.pdf-foot__right {
+    display: table-cell;
+    vertical-align: top;
+}
+
+.pdf-foot__right {
+    text-align: right;
+}
+
+.pdf-foot__brand {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: var(--pdf-navy);
+    margin-bottom: 2px;
+}
+
+.pdf-foot__row {
+    line-height: 1.5;
+}
+
+.pdf-foot__row .ic {
+    color: var(--pdf-navy-soft);
+    margin-right: 4px;
+}
+
+/* ============================ Account card ============================ */
+.pdf-acct-card {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border: 1px solid var(--pdf-line);
+    border-radius: 10px;
+    background: #fcfdff;
+    margin: 4px 0 14px;
+    padding: 4px 0;
+}
+
+.pdf-acct-card__cell {
+    display: table-cell;
+    width: 50%;
+    vertical-align: middle;
+    padding: 12px 16px;
+}
+
+.pdf-acct-card__cell + .pdf-acct-card__cell {
+    border-left: 1px dashed #cbd5e1;
+}
+
+.pdf-acct-ico {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--pdf-balance-bg);
+    text-align: center;
+    line-height: 30px;
+    color: var(--pdf-navy);
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.pdf-acct-text {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.pdf-acct-label {
+    font-size: 7.5pt;
+    color: var(--pdf-muted);
+    line-height: 1.2;
+}
+
+.pdf-acct-value {
+    font-size: 11pt;
+    font-weight: 800;
+    color: var(--pdf-navy);
+    line-height: 1.25;
+}
+
+/* ============================ Stat cards ============================ */
+.pdf-stat-cards {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-spacing: 10px 0;
+    margin: 0 -10px 16px;
+}
+
+.pdf-stat-card {
+    display: table-cell;
+    width: 33.33%;
+    vertical-align: middle;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.pdf-stat-card--debit { background: var(--pdf-debit-bg); }
+.pdf-stat-card--credit { background: var(--pdf-credit-bg); }
+.pdf-stat-card--balance { background: var(--pdf-balance-bg); }
+.pdf-stat-card--neutral { background: #f1f5f9; }
+
+.pdf-stat-ico {
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 34px;
+    margin-right: 12px;
+    vertical-align: middle;
+    font-size: 13pt;
+    background: #fff;
+}
+
+.pdf-stat-card--debit .pdf-stat-ico { color: var(--pdf-debit); }
+.pdf-stat-card--credit .pdf-stat-ico { color: var(--pdf-credit); }
+.pdf-stat-card--balance .pdf-stat-ico { color: var(--pdf-balance); }
+
+.pdf-stat-text {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.pdf-stat-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.pdf-stat-card--debit .pdf-stat-label { color: var(--pdf-debit); }
+.pdf-stat-card--credit .pdf-stat-label { color: var(--pdf-credit); }
+.pdf-stat-card--balance .pdf-stat-label { color: var(--pdf-balance); }
+.pdf-stat-card--neutral .pdf-stat-label { color: var(--pdf-muted); }
+
+.pdf-stat-value {
+    font-size: 15pt;
+    font-weight: 800;
+    color: var(--pdf-navy);
+    line-height: 1.1;
+}
+
+/* ============================ Section heading ============================ */
+.pdf-section {
+    display: table;
+    width: 100%;
+    margin: 6px 0 8px;
+}
+
+.pdf-section__ico {
+    display: table-cell;
+    width: 30px;
+    vertical-align: middle;
+}
+
+.pdf-section__ico span {
+    display: inline-block;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--pdf-balance-bg);
+    color: var(--pdf-navy);
+    text-align: center;
+    line-height: 26px;
+}
+
+.pdf-section__text {
+    display: table-cell;
+    vertical-align: middle;
+    padding-left: 8px;
+}
+
+.pdf-section__title {
+    font-size: 11pt;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--pdf-navy);
+    line-height: 1.1;
+}
+
+.pdf-section__subtitle {
+    font-size: 8pt;
+    color: var(--pdf-muted);
+}
+
+/* ============================ Data table ============================ */
+.pdf-data-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 8.6pt;
+    margin: 0 0 14px;
+}
+
+.pdf-data-table thead { display: table-header-group; }
+.pdf-data-table tbody tr { page-break-inside: avoid; }
+
+.pdf-data-table thead th {
+    background: var(--pdf-table-head);
+    color: #fff;
+    font-weight: 700;
+    font-size: 7.8pt;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 9px 8px;
+    text-align: left;
+    border: none;
+}
+
+.pdf-data-table thead th:first-child { border-top-left-radius: 8px; }
+.pdf-data-table thead th:last-child { border-top-right-radius: 8px; }
+
+.pdf-data-table tbody td {
+    padding: 9px 8px;
+    border-bottom: 1px solid #eef1f6;
+    vertical-align: top;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.4;
+    color: #25324a;
+}
+
+.pdf-data-table tbody tr:nth-child(even) td {
+    background: #f8fafc;
+}
+
+.pdf-data-table td.num,
+.pdf-data-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.pdf-data-table th.center,
+.pdf-data-table td.center {
+    text-align: center;
+}
+
+.pdf-data-table td.wrap,
+.pdf-data-table td.desc {
+    max-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.pdf-data-table tbody tr.pdf-row--summary td {
+    font-weight: 600;
+    background: #f8fafc !important;
+}
+
+.pdf-data-table tfoot td {
+    font-weight: 700;
+    background: #eef2f8;
+    border-top: 1.5px solid #b8c4d6;
+    padding: 9px 8px;
+    color: var(--pdf-navy);
+}
+
+/* Type pill */
+.pdf-pill {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 11px;
+    font-size: 7.4pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.pdf-pill--debit { background: var(--pdf-debit-bg); color: var(--pdf-debit); }
+.pdf-pill--credit { background: var(--pdf-credit-bg); color: var(--pdf-credit); }
+.pdf-pill--neutral { background: #eef2f8; color: var(--pdf-navy); }
+
+/* ============================ Totals block ============================ */
+.pdf-totals {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    page-break-inside: avoid;
+}
+
+.pdf-totals td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--pdf-line);
+    font-size: 9.5pt;
+}
+
+.pdf-totals td:first-child {
+    color: var(--pdf-muted);
+    font-weight: 600;
+}
+
+.pdf-totals td:last-child {
+    text-align: right;
+    font-weight: 700;
+    color: var(--pdf-navy);
+    font-variant-numeric: tabular-nums;
+}
+
+.pdf-totals tr.is-closing td {
+    background: var(--pdf-balance-bg);
+    border-bottom: none;
+    border-radius: 6px;
+    font-size: 10.5pt;
+}
+
+.pdf-totals tr.is-closing td:first-child {
+    color: var(--pdf-navy);
+    font-weight: 800;
+}
+
+.pdf-totals tr.is-closing td:last-child {
+    color: var(--pdf-navy);
+    font-weight: 800;
+}
+
+/* ============================ Misc ============================ */
+.pdf-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--pdf-muted);
+    border: 1px dashed var(--pdf-line);
+    border-radius: 8px;
+}
+
+.pdf-note {
+    font-size: 8.5pt;
+    color: var(--pdf-muted);
+    margin: 0 0 10px;
+}
+
+body.is-pdf a {
+    color: inherit;
+    text-decoration: none;
+}

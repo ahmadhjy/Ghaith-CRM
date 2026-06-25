@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Invoice review queue | Ghaith Accounting{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>CRM invoice review queue</h1>
+    <p class="muted">New CRM invoices appear here for accountant review before publishing to accounting.</p>
+</div>
+<div class="hub-hero__filters" style="margin-bottom:1rem;">
+    {% for value, label in status_choices %}
+    <a class="btn {% if status == value %}btn--primary{% else %}btn--ghost{% endif %}"
+       href="?status={{ value }}">{{ label }}</a>
+    {% endfor %}
+</div>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>CRM order</th>
+            <th>Client</th>
+            <th>Assigned to</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>#{{ item.leadtask_id }}</td>
+            <td>{{ item.leadtask.lead.name }}</td>
+            <td>{{ item.leadtask.assigned_to.get_full_name|default:item.leadtask.assigned_to.username }}</td>
+            <td>{{ item.get_status_display }}</td>
+            <td>{{ item.last_crm_snapshot_at|date:"Y-m-d H:i" }}</td>
+            <td><a href="{% url 'accounting_bridge:review_detail' item.pk %}">Review</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No items in this queue.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -23,6 +23,7 @@ urlpatterns = [
     path('leads/current/', views.current_leadtasks, name='current_lead_tasks'),
     path('leads/done/', views.done_leadtasks, name='doneLeadTask'),
     path('leads/edit/<int:pk>/', views.edit_lead_task, name='edit_lead_tasks'),
+    path('leads/sync-accounting/<int:pk>/', views.sync_leadtask_accounting, name='sync_leadtask_accounting'),
     path('payment/<int:pk>/', views.add_payment, name='add_payment'),
     path('attachment/add/<int:pk>/', views.add_attachment, name='add_leadtask_attachment'),
     path('attachment/add_multiple/<int:pk>/', views.add_attachments_multiple, name='add_leadtask_attachments_multiple'),

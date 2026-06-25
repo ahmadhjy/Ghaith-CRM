@@ -1,0 +1,68 @@
+{% extends "page/layout.html" %}
+{% block title %}Salary — {{ entry.employee.name }}{% endblock %}
+{% block page_content %}
+<h1 class="title">Salary — {{ entry.employee.name }}</h1>
+<p class="muted">Payroll period {{ entry.period_year }}-{{ entry.period_month|stringformat:"02d" }} · Status: {{ entry.get_status_display }}</p>
+
+<div class="panel" style="margin-bottom:16px;">
+    <p><strong>Amount due:</strong> {{ amount_due }} USD</p>
+    <p><strong>Total paid:</strong> {{ total_paid }} USD</p>
+    <p><strong>Balance:</strong> {% if balance_due > 0 %}{{ balance_due }}{% else %}0.00{% endif %} USD</p>
+</div>
+
+<form method="post" class="panel" style="margin-bottom:16px;">
+    {% csrf_token %}
+    <h2>Adjust amounts</h2>
+    <p class="muted">Change base salary or add a bonus for this month. This does not post an expense until you record a payment below.</p>
+    {% for field in form %}
+    <p>
+        {{ field.label_tag }} {{ field }}
+        {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
+    </p>
+    {% endfor %}
+    <button class="btn" type="submit" name="save_entry" value="1">Save amounts</button>
+</form>
+
+{% if balance_due > 0 or total_paid < amount_due %}
+<form method="post" class="panel" style="margin-bottom:16px;">
+    {% csrf_token %}
+    <h2>Record payment</h2>
+    <p class="muted">Enter how much was actually paid (full, partial, or extra). This creates a posted operating expense.</p>
+    {% for field in payment_form %}
+    <p>
+        {{ field.label_tag }} {{ field }}
+        {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
+    </p>
+    {% endfor %}
+    <button class="btn" type="submit" name="record_payment" value="1">Post payment</button>
+</form>
+{% endif %}
+
+{% if payments %}
+<h2>Payments posted</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th class="num">Amount</th>
+            <th>Expense</th>
+            <th>Note</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in payments %}
+        <tr>
+            <td>{{ p.payment_date|date:"d/m/Y" }}</td>
+            <td class="num">{{ p.amount }} USD</td>
+            <td>{{ p.operating_expense.expense_no }}</td>
+            <td>{{ p.notes|default:"—" }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<p style="margin-top:16px;">
+    <a class="btn" href="{% url 'expenses:expense_list' %}?tab=salaries&payroll_month={{ entry.period_year }}-{{ entry.period_month|stringformat:'02d' }}">Back to salaries</a>
+</p>
+{% endblock %}

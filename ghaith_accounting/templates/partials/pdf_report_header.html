@@ -1,0 +1,58 @@
+{% load static %}
+{% if is_pdf %}
+<div class="pdf-running-header">
+  <div class="pdf-head">
+    <div class="pdf-head__brand">
+      <div class="pdf-brand-row">
+        <div class="pdf-brand-logo-cell">
+          {% if company.logo_url %}
+          <img class="pdf-brand-logo" src="{{ company.logo_url }}" alt="{{ company.name }}">
+          {% endif %}
+        </div>
+        <div class="pdf-brand-text-cell">
+          <div class="pdf-brand-name">{{ company.name }}</div>
+          {% if company.address %}<div class="pdf-brand-line"><span class="ic">&#9679;</span>{{ company.address }}</div>{% endif %}
+          {% if company.phone %}<div class="pdf-brand-line"><span class="ic">&#9742;</span>{{ company.phone }}</div>{% endif %}
+          {% if company.email %}<div class="pdf-brand-line"><span class="ic">&#9993;</span>{{ company.email }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="pdf-head__meta">
+      <div class="pdf-head__title">{{ pdf_report_title }}</div>
+      {% if not pdf_hide_period %}{% if date_from or date_to %}
+      <div class="pdf-head__period">
+        <span class="ic">&#128197;</span>
+        Period:
+        {% if date_from %}{{ date_from|date:"d/m/Y" }}{% endif %}
+        {% if date_from and date_to %} &ndash; {% endif %}
+        {% if date_to %}{{ date_to|date:"d/m/Y" }}{% endif %}
+      </div>
+      {% endif %}{% endif %}
+      {% if pdf_account_name %}
+      <div class="pdf-head__account">
+        Account: <strong>{{ pdf_account_name }}{% if pdf_account_id %} ({{ pdf_account_id }}){% endif %}</strong>
+      </div>
+      {% elif pdf_report_subtitle and not pdf_hide_subtitle_in_body %}
+      <div class="pdf-head__account">{{ pdf_report_subtitle }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="pdf-running-footer">
+  <div class="pdf-foot">
+    <div class="pdf-foot__left">
+      <div class="pdf-foot__brand">{{ company.footer_text|default:company.name }}</div>
+      {% if company.address %}<div class="pdf-foot__row">{{ company.address }}</div>{% endif %}
+      <div class="pdf-foot__row">
+        {% if company.email %}{{ company.email }}{% endif %}
+        {% if company.email and company.phone %} &nbsp;|&nbsp; {% endif %}
+        {% if company.phone %}{{ company.phone }}{% endif %}
+      </div>
+    </div>
+    <div class="pdf-foot__right">
+      <div class="pdf-foot__row"><span class="ic">&#128197;</span> Printed on: {{ pdf_generated_on|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}

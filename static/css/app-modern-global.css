@@ -307,13 +307,13 @@ body.has-unified-nav .list-page__desc {
   margin: 6px 0 0;
 }
 
-body.has-unified-nav .btn,
-body.has-unified-nav .btn--primary,
-body.has-unified-nav .btn--secondary,
-body.has-unified-nav .btn--small,
-body.has-unified-nav .btn-info,
-body.has-unified-nav .btn-primary,
-body.has-unified-nav .btn-secondary {
+body.has-unified-nav:not(.ghaith-accounting) .btn,
+body.has-unified-nav:not(.ghaith-accounting) .btn--primary,
+body.has-unified-nav:not(.ghaith-accounting) .btn--secondary,
+body.has-unified-nav:not(.ghaith-accounting) .btn--small,
+body.has-unified-nav:not(.ghaith-accounting) .btn-info,
+body.has-unified-nav:not(.ghaith-accounting) .btn-primary,
+body.has-unified-nav:not(.ghaith-accounting) .btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -329,15 +329,15 @@ body.has-unified-nav .btn-secondary {
   color: #fff !important;
 }
 
-body.has-unified-nav .btn--secondary,
-body.has-unified-nav .btn-secondary,
-body.has-unified-nav .btn--link {
+body.has-unified-nav:not(.ghaith-accounting) .btn--secondary,
+body.has-unified-nav:not(.ghaith-accounting) .btn-secondary,
+body.has-unified-nav:not(.ghaith-accounting) .btn--link {
   background: #fff;
   color: var(--req-primary) !important;
   border: 1.5px solid var(--req-border);
 }
 
-body.has-unified-nav .btn--small { padding: 5px 10px; font-size: .78rem; }
+body.has-unified-nav:not(.ghaith-accounting) .btn--small { padding: 5px 10px; font-size: .78rem; }
 
 /* Dashboard / Calendar — summary stat cards */
 body.has-unified-nav .dash-stats-grid {

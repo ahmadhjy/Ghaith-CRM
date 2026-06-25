@@ -29,6 +29,18 @@
                     {{ form.instance.get_status_display|default:form.instance.status }}
                 </span>
                 <div class="inv-hero__actions">
+                    {% if user_is_accountant %}
+                    <form method="post" action="{% url 'sync_leadtask_accounting' pk=leadid %}" class="inv-hero__action-form" onsubmit="return confirm('{% if accounting_invoice_linked %}Update the linked accounting invoice from this CRM order?{% else %}Create this invoice in accounting and keep it synced with CRM edits?{% endif %}');">
+                        {% csrf_token %}
+                        <button type="submit" class="inv-btn-ghost{% if accounting_invoice_linked %} inv-btn-ghost--synced{% endif %}">
+                            <i class="fas fa-{% if accounting_invoice_linked %}rotate{% else %}link{% endif %}"></i>
+                            Sync with accounting
+                        </button>
+                    </form>
+                    {% if accounting_invoice_linked and accounting_invoice_url %}
+                    <a href="{{ accounting_invoice_url }}" class="inv-btn-ghost" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open in accounting{% if accounting_invoice_no %} ({{ accounting_invoice_no }}){% endif %}</a>
+                    {% endif %}
+                    {% endif %}
                     <a href="{% url 'lead_task_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-pdf"></i> Internal PDF</a>
                     <a href="{% url 'lead_task_client_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-export"></i> Client PDF</a>
                     <a href="{% url 'current_lead_tasks' %}" class="inv-btn-ghost"><i class="fas fa-arrow-left"></i> All Orders</a>
@@ -48,6 +60,14 @@
     </nav>
 
     <main class="inv-main">
+
+    {% if messages %}
+    <div class="inv-flash-messages" role="status">
+        {% for message in messages %}
+        <p class="inv-flash inv-flash--{{ message.tags|default:'info' }}">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
 
             <form method="post" enctype="multipart/form-data" id="invoiceForm">
                 {% csrf_token %}
@@ -212,7 +232,7 @@
                                     <th>Selling</th>
                                     <th>Due</th>
                                     <th>Voucher</th>
-                                    <th>Send to Client</th>
+                                    <th>Sent to client</th>
                                     <th>Issued</th>
                                     <th>Actions</th>
                                 </tr>

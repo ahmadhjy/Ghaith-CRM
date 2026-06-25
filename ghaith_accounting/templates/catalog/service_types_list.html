@@ -1,0 +1,31 @@
+{% extends "page/layout.html" %}
+{% block title %}Service Types{% endblock %}
+{% block page_content %}
+<h1 class="title">Service Types</h1>
+<p>
+    <a class="btn" href="{% url 'catalog:service_type_create' %}">New Service Type</a>
+    {% include "partials/export_buttons.html" %}
+</p>
+<form method="get" class="panel filter-bar">
+    <label>Search <input name="q" value="{{ request.GET.q }}" placeholder="Name or code"></label>
+    <button class="btn" type="submit">Filter</button>
+    <a class="btn btn-clear hub-btn-clear" href="{% url 'catalog:service_types_list' %}"><i class="fa-solid fa-filter-circle-xmark"></i> Clear filters</a>
+</form>
+<table>
+    <thead><tr><th>Code</th><th>Name</th><th>Fields</th><th>Supplier req.</th><th>Currency</th><th></th></tr></thead>
+    <tbody>
+    {% for item in service_types %}
+        <tr>
+            <td>{{ item.code }}</td>
+            <td><a href="{% url 'catalog:service_type_detail' item.id %}">{{ item.name }}</a></td>
+            <td>{{ item.field_definitions.count }}</td>
+            <td>{{ item.requires_supplier }}</td>
+            <td>{{ item.default_currency }}</td>
+            <td><a class="btn" href="{% url 'catalog:service_type_edit' item.id %}">Edit</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="6">No service types found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

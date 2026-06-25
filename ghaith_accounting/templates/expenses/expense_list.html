@@ -1,0 +1,109 @@
+{% extends "page/layout.html" %}
+{% block title %}Operating Expenses{% endblock %}
+{% block page_content %}
+<h1 class="title">Operating Expenses</h1>
+
+<nav class="hub-subtabs" aria-label="Expense sections" style="margin-bottom:12px;">
+    <a class="hub-subtab {% if tab != 'salaries' %}hub-subtab--active{% endif %}" href="{% url 'expenses:expense_list' %}?{% if date_from %}date_from={{ date_from|date:'Y-m-d' }}&{% endif %}{% if date_to %}date_to={{ date_to|date:'Y-m-d' }}&{% endif %}{% if selected_category %}category={{ selected_category }}&{% endif %}tab=expenses">Other expenses</a>
+    <a class="hub-subtab {% if tab == 'salaries' %}hub-subtab--active{% endif %}" href="{% url 'expenses:expense_list' %}?tab=salaries&payroll_month={{ payroll_month_value }}">Salaries</a>
+</nav>
+
+{% if tab == 'salaries' %}
+<p class="muted" style="margin-bottom:12px;">
+    Prepare monthly rows from employee profiles, adjust base or bonus, then record each payment when money is actually paid.
+    Posted payments become operating expenses; unpaid or partial amounts stay on this tab only.
+</p>
+<form method="get" class="panel filter-bar">
+    <input type="hidden" name="tab" value="salaries">
+    <label>Payroll month
+        <input type="month" name="payroll_month" value="{{ payroll_month_value }}">
+    </label>
+    <button class="btn" type="submit">Show</button>
+</form>
+<form method="post" action="{% url 'expenses:salary_prepare_month' %}" class="panel filter-bar" style="margin-top:0;">
+    {% csrf_token %}
+    <input type="hidden" name="payroll_month" value="{{ payroll_month_value }}">
+    <button class="btn" type="submit">Prepare rows for {{ payroll_month_value }}</button>
+    <span class="muted">Creates one row per active employee with a configured salary (skips existing).</span>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th class="num">Base</th>
+            <th class="num">Bonus</th>
+            <th class="num">Due</th>
+            <th class="num">Paid</th>
+            <th class="num">Balance</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in salary_rows %}
+        <tr>
+            <td>{{ row.entry.employee.name }}</td>
+            <td class="num">{{ row.entry.base_salary }}</td>
+            <td class="num">{{ row.entry.bonus }}</td>
+            <td class="num">{{ row.amount_due }}</td>
+            <td class="num">{{ row.total_paid }}</td>
+            <td class="num">{% if row.balance_due > 0 %}{{ row.balance_due }}{% else %}0.00{% endif %}</td>
+            <td>{{ row.entry.get_status_display }}</td>
+            <td><a href="{% url 'expenses:salary_entry_edit' row.entry.id %}">{% if row.balance_due > 0 %}Pay / edit{% else %}View{% endif %}</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">No salary rows for this month. Click <strong>Prepare rows</strong> to generate them from employee profiles.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% else %}
+<form method="get" class="panel filter-bar">
+    <input type="hidden" name="tab" value="expenses">
+    <label>From <input type="date" name="date_from" value="{% if date_from %}{{ date_from|date:'Y-m-d' }}{% endif %}"></label>
+    <label>To <input type="date" name="date_to" value="{% if date_to %}{{ date_to|date:'Y-m-d' }}{% endif %}"></label>
+    <label>Category
+        <select name="category">
+            <option value="">All</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.code }} — {{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button class="btn" type="submit">Filter</button>
+    <a class="btn btn-clear hub-btn-clear" href="{% url 'expenses:expense_list' %}?{{ default_filter_query }}&tab=expenses"><i class="fa-solid fa-filter-circle-xmark"></i> Clear filters</a>
+    {% include "partials/export_buttons.html" %}
+    <a class="btn" href="{% url 'expenses:expense_create' %}">+ New Expense</a>
+    <a class="btn" href="{% url 'expenses:expense_category_list' %}">Categories</a>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>No</th><th>Date</th><th>Category</th><th>Description</th>
+            <th class="num">Amount</th><th class="num">USD</th><th>Status</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for e in expenses %}
+        <tr>
+            <td>{{ e.expense_no }}</td>
+            <td>{{ e.expense_date|date:"d/m/Y" }}</td>
+            <td>{{ e.category.name }}</td>
+            <td>{{ e.description|truncatewords:12 }}</td>
+            <td class="num">{{ e.amount }} {{ e.currency }}</td>
+            <td class="num">{{ e.amount_usd }}</td>
+            <td>{{ e.status }}</td>
+            <td>
+                {% if e.status == "DRAFT" %}
+                <a href="{% url 'expenses:expense_edit' e.id %}">Edit</a>
+                <a href="{% url 'expenses:post_expense' e.id %}">Post</a>
+                {% endif %}
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">No expenses found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

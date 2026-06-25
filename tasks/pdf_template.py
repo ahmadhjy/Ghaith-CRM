@@ -9,6 +9,8 @@ from reportlab.lib.units import inch
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
+from display.company_info import GHAITH_COMPANY
+
 TEAL = colors.HexColor('#1a5f6b')
 TEAL_LIGHT = colors.HexColor('#e8f4f6')
 GREY = colors.HexColor('#627d98')
@@ -19,15 +21,7 @@ BORDER = colors.HexColor('#cddde2')
 # Usable content width on landscape A4 with 28pt left/right margins.
 FULL_WIDTH = landscape(A4)[0] - 56
 
-COMPANY = {
-    'name': 'Ghaith Travel',
-    'address_line1': 'Bechara El Khoury Highway',
-    'address_line2': 'Beirut, Lebanon',
-    'phone': '+961-81456406',
-    'email': 'info@ghaithtravel.com',
-    'website': 'www.ghaithtravel.com',
-    'hours': '9:00 AM - 5:00 PM',
-}
+COMPANY = GHAITH_COMPANY
 
 
 def company_contact_lines():

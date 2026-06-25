@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 import os
 
 from .models import (
@@ -466,6 +467,8 @@ def edit_lead_task(request, pk):
     has_issue_mismatch = any(service_has_issue_override(s) for s in services_list)
     post_issue_profit = total_selling - total_issue_net
     media_upload_links = ClientMediaUploadLink.objects.filter(leadtask=instance)
+    from accounting_bridge.services.invoices import leadtask_accounting_sync_context
+    accounting_ctx = leadtask_accounting_sync_context(instance)
     return render(request, 'edit_leadtask.html', {
         'form': form,
         'leadid': pk,
@@ -489,7 +492,41 @@ def edit_lead_task(request, pk):
         'post_issue_profit': post_issue_profit,
         'media_upload_links': media_upload_links,
         'supplier_form': SupplierForm(),
+        **accounting_ctx,
     })
+
+
+@login_required(login_url="/login/")
+@require_POST
+def sync_leadtask_accounting(request, pk):
+    from accounting_bridge.permissions import user_is_accountant
+    from accounting_bridge.services.invoices import force_sync_crm_leadtask_to_accounting
+
+    if not user_is_accountant(request.user):
+        messages.error(request, 'Only main accountant users can sync invoices with accounting.')
+        return redirect('edit_lead_tasks', pk)
+
+    leadtask = get_object_or_404(LeadTask, pk=pk)
+    if not leadtask.service_set.exists():
+        messages.error(request, 'Add at least one service line before syncing with accounting.')
+        return redirect('edit_lead_tasks', pk)
+
+    try:
+        queue = force_sync_crm_leadtask_to_accounting(leadtask)
+    except Exception:
+        messages.error(request, 'Could not sync this invoice with accounting. Check server logs.')
+        return redirect('edit_lead_tasks', pk)
+
+    if not queue or not queue.sales_invoice_id:
+        messages.error(request, 'Accounting sync is disabled or this invoice could not be linked.')
+        return redirect('edit_lead_tasks', pk)
+
+    messages.success(
+        request,
+        f'Invoice synced with accounting ({queue.sales_invoice.invoice_no}). '
+        'Future edits to this CRM invoice will update the accounting copy.',
+    )
+    return redirect('edit_lead_tasks', pk)
 
 
 @login_required
