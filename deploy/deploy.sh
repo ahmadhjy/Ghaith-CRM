@@ -142,7 +142,7 @@ if [[ "$SKIP_BACKUP" -eq 0 ]]; then
     fi
 
     MEDIA_PATH="${MEDIA_DIR:-${PROJECT_DIR}/media}"
-    if [[ "${BACKUP_MEDIA:-yes}" == "yes" && -d "$MEDIA_PATH" ]]; then
+    if [[ "${BACKUP_MEDIA:-no}" == "yes" && -d "$MEDIA_PATH" ]]; then
         MEDIA_SIZE="$(du -sh "$MEDIA_PATH" 2>/dev/null | cut -f1 || echo '?')"
         log "Backing up media (${MEDIA_SIZE}) — can take several minutes, please wait..."
         backup_file "$MEDIA_PATH" "$BACKUP_DIR"
