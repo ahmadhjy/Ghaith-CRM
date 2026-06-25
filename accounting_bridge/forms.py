@@ -3,7 +3,8 @@ from decimal import Decimal
 from django import forms
 
 from accounting_bridge.models import PartyOpeningBalance
-from accounts_core.models import Client, Supplier
+from accounts_core.client_querysets import clients_for_select
+from accounts_core.models import Supplier
 
 
 class OpeningBalanceForm(forms.ModelForm):
@@ -19,7 +20,13 @@ class OpeningBalanceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['client'].queryset = Client.objects.order_by('name_en')
+        extra_pk = self.instance.client_id if self.instance.pk else None
+        if self.is_bound:
+            raw = self.data.get(self.add_prefix('client'))
+            if raw:
+                extra_pk = raw
+        self.fields['client'].queryset = clients_for_select(extra_pk=extra_pk)
+        self.fields['client'].widget.attrs.setdefault('class', 'client-select-search')
         self.fields['supplier'].queryset = Supplier.objects.order_by('name')
         self.fields['client'].required = False
         self.fields['supplier'].required = False

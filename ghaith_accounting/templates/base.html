@@ -35,8 +35,58 @@
 {% if not is_pdf %}
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
+window.CLIENT_SEARCH_URL = "{% url 'accounts_core:client_search' %}";
+
+window.initClientSearchSelect = function(el) {
+    if (!el || typeof Choices === "undefined") return null;
+    if (el._choicesInstance) window.destroySearchableSelect(el);
+    var initialChoices = Array.from(el.options).filter(function(o) { return o.value; }).map(function(o) {
+        return { value: o.value, label: o.textContent.replace(/\s+/g, " ").trim(), selected: o.selected };
+    });
+    var searchUrl = el.dataset.clientSearchUrl || window.CLIENT_SEARCH_URL || "/accounting/clients/search/";
+    var instance = new Choices(el, {
+        searchEnabled: true,
+        searchChoices: false,
+        shouldSort: false,
+        itemSelectText: "",
+        searchPlaceholderValue: "Type name or code to search all clients…",
+        allowHTML: false,
+    });
+    var searchTimer;
+    el.addEventListener("search", function(event) {
+        var q = (event.detail.value || "").trim();
+        clearTimeout(searchTimer);
+        if (q.length < 2) {
+            instance.clearChoices();
+            instance.setChoices(initialChoices, "value", "label", true);
+            return;
+        }
+        searchTimer = setTimeout(function() {
+            fetch(searchUrl + "?q=" + encodeURIComponent(q), { headers: { Accept: "application/json" } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var current = instance.getValue(true);
+                    var choices = (data.results || []).map(function(r) {
+                        return { value: r.id, label: r.label, selected: String(r.id) === String(current) };
+                    });
+                    if (!choices.length) {
+                        choices = [{ value: "", label: "No clients found", disabled: true }];
+                    }
+                    instance.clearChoices();
+                    instance.setChoices(choices, "value", "label", true);
+                });
+        }, 250);
+    });
+    el._choicesInstance = instance;
+    el.dataset.choicesInitialized = "1";
+    return instance;
+};
+
 window.initSearchableSelect = function(el) {
     if (!el || typeof Choices === "undefined") return null;
+    if (el.classList && el.classList.contains("client-select-search")) {
+        return window.initClientSearchSelect(el);
+    }
     if (el.name && el.name.endsWith("-DELETE")) return null;
     if (el.closest && el.closest(".hub-hero__filters")) return null;
     if (el.classList.contains("hub-preset-select")) return null;

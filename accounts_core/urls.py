@@ -9,6 +9,7 @@ urlpatterns = [
     path("", login_required(views.dashboard), name="dashboard"),
     path("login/", views.AppLoginView.as_view(), name="login"),
     path("clients/", views.clients_list, name="clients_list"),
+    path("clients/search/", views.client_search, name="client_search"),
     path("clients/new/", views.client_create, name="client_create"),
     path("clients/<uuid:client_id>/edit/", views.client_edit, name="client_edit"),
     path("clients/quick-create/", views.client_quick_create, name="client_quick_create"),

@@ -8,10 +8,13 @@
     {% include "partials/export_buttons.html" %}
 </p>
 <form method="get" class="panel filter-bar">
-    <label>Search <input name="q" value="{{ request.GET.q }}" placeholder="Name, code, email"></label>
+    <label>Search <input name="q" value="{{ request.GET.q }}" placeholder="Name, code, email — searches all clients"></label>
     <button class="btn" type="submit">Filter</button>
     <a class="btn btn-clear hub-btn-clear" href="{% url 'accounts_core:clients_list' %}"><i class="fa-solid fa-filter-circle-xmark"></i> Clear filters</a>
 </form>
+{% if show_inactive_hint %}
+<p class="muted">Showing clients with invoices, opening balances, or payments. Use <strong>Search</strong> to find any client from CRM history.</p>
+{% endif %}
 <table>
     <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Date of birth</th><th>Phone</th><th>Outstanding A/R</th><th></th></tr></thead>
     <tbody>

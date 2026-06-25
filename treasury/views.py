@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 
+from accounts_core.client_querysets import clients_for_select
 from accounts_core.list_utils import parse_post_date
 from accounts_core.models import Client, Supplier
 from accounts_core.export_names import export_filename
@@ -203,7 +204,9 @@ def payment_create(request):
             "default_receipt_no": _next_temp_receipt_no(),
             "default_payment_date": _default_payment_date().isoformat(),
             "accounts": MoneyAccount.objects.filter(is_active=True).order_by("name"),
-            "clients": Client.objects.order_by("name_en"),
+            "clients": clients_for_select(
+                extra_pk=payment.client_id if payment else None
+            ),
             "suppliers": Supplier.objects.order_by("name"),
         },
     )
@@ -292,7 +295,9 @@ def payment_edit(request, payment_id):
             "payment": payment,
             "default_receipt_no": payment.receipt_no,
             "accounts": MoneyAccount.objects.filter(is_active=True).order_by("name"),
-            "clients": Client.objects.order_by("name_en"),
+            "clients": clients_for_select(
+                extra_pk=payment.client_id if payment else None
+            ),
             "suppliers": Supplier.objects.order_by("name"),
         },
     )

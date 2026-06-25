@@ -7,6 +7,7 @@ from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 
+from accounts_core.client_querysets import clients_for_select
 from accounts_core.models import Currency, Employee
 from catalog.models import Destination
 from sales.models import SalesInvoice, SalesInvoiceLine
@@ -100,6 +101,13 @@ class SalesInvoiceForm(forms.ModelForm):
         )
         self.fields["client"].required = False
         self.fields["sales_employee"].required = False
+        extra_client = _bound_pk(self, "client") or getattr(self.instance, "client_id", None)
+        if self.is_bound:
+            raw = self.data.get(self.add_prefix("client"))
+            if raw:
+                extra_client = raw
+        self.fields["client"].queryset = clients_for_select(extra_pk=extra_client)
+        self.fields["client"].widget.attrs.setdefault("class", "client-select-search")
         if not self.is_bound:
             if not self.initial.get("issue_date") and not getattr(self.instance, "issue_date", None):
                 self.initial["issue_date"] = timezone.localdate()

@@ -6,7 +6,12 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
-from accounts_core.employee_forms import EmployeeForm
+from accounts_core.client_querysets import (
+    client_choice_label,
+    clients_for_select,
+    clients_with_accounting_activity,
+    search_clients,
+)
 from accounts_core.forms import ClientForm, SupplierForm
 from accounts_core.list_utils import client_list_filters, supplier_list_filters
 from accounts_core.models import BookingFile, Client, Employee, Supplier
@@ -69,9 +74,35 @@ def dashboard(request):
 
 @login_required
 def clients_list(request):
-    qs = Client.objects.order_by("name_en")
-    clients = client_list_filters(qs, request)[:500]
-    return render_or_pdf(request, "accounts_core/clients_list.html", {"clients": clients}, export_filename("Clients"))
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = Client.objects.order_by("name_en")
+        clients = client_list_filters(qs, request)[:500]
+        show_inactive_hint = False
+    else:
+        clients = clients_with_accounting_activity().order_by("name_en")[:500]
+        show_inactive_hint = True
+    return render_or_pdf(
+        request,
+        "accounts_core/clients_list.html",
+        {"clients": clients, "show_inactive_hint": show_inactive_hint},
+        export_filename("Clients"),
+    )
+
+
+@login_required
+def client_search(request):
+    """JSON search for client dropdowns — searches all clients, not only active."""
+    q = (request.GET.get("q") or "").strip()
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 100)
+    except (TypeError, ValueError):
+        limit = 50
+    results = [
+        {"id": str(c.id), "label": client_choice_label(c)}
+        for c in search_clients(q, limit=limit)
+    ]
+    return JsonResponse({"results": results})
 
 
 @login_required
