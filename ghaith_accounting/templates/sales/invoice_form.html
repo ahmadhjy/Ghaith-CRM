@@ -13,9 +13,51 @@
   .acc-invoice-form .destination-pick:hover { background: #f0f5fb; }
   .acc-invoice-form .quick-inline-btn { margin-left: 0; font-size: 0.9em; vertical-align: middle; }
   .acc-invoice-form .supplier-wrap { display: flex; align-items: center; gap: 6px; }
-  .acc-invoice-form .acc-line-meta { display: none !important; }
-  .acc-invoice-form .line-data-json { display: none; }
-  .acc-invoice-form .acc-line-meta .dynamic-fields { display: none !important; }
+.acc-invoice-form .invoice-line--editing {
+  background: #f0f7ff;
+}
+
+.acc-invoice-form .acc-line-edit-row[hidden] {
+  display: none !important;
+}
+
+.acc-invoice-form .acc-line-edit-row--open {
+  display: table-row;
+}
+
+.acc-invoice-form .acc-line-edit-cell {
+  padding: 0 !important;
+  border-top: none;
+  background: #f8fafc;
+}
+
+.acc-invoice-form .acc-line-edit-panel {
+  margin: 0 8px 12px;
+  padding: 14px 16px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.acc-invoice-form .acc-line-edit-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.acc-invoice-form .acc-line-hidden-fields {
+  display: none !important;
+}
+
+.acc-invoice-form .btn-inline-done {
+  font-size: .85rem;
+  padding: 6px 12px;
+}
   .acc-invoice-form .inv-services-panel { margin-top: 20px; }
   .acc-invoice-form .issue-price-field { width: 100%; border: 1.5px solid var(--inv-border); border-radius: 8px; padding: 7px 10px; font-size: .82rem; }
   .acc-invoice-form .delete-line { display: none; }
@@ -162,14 +204,21 @@
             <td class="svc-view-toggle">{{ line_form.send_to_client }}</td>
             <td class="svc-view-toggle">{{ line_form.crm_issued }}</td>
             <td class="service-actions">
-                <button type="button" class="btn-edit-service btn-edit-line" title="Edit service"><i class="fas fa-pen"></i> Edit</button>
+                <button type="button" class="btn-edit-service btn-edit-line" title="Edit service"><i class="fas fa-pen"></i> <span class="btn-edit-line-label">Edit</span></button>
                 {% if line_form.DELETE %}
                 <button type="button" class="line-remove-btn" title="Remove line" data-delete-for="{{ line_form.DELETE.id_for_label }}">×</button>
                 <span class="delete-line" style="display:none">{{ line_form.DELETE }}</span>
                 {% endif %}
             </td>
-            <td class="acc-line-meta">
-                <div class="acc-line-editables">
+        </tr>
+        <tr class="acc-line-edit-row" data-form-index="{{ forloop.counter0 }}" hidden>
+            <td colspan="11" class="acc-line-edit-cell">
+                <div class="acc-line-edit-panel">
+                    <div class="acc-line-edit-panel__head">
+                        <strong>Edit service line</strong>
+                        <button type="button" class="btn btn--secondary btn-inline-done" title="Done editing"><i class="fas fa-check"></i> Done</button>
+                    </div>
+                    <div class="acc-line-editables">
                     <div class="acc-edit-field acc-edit-field--full">
                         <label>Service</label>
                         {{ line_form.service_type }}
@@ -204,18 +253,21 @@
                         {{ line_form.service_date }}
                     </div>
                     <div class="acc-edit-field acc-edit-field--full dynamic-fields" data-dynamic-for="{{ forloop.counter0 }}"></div>
+                    </div>
+                    <div class="acc-line-hidden-fields">
+                        {{ line_form.id }}
+                        {{ line_form.qty }}
+                        {{ line_form.line_discount }}
+                        {{ line_form.line_data }}
+                        {{ line_form.line_employee }}
+                        <span class="destination-wrap">
+                            <input type="text" class="destination-search" placeholder="Search…" autocomplete="off">
+                            <button type="button" class="btn-add-destination quick-inline-btn btn-add-destination">+</button>
+                            <div class="destination-results"></div>
+                            {{ line_form.destination }}
+                        </span>
+                    </div>
                 </div>
-                {{ line_form.id }}
-                {{ line_form.qty }}
-                {{ line_form.line_discount }}
-                {{ line_form.line_data }}
-                {{ line_form.line_employee }}
-                <span class="destination-wrap">
-                    <input type="text" class="destination-search" placeholder="Search…" autocomplete="off">
-                    <button type="button" class="btn-add-destination quick-inline-btn btn-add-destination">+</button>
-                    <div class="destination-results"></div>
-                    {{ line_form.destination }}
-                </span>
             </td>
         </tr>
         {% for field in line_form %}
@@ -275,18 +327,6 @@
   <span class="svc-cell-popover__text"></span>
 </div>
 
-<div id="acc-line-edit-modal" class="service-edit-modal" aria-hidden="true" style="display:none">
-  <div class="service-edit-modal__overlay" id="acc-line-edit-overlay"></div>
-  <div class="service-edit-modal__box acc-line-edit-modal__box">
-    <h3 class="service-edit-modal__title"><i class="fas fa-pen"></i> Edit service line</h3>
-    <div id="acc-line-edit-modal-body" class="acc-line-edit-modal__body"></div>
-    <div class="service-edit-modal__actions">
-      <button type="button" class="btn btn--primary" id="acc-line-edit-done"><i class="fas fa-check"></i> Done</button>
-      <button type="button" class="btn btn--secondary" id="acc-line-edit-cancel">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <script>
 (function() {
   const formEl = document.getElementById('invoice-form');
@@ -309,8 +349,29 @@
   var svcCellPopover = document.getElementById('svc-cell-popover');
   var svcCellPopoverLabel = svcCellPopover && svcCellPopover.querySelector('.svc-cell-popover__label');
   var svcCellPopoverText = svcCellPopover && svcCellPopover.querySelector('.svc-cell-popover__text');
-  var accLineEditModal = document.getElementById('acc-line-edit-modal');
-  var accLineEditBody = document.getElementById('acc-line-edit-modal-body');
+
+  function lineEditRow(viewRow) {
+    if (!viewRow) return null;
+    var next = viewRow.nextElementSibling;
+    return next && next.classList.contains('acc-line-edit-row') ? next : null;
+  }
+
+  function lineFieldRoot(viewRow) {
+    var edit = lineEditRow(viewRow);
+    return edit || viewRow;
+  }
+
+  function lineQuery(viewRow, sel) {
+    var root = lineFieldRoot(viewRow);
+    return root.querySelector(sel) || viewRow.querySelector(sel);
+  }
+
+  function lineQueryAll(viewRow, sel) {
+    var nodes = Array.from(viewRow.querySelectorAll(sel));
+    var edit = lineEditRow(viewRow);
+    if (edit) nodes = nodes.concat(Array.from(edit.querySelectorAll(sel)));
+    return nodes;
+  }
 
   var SVC_CHAR_LIMITS = {
     service: 14,
@@ -383,19 +444,19 @@
   }
 
   function lineRowIsEmpty(box) {
-    var st = box.querySelector('select[name$="service_type"]');
+    var st = lineQuery(box, 'select[name$="service_type"]');
     return !st || !st.value;
   }
 
   function syncRowDisplay(box) {
     if (!box) return;
-    var st = box.querySelector('select[name$="service_type"]');
-    var sup = box.querySelector('select[name$="-supplier"]');
-    var notes = box.querySelector('[name$="-notes"]');
-    var net = box.querySelector('input[name$="-cost_price"]');
-    var sell = box.querySelector('input[name$="-sell_price"]');
-    var due = box.querySelector('input[name$="-service_date"]');
-    var issue = box.querySelector('.issue-price-field');
+    var st = lineQuery(box, 'select[name$="service_type"]');
+    var sup = lineQuery(box, 'select[name$="-supplier"]');
+    var notes = lineQuery(box, '[name$="-notes"]');
+    var net = lineQuery(box, 'input[name$="-cost_price"]');
+    var sell = lineQuery(box, 'input[name$="-sell_price"]');
+    var due = lineQuery(box, 'input[name$="-service_date"]');
+    var issue = lineQuery(box, '.issue-price-field');
     var parsed = parseNotesDisplay(notes && notes.value);
     var elService = box.querySelector('.svc-d-service');
     var elSup = box.querySelector('.svc-d-supplier');
@@ -424,52 +485,49 @@
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(syncRowDisplay);
   }
 
-  function openAccLineEditModal(row) {
-    if (!row || !accLineEditModal || !accLineEditBody) return;
-    var panel = row.querySelector('.acc-line-editables');
-    if (!panel) return;
+  function openInlineLineEdit(row) {
+    if (!row) return;
+    if (accLineEditingRow && accLineEditingRow !== row) closeInlineLineEdit(accLineEditingRow);
+    var edit = lineEditRow(row);
+    if (!edit) return;
+    edit.hidden = false;
+    edit.classList.add('acc-line-edit-row--open');
+    row.classList.add('invoice-line--editing');
     accLineEditingRow = row;
-    accLineEditBody.innerHTML = '';
-    accLineEditBody.appendChild(panel);
-    accLineEditModal.style.display = '';
-    accLineEditModal.classList.add('service-edit-modal--open');
-    accLineEditModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    var lbl = row.querySelector('.btn-edit-line-label');
+    if (lbl) lbl.textContent = 'Done';
     if (window.initSearchableSelect) {
-      accLineEditBody.querySelectorAll('select:not(.destination-select)').forEach(function(el) {
+      edit.querySelectorAll('select:not(.destination-select)').forEach(function(el) {
         if (!el.dataset.choicesInitialized) window.initSearchableSelect(el);
       });
     }
-    var first = accLineEditBody.querySelector('select, input, textarea');
+    var first = edit.querySelector('select, input, textarea');
     if (first) setTimeout(function() { first.focus(); }, 50);
   }
 
-  function closeAccLineEditModal() {
-    if (!accLineEditingRow) {
-      if (accLineEditModal) {
-        accLineEditModal.classList.remove('service-edit-modal--open');
-        accLineEditModal.style.display = 'none';
-        accLineEditModal.setAttribute('aria-hidden', 'true');
-      }
-      document.body.style.overflow = '';
-      return;
+  function closeInlineLineEdit(row) {
+    if (!row) return;
+    var edit = lineEditRow(row);
+    if (edit) {
+      edit.classList.remove('acc-line-edit-row--open');
+      edit.hidden = true;
     }
-    var meta = accLineEditingRow.querySelector('.acc-line-meta');
-    var panel = accLineEditBody && accLineEditBody.querySelector('.acc-line-editables');
-    if (meta && panel) meta.appendChild(panel);
-    collectLineData(accLineEditingRow);
-    syncRowDisplay(accLineEditingRow);
+    row.classList.remove('invoice-line--editing');
+    var lbl = row.querySelector('.btn-edit-line-label');
+    if (lbl) lbl.textContent = 'Edit';
+    collectLineData(row);
+    syncRowDisplay(row);
     updateTotalLineCost();
     updateSellingTotal();
     updateUsdHint();
-    accLineEditingRow.classList.remove('is-empty-line');
-    accLineEditingRow = null;
-    if (accLineEditModal) {
-      accLineEditModal.classList.remove('service-edit-modal--open');
-      accLineEditModal.style.display = 'none';
-      accLineEditModal.setAttribute('aria-hidden', 'true');
-    }
-    document.body.style.overflow = '';
+    row.classList.remove('is-empty-line');
+    if (accLineEditingRow === row) accLineEditingRow = null;
+  }
+
+  function toggleInlineLineEdit(row) {
+    if (!row) return;
+    if (accLineEditingRow === row) closeInlineLineEdit(row);
+    else openInlineLineEdit(row);
   }
 
   function positionCellPopover(anchor) {
@@ -505,18 +563,22 @@
     if (svcCellPopover) svcCellPopover.hidden = true;
   }
 
-  document.getElementById('acc-line-edit-done').addEventListener('click', function() {
-    closeAccLineEditModal();
-    markFormDirty();
-  });
-  document.getElementById('acc-line-edit-cancel').addEventListener('click', closeAccLineEditModal);
-  document.getElementById('acc-line-edit-overlay').addEventListener('click', closeAccLineEditModal);
-
   document.getElementById('invoice-lines').addEventListener('click', function(ev) {
+    var doneBtn = ev.target.closest('.btn-inline-done');
+    if (doneBtn) {
+      ev.preventDefault();
+      var editRow = doneBtn.closest('.acc-line-edit-row');
+      var viewRow = editRow && editRow.previousElementSibling;
+      if (viewRow && viewRow.classList.contains('invoice-line')) {
+        closeInlineLineEdit(viewRow);
+        markFormDirty();
+      }
+      return;
+    }
     var btn = ev.target.closest('.btn-edit-line');
     if (!btn) return;
     ev.preventDefault();
-    openAccLineEditModal(btn.closest('.invoice-line'));
+    toggleInlineLineEdit(btn.closest('.invoice-line'));
   });
 
   document.getElementById('invoice-lines').addEventListener('mouseover', function(ev) {
@@ -537,7 +599,12 @@
 
   (function captureInvoiceLineTemplate() {
     var first = document.querySelector('#invoice-lines .invoice-line');
-    if (first) invoiceLineTemplate = first.cloneNode(true);
+    if (!first) return;
+    var frag = document.createDocumentFragment();
+    frag.appendChild(first.cloneNode(true));
+    var edit = lineEditRow(first);
+    if (edit) frag.appendChild(edit.cloneNode(true));
+    invoiceLineTemplate = frag;
   })();
 
   function setLineEmployeeSelect(sel, empId) {
@@ -569,40 +636,39 @@
     if (!container || !totalInput) return;
     container.querySelectorAll('.invoice-line').forEach(function(box, newIndex) {
       var oldIndex = box.dataset.formIndex;
-      if (String(oldIndex) === String(newIndex)) {
-        box.dataset.formIndex = String(newIndex);
-        return;
-      }
-      box.querySelectorAll('[name],[id],[for]').forEach(function(el) {
-        replaceFormIndex(el, 'name', oldIndex, newIndex);
-        replaceFormIndex(el, 'id', oldIndex, newIndex);
-        if (el.tagName === 'LABEL' && el.htmlFor) replaceFormIndex(el, 'for', oldIndex, newIndex);
+      var edit = lineEditRow(box);
+      [box, edit].filter(Boolean).forEach(function(row) {
+        row.dataset.formIndex = String(newIndex);
+        row.querySelectorAll('[name],[id],[for]').forEach(function(el) {
+          replaceFormIndex(el, 'name', oldIndex, newIndex);
+          replaceFormIndex(el, 'id', oldIndex, newIndex);
+          if (el.tagName === 'LABEL' && el.htmlFor) replaceFormIndex(el, 'for', oldIndex, newIndex);
+        });
+        row.querySelectorAll('[id]').forEach(function(el) {
+          replaceFormIndex(el, 'id', oldIndex, newIndex);
+        });
+        var dyn = row.querySelector('.dynamic-fields');
+        if (dyn) dyn.setAttribute('data-dynamic-for', String(newIndex));
       });
-      box.querySelectorAll('[id]').forEach(function(el) {
-        replaceFormIndex(el, 'id', oldIndex, newIndex);
-      });
-      box.dataset.formIndex = String(newIndex);
-      var dyn = box.querySelector('.dynamic-fields');
-      if (dyn) dyn.setAttribute('data-dynamic-for', String(newIndex));
     });
     totalInput.value = String(container.querySelectorAll('.invoice-line').length);
     renumberLineTitles();
   }
 
   function invoiceLineHasContent(box) {
-    if (box.querySelector('input[name$="-DELETE"]') && box.querySelector('input[name$="-DELETE"]').checked) return true;
-    if (box.querySelector('input[name$="-id"]') && box.querySelector('input[name$="-id"]').value) return true;
-    if (box.querySelector('select[name$="service_type"]') && box.querySelector('select[name$="service_type"]').value) return true;
-    if (box.querySelector('select[name$="-supplier"]') && box.querySelector('select[name$="-supplier"]').value) return true;
-    if (box.querySelector('select[name$="line_employee"]') && box.querySelector('select[name$="line_employee"]').value) return true;
-    if (box.querySelector('select.destination-select[name$="-destination"]') && box.querySelector('select.destination-select[name$="-destination"]').value) return true;
-    var sell = box.querySelector('input[name$="-sell_price"]');
+    if (lineQuery(box, 'input[name$="-DELETE"]') && lineQuery(box, 'input[name$="-DELETE"]').checked) return true;
+    if (lineQuery(box, 'input[name$="-id"]') && lineQuery(box, 'input[name$="-id"]').value) return true;
+    if (lineQuery(box, 'select[name$="service_type"]') && lineQuery(box, 'select[name$="service_type"]').value) return true;
+    if (lineQuery(box, 'select[name$="-supplier"]') && lineQuery(box, 'select[name$="-supplier"]').value) return true;
+    if (lineQuery(box, 'select[name$="line_employee"]') && lineQuery(box, 'select[name$="line_employee"]').value) return true;
+    if (lineQuery(box, 'select.destination-select[name$="-destination"]') && lineQuery(box, 'select.destination-select[name$="-destination"]').value) return true;
+    var sell = lineQuery(box, 'input[name$="-sell_price"]');
     if (sell && sell.value.trim() && parseFloat(sell.value) !== 0) return true;
-    var cost = box.querySelector('input[name$="-cost_price"]');
+    var cost = lineQuery(box, 'input[name$="-cost_price"]');
     if (cost && cost.value.trim() && parseFloat(cost.value) !== 0) return true;
-    var notes = box.querySelector('[name$="-notes"]');
+    var notes = lineQuery(box, '[name$="-notes"]');
     if (notes && notes.value.trim()) return true;
-    var lineData = box.querySelector('.line-data-json');
+    var lineData = lineQuery(box, '.line-data-json');
     if (lineData && lineData.value && lineData.value !== '{}') return true;
     return false;
   }
@@ -621,7 +687,11 @@
     if (toRemove.length >= lines.length) {
       toRemove = toRemove.slice(0, toRemove.length - 1);
     }
-    toRemove.forEach(function(box) { box.remove(); });
+    toRemove.forEach(function(box) {
+      var edit = lineEditRow(box);
+      if (edit) edit.remove();
+      box.remove();
+    });
     reindexInvoiceLineForms();
   }
 
@@ -650,9 +720,8 @@
   });
   document.addEventListener('keydown', function(ev) {
     if (ev.key === 'Escape') {
-      if (accLineEditModal && accLineEditModal.classList.contains('service-edit-modal--open')) {
-        closeAccLineEditModal();
-      } else if (document.getElementById('leave-modal-backdrop').classList.contains('open')) {
+      if (accLineEditingRow) closeInlineLineEdit(accLineEditingRow);
+      else if (document.getElementById('leave-modal-backdrop').classList.contains('open')) {
         closeLeaveModal();
       } else if (document.getElementById('quick-modal-backdrop').classList.contains('open')) {
         closeQuickModal();
@@ -759,8 +828,8 @@
   function applyMainDestinationToLine(box) {
     var main = getMainDestination();
     if (!main) return;
-    var destSel = box.querySelector('select.destination-select[name$="-destination"]');
-    var search = box.querySelector('.destination-search');
+    var destSel = lineQuery(box, 'select.destination-select[name$="-destination"]');
+    var search = lineQuery(box, '.destination-search');
     if (!destSel || destSel.dataset.userOverridden === '1') return;
     appendDestinationOption(destSel, main.id, main.label);
     if (search) search.value = main.label;
@@ -829,6 +898,7 @@
   }
 
   function prepareFormForSave(compactEmpty) {
+    if (accLineEditingRow) closeInlineLineEdit(accLineEditingRow);
     syncFormSelectValues();
     document.querySelectorAll('.invoice-line').forEach(collectLineData);
     if (compactEmpty) compactInvoiceLineForms();
@@ -1045,14 +1115,14 @@
   }
 
   function collectLineData(box) {
-    const hidden = box.querySelector('.line-data-json');
+    const hidden = lineQuery(box, '.line-data-json');
     const data = {};
-    box.querySelectorAll('[data-line-key]').forEach(function(el) {
+    lineQueryAll(box, '[data-line-key]').forEach(function(el) {
       const k = el.dataset.lineKey;
       if (el.type === 'checkbox') data[k] = el.checked;
       else data[k] = el.value;
     });
-    const issueInput = box.querySelector('.issue-price-field');
+    const issueInput = lineQuery(box, '.issue-price-field');
     if (issueInput) {
       data.issue_price = issueInput.value || '';
     }
@@ -1060,7 +1130,7 @@
   }
 
   function wireDynamicFieldListeners(box) {
-    box.querySelectorAll('[data-line-key]').forEach(function(el) {
+    lineQueryAll(box, '[data-line-key]').forEach(function(el) {
       if (el.dataset.lineDataWired) return;
       el.dataset.lineDataWired = '1';
       el.addEventListener('input', function() { collectLineData(box); markFormDirty(); });
@@ -1080,9 +1150,9 @@
   function computeSellingTotal() {
     let total = 0;
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(function(box) {
-      const st = box.querySelector('select[name$="service_type"]');
+      const st = lineQuery(box, 'select[name$="service_type"]');
       if (!st || !st.value) return;
-      const sellIn = box.querySelector('input[name$="-sell_price"]');
+      const sellIn = lineQuery(box, 'input[name$="-sell_price"]');
       const s = parseFloat(sellIn && sellIn.value !== '' ? sellIn.value : '0') || 0;
       total += s;
     });
@@ -1143,10 +1213,10 @@
     if (!el) return;
     let sum = 0;
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(function(box) {
-      const st = box.querySelector('select[name$="service_type"]');
+      const st = lineQuery(box, 'select[name$="service_type"]');
       if (!st || !st.value) return;
-      const qtyIn = box.querySelector('input[name$="-qty"]');
-      const costIn = box.querySelector('input[name$="-cost_price"]');
+      const qtyIn = lineQuery(box, 'input[name$="-qty"]');
+      const costIn = lineQuery(box, 'input[name$="-cost_price"]');
       const q = parseFloat(qtyIn && qtyIn.value !== '' ? qtyIn.value : '0') || 0;
       const c = parseFloat(costIn && costIn.value !== '' ? costIn.value : '0') || 0;
       sum += q * c;
@@ -1164,20 +1234,20 @@
   }
 
   function getLineDataInitial(box) {
-    const hidden = box.querySelector('.line-data-json');
+    const hidden = lineQuery(box, '.line-data-json');
     if (!hidden || !hidden.value) return {};
     try { return JSON.parse(hidden.value); } catch (e) { return {}; }
   }
 
   function wireLine(box) {
-    const notesField = box.querySelector('textarea[name$="-notes"], input[name$="-notes"]');
+    const notesField = lineQuery(box, 'textarea[name$="-notes"], input[name$="-notes"]');
     if (notesField && !notesField.dataset.displayWired) {
       notesField.dataset.displayWired = '1';
       notesField.addEventListener('input', function() { syncRowDisplay(box); markFormDirty(); });
       notesField.addEventListener('change', function() { syncRowDisplay(box); markFormDirty(); });
     }
-    const netInput = box.querySelector('input[name$="-cost_price"]');
-    const issueInput = box.querySelector('.issue-price-field');
+    const netInput = lineQuery(box, 'input[name$="-cost_price"]');
+    const issueInput = lineQuery(box, '.issue-price-field');
     if (issueInput && netInput && !issueInput.dataset.issueWired) {
       issueInput.dataset.issueWired = '1';
       const lineData = getLineDataInitial(box);
@@ -1214,16 +1284,16 @@
     wireSupplierQuickCreate(box);
     wireDestinationQuickCreate(box);
     const idx = box.dataset.formIndex;
-    const dyn = box.querySelector('[data-dynamic-for="' + idx + '"]');
-    const typeSelect = box.querySelector('select[name$="service_type"]');
-    const empSel = box.querySelector('select[name$="line_employee"]');
+    const dyn = lineQuery(box, '[data-dynamic-for="' + idx + '"]');
+    const typeSelect = lineQuery(box, 'select[name$="service_type"]');
+    const empSel = lineQuery(box, 'select[name$="line_employee"]');
     if (empSel && empSel.value) {
       const headerEmp = document.getElementById('id_sales_employee');
       if (!headerEmp || !headerEmp.value || empSel.value !== headerEmp.value) {
         empSel.dataset.userOverridden = '1';
       }
     }
-    const destSel = box.querySelector('select.destination-select[name$="-destination"]');
+    const destSel = lineQuery(box, 'select.destination-select[name$="-destination"]');
     if (destSel && destSel.value) {
       var main = getMainDestination();
       if (!main || destSel.value !== main.id) {
@@ -1243,13 +1313,13 @@
       typeSelect.addEventListener('change', function() { refresh(); markFormDirty(); });
       refresh();
     }
-    var supSel = box.querySelector('select[name$="-supplier"]');
+    var supSel = lineQuery(box, 'select[name$="-supplier"]');
     if (supSel && !supSel.dataset.displayWired) {
       supSel.dataset.displayWired = '1';
       supSel.addEventListener('change', function() { syncRowDisplay(box); markFormDirty(); });
     }
     ['input', 'change'].forEach(function(ev) {
-      box.querySelectorAll('input[name$="-qty"], input[name$="-cost_price"], input[name$="-sell_price"], input[name$="-line_discount"], input[name$="-service_date"]').forEach(function(inp) {
+      lineQueryAll(box, 'input[name$="-qty"], input[name$="-cost_price"], input[name$="-sell_price"], input[name$="-line_discount"], input[name$="-service_date"]').forEach(function(inp) {
         if (inp.dataset.displayWired) return;
         inp.dataset.displayWired = '1';
         inp.addEventListener(ev, function() {
@@ -1286,8 +1356,8 @@
     var main = getMainDestination();
     if (!main) return;
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(function(box) {
-      var destSel = box.querySelector('select.destination-select[name$="-destination"]');
-      var search = box.querySelector('.destination-search');
+      var destSel = lineQuery(box, 'select.destination-select[name$="-destination"]');
+      var search = lineQuery(box, '.destination-search');
       if (!destSel) return;
       if (onlyEmpty && (destSel.dataset.userOverridden || destSel.value)) return;
       if (!onlyEmpty && destSel.dataset.userOverridden) return;
@@ -1396,9 +1466,9 @@
   }
 
   function wireDestinationSearch(box) {
-    const search = box.querySelector('.destination-search');
-    const select = box.querySelector('select.destination-select[name$="-destination"]');
-    const results = box.querySelector('.destination-results');
+    const search = lineQuery(box, '.destination-search');
+    const select = lineQuery(box, 'select.destination-select[name$="-destination"]');
+    const results = lineQuery(box, '.destination-results');
     if (!search || !select || !results) return;
     let timer;
 
@@ -1489,26 +1559,34 @@
     wireLine(box);
   });
 
-  function resetClonedLineBox(box, index) {
-    clearQuickCreateWiring(box);
-    box.dataset.formIndex = String(index);
-    var dyn = box.querySelector('.dynamic-fields');
-    if (dyn) dyn.setAttribute('data-dynamic-for', String(index));
-    box.querySelectorAll('.errorlist').forEach(function(el) { el.remove(); });
-    box.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+  function resetClonedLineBox(viewRow, index) {
+    clearQuickCreateWiring(viewRow);
+    var edit = lineEditRow(viewRow);
+    if (edit) clearQuickCreateWiring(edit);
+    viewRow.dataset.formIndex = String(index);
+    if (edit) {
+      edit.dataset.formIndex = String(index);
+      edit.hidden = true;
+      edit.classList.remove('acc-line-edit-row--open');
+    }
+    viewRow.classList.remove('invoice-line--editing');
+    var lbl = viewRow.querySelector('.btn-edit-line-label');
+    if (lbl) lbl.textContent = 'Edit';
+    lineQueryAll(viewRow, '.errorlist').forEach(function(el) { el.remove(); });
+    lineQueryAll(viewRow, 'input:not([type="hidden"]), textarea').forEach(function(el) {
       if (el.type === 'checkbox') el.checked = false;
       else el.value = '';
     });
-    box.querySelectorAll('input[type="hidden"][name$="-id"]').forEach(function(el) { el.value = ''; });
-    box.querySelectorAll('.line-service-date').forEach(function(inp) { inp.value = todayIso(); });
-    box.querySelectorAll('.choices').forEach(function(wrap) {
+    lineQueryAll(viewRow, 'input[type="hidden"][name$="-id"]').forEach(function(el) { el.value = ''; });
+    lineQueryAll(viewRow, '.line-service-date').forEach(function(inp) { inp.value = todayIso(); });
+    lineQueryAll(viewRow, '.choices').forEach(function(wrap) {
       var sel = wrap.querySelector('select');
       if (sel && wrap.parentNode) {
         wrap.parentNode.insertBefore(sel, wrap);
         wrap.remove();
       }
     });
-    box.querySelectorAll('select').forEach(function(el) {
+    lineQueryAll(viewRow, 'select').forEach(function(el) {
       if (el.name && el.name.endsWith('-DELETE')) el.checked = false;
       else el.selectedIndex = 0;
       delete el.dataset.choicesInitialized;
@@ -1519,14 +1597,39 @@
       }
       if (el.classList.contains('destination-select')) {
         delete el.dataset.userOverridden;
+        el.value = '';
       }
     });
-    var hid = box.querySelector('.line-data-json');
+    var hid = lineQuery(viewRow, '.line-data-json');
     if (hid) hid.value = '{}';
-    box.querySelectorAll('.dynamic-fields').forEach(function(d) { d.innerHTML = ''; });
-    box.querySelectorAll('[data-line-key]').forEach(function(el) { delete el.dataset.lineDataWired; });
-    var destSearch = box.querySelector('.destination-search');
+    lineQueryAll(viewRow, '.dynamic-fields').forEach(function(d) { d.innerHTML = ''; });
+    lineQueryAll(viewRow, '[data-line-key]').forEach(function(el) { delete el.dataset.lineDataWired; });
+    var destSearch = lineQuery(viewRow, '.destination-search');
     if (destSearch) destSearch.value = '';
+    viewRow.querySelectorAll('[data-display-wired], [data-issue-wired], [data-issued-wired]').forEach(function(el) {
+      delete el.dataset.displayWired;
+      delete el.dataset.issueWired;
+      delete el.dataset.issuedWired;
+    });
+  }
+
+  function reindexClonedLineFields(root, oldIndex, newIndex) {
+    function replaceIdx(attr, el) {
+      var v = el.getAttribute(attr);
+      if (!v) return;
+      var re = new RegExp(prefix + '-' + oldIndex + '-', 'g');
+      el.setAttribute(attr, v.replace(re, prefix + '-' + newIndex + '-'));
+    }
+    root.querySelectorAll('[name],[id],[for]').forEach(function(el) {
+      replaceIdx('name', el);
+      replaceIdx('id', el);
+      if (el.tagName === 'LABEL' && el.htmlFor) replaceIdx('for', el);
+    });
+    root.querySelectorAll('[id]').forEach(function(el) {
+      replaceIdx('id', el);
+    });
+    var dyn = root.querySelector('.dynamic-fields');
+    if (dyn) dyn.setAttribute('data-dynamic-for', String(newIndex));
   }
 
   document.getElementById('add-invoice-line').addEventListener('click', function() {
@@ -1541,122 +1644,53 @@
     }
     const container = document.getElementById('invoice-lines');
     let lastBox = container.querySelector('.invoice-line:last-of-type');
+    const newIndex = total;
+    let viewRow;
+
     if (!lastBox) {
       if (!invoiceLineTemplate) {
         alert('Cannot add a service line — refresh the page and try again.');
         return;
       }
-      const fresh = invoiceLineTemplate.cloneNode(true);
-      container.appendChild(fresh);
+      container.appendChild(invoiceLineTemplate.cloneNode(true));
+      viewRow = container.querySelector('.invoice-line:last-of-type');
       totalInput.value = '1';
       reindexInvoiceLineForms();
-      resetClonedLineBox(fresh, 0);
-      wireLine(fresh);
-      wireDestinationSearch(fresh);
-      initInvoiceSelects(fresh);
-      defaultEmptyLineServiceDates();
-      syncLineEmployeesFromHeader(true);
-      applyMainDestinationToLine(fresh);
-      renumberLineTitles();
-      updateTotalLineCost();
-      updateSellingTotal();
-      fresh.classList.add('is-empty-line');
-      syncRowDisplay(fresh);
-      openAccLineEditModal(fresh);
-      return;
-    }
-    const oldIndex = total - 1;
-    const newIndex = total;
-    const clone = lastBox.cloneNode(true);
-    clearQuickCreateWiring(clone);
-    clone.querySelectorAll('.errorlist').forEach(function(el) { el.remove(); });
-    (function ensureEditablesInMeta(box) {
-      var meta = box.querySelector('.acc-line-meta');
-      var panel = box.querySelector('.acc-line-editables');
-      if (meta && panel && !meta.contains(panel)) meta.appendChild(panel);
-    })(clone);
-    clone.querySelectorAll('[data-display-wired], [data-issue-wired], [data-issued-wired]').forEach(function(el) {
-      delete el.dataset.displayWired;
-      delete el.dataset.issueWired;
-      delete el.dataset.issuedWired;
-    });
-
-    function replaceIdx(attr, el) {
-      let v = el.getAttribute(attr);
-      if (!v) return;
-      const re = new RegExp(prefix + '-' + oldIndex + '-', 'g');
-      el.setAttribute(attr, v.replace(re, prefix + '-' + newIndex + '-'));
+      resetClonedLineBox(viewRow, 0);
+    } else {
+      const oldIndex = total - 1;
+      const lastEdit = lineEditRow(lastBox);
+      viewRow = lastBox.cloneNode(true);
+      container.appendChild(viewRow);
+      if (lastEdit) {
+        var editClone = lastEdit.cloneNode(true);
+        editClone.hidden = true;
+        editClone.classList.remove('acc-line-edit-row--open');
+        container.appendChild(editClone);
+        reindexClonedLineFields(editClone, oldIndex, newIndex);
+      }
+      reindexClonedLineFields(viewRow, oldIndex, newIndex);
+      viewRow.dataset.formIndex = String(newIndex);
+      var pairedEdit = lineEditRow(viewRow);
+      if (pairedEdit) pairedEdit.dataset.formIndex = String(newIndex);
+      resetClonedLineBox(viewRow, newIndex);
+      totalInput.value = String(total + 1);
     }
 
-    clone.querySelectorAll('[name],[id],[for]').forEach(function(el) {
-      replaceIdx('name', el);
-      replaceIdx('id', el);
-      if (el.tagName === 'LABEL' && el.htmlFor) replaceIdx('for', el);
-    });
-    clone.querySelectorAll('[id]').forEach(function(el) {
-      replaceIdx('id', el);
-    });
-
-    clone.dataset.formIndex = String(newIndex);
-    const dyn = clone.querySelector('.dynamic-fields');
-    if (dyn) dyn.setAttribute('data-dynamic-for', String(newIndex));
-
-    clone.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
-      if (el.type === 'checkbox') el.checked = false;
-      else el.value = '';
-    });
-    clone.querySelectorAll('input[type="hidden"][name$="-id"]').forEach(function(el) {
-      el.value = '';
-    });
-    clone.querySelectorAll('.line-service-date').forEach(function(inp) {
-      inp.value = todayIso();
-    });
-    clone.querySelectorAll('.choices').forEach(function(wrap) {
-      var sel = wrap.querySelector('select');
-      if (sel && wrap.parentNode) {
-        wrap.parentNode.insertBefore(sel, wrap);
-        wrap.remove();
-      }
-    });
-    clone.querySelectorAll('select').forEach(function(el) {
-      if (el.name && el.name.endsWith('-DELETE')) {
-        el.checked = false;
-      } else if (el.classList.contains('destination-select')) {
-        el.selectedIndex = 0;
-        el.value = '';
-        delete el.dataset.userOverridden;
-      } else {
-        el.selectedIndex = 0;
-      }
-      delete el.dataset.choicesInitialized;
-      el._choicesInstance = null;
-      if (el.name && el.name.endsWith('line_employee')) {
-        delete el.dataset.userOverridden;
-        delete el.dataset.syncedFromHeader;
-      }
-    });
-    var cloneDestSearch = clone.querySelector('.destination-search');
-    if (cloneDestSearch) cloneDestSearch.value = '';
-    const hid = clone.querySelector('.line-data-json');
-    if (hid) hid.value = '{}';
-    clone.querySelectorAll('.dynamic-fields').forEach(function(d) { d.innerHTML = ''; });
-
-    container.appendChild(clone);
-    totalInput.value = String(total + 1);
-    wireLine(clone);
-    wireIssuedRowHighlight(clone);
-    wireDestinationSearch(clone);
-    initInvoiceSelects(clone);
+    wireLine(viewRow);
+    wireIssuedRowHighlight(viewRow);
+    wireDestinationSearch(viewRow);
+    initInvoiceSelects(lineEditRow(viewRow) || viewRow);
     defaultEmptyLineServiceDates();
     syncLineEmployeesFromHeader(true);
-    applyMainDestinationToLine(clone);
+    applyMainDestinationToLine(viewRow);
     renumberLineTitles();
     updateTotalLineCost();
     updateSellingTotal();
+    viewRow.classList.add('is-empty-line');
+    syncRowDisplay(viewRow);
+    openInlineLineEdit(viewRow);
     markFormDirty();
-    clone.classList.add('is-empty-line');
-    syncRowDisplay(clone);
-    openAccLineEditModal(clone);
   });
   defaultEmptyLineServiceDates();
 
@@ -1692,7 +1726,11 @@
     var del = delId && document.getElementById(delId);
     if (del) {
       del.checked = true;
-      btn.closest('.invoice-line').style.display = 'none';
+      var viewRow = btn.closest('.invoice-line');
+      var editRow = lineEditRow(viewRow);
+      viewRow.style.display = 'none';
+      if (editRow) editRow.style.display = 'none';
+      if (accLineEditingRow === viewRow) accLineEditingRow = null;
       markFormDirty();
       updateTotalLineCost();
       updateSellingTotal();
