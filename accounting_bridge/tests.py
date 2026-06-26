@@ -176,3 +176,16 @@ class CrmInvoiceSyncTests(TestCase):
         sync_crm_leadtask_to_accounting(self.leadtask)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.grand_total, Decimal('410.00'))
+
+    def test_accounting_header_selling_pushes_to_crm_lead(self):
+        from accounting_bridge.crm_invoice_totals import apply_header_selling_from_post
+        from django.test import RequestFactory
+
+        self.lead.selling_price = '500'
+        self.lead.save()
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        request = RequestFactory().post('/', {'invoice_total_selling': '725'})
+        apply_header_selling_from_post(request, self.invoice)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.selling_price, '725')
+        self.assertEqual(self.invoice.grand_total, Decimal('725.00'))

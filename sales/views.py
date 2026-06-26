@@ -29,7 +29,12 @@ def _save_draft_invoice_with_recalc(form, formset, request=None):
     if inv.sales_employee_id:
         inv.lines.filter(line_employee__isnull=True).update(line_employee_id=inv.sales_employee_id)
     inv.refresh_from_db()
-    inv.recalc_usd_amounts()
+    preserve_header = False
+    if request:
+        from accounting_bridge.crm_invoice_totals import apply_header_selling_from_post
+
+        preserve_header = apply_header_selling_from_post(request, inv)
+    inv.recalc_usd_amounts(preserve_header=preserve_header)
     if request:
         _save_invoice_attachments(request, inv)
     user = request.user if request and request.user.is_authenticated else None

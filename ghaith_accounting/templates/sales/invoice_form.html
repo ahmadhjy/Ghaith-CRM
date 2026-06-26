@@ -133,10 +133,18 @@
             <span class="inv-finance-card__label">Total selling</span>
             <div class="inv-finance-card__input-wrap">
                 <span class="inv-finance-card__prefix" id="invoice-selling-currency-prefix">{{ invoice.currency|default:"USD" }}</span>
-                <strong class="inv-finance-card__amount" id="invoice-selling-total">{{ invoice.grand_total|default:"0.00" }}</strong>
+                <input type="text"
+                       name="invoice_total_selling"
+                       id="invoice-selling-total"
+                       class="inv-finance-card__input"
+                       value="{{ invoice.grand_total|default:'0.00' }}"
+                       placeholder="0"
+                       inputmode="decimal"
+                       form="invoice-form"
+                       {% if crm_invoice_linked %}data-crm-linked="1"{% endif %}>
             </div>
             {% if crm_invoice_linked %}
-            <span class="inv-finance-card__hint">From CRM order #{{ crm_order_id }}{% if crm_total_selling %} ({{ crm_total_selling }}){% endif %}</span>
+            <span class="inv-finance-card__hint">Synced with CRM order #{{ crm_order_id }} — edits sync both ways</span>
             {% endif %}
             <span id="invoice-selling-currency" style="display:none">{{ invoice.currency|default:"USD" }}</span>
         </div>
@@ -1152,9 +1160,16 @@
     return r > 0 ? r : 0;
   }
 
+  function readSellingTotalInput() {
+    const totalEl = document.getElementById('invoice-selling-total');
+    if (!totalEl) return 0;
+    const raw = totalEl.value !== undefined ? totalEl.value : (totalEl.textContent || '');
+    return Math.max(0, parseFloat(String(raw).replace(/,/g, '')) || 0);
+  }
+
   function computeSellingTotal() {
-    if (CRM_INVOICE_LINKED && CRM_TOTAL_SELLING !== null) {
-      return Math.max(0, parseFloat(CRM_TOTAL_SELLING) || 0);
+    if (CRM_INVOICE_LINKED) {
+      return readSellingTotalInput();
     }
     let total = 0;
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(function(box) {
@@ -1168,12 +1183,21 @@
   }
 
   function updateSellingTotal() {
-    const total = computeSellingTotal();
+    let total;
     const totalEl = document.getElementById('invoice-selling-total');
+    if (CRM_INVOICE_LINKED) {
+      total = readSellingTotalInput();
+    } else {
+      total = computeSellingTotal();
+      if (totalEl && totalEl.tagName === 'INPUT') {
+        totalEl.value = total.toFixed(2);
+      } else if (totalEl) {
+        totalEl.textContent = total.toFixed(2);
+      }
+    }
     const curEl = document.getElementById('id_currency');
     const curLab = document.getElementById('invoice-selling-currency');
     const code = curEl && curEl.value ? curEl.value : 'USD';
-    if (totalEl) totalEl.textContent = total.toFixed(2);
     if (curLab) curLab.textContent = code;
     return total;
   }
@@ -1409,6 +1433,17 @@
     if (curEl) curEl.addEventListener(ev, function() { updateUsdHint(); updateTotalLineCost(); updateSellingTotal(); });
     if (rateEl) rateEl.addEventListener(ev, function() { updateUsdHint(); updateTotalLineCost(); updateSellingTotal(); });
   });
+
+  const sellingTotalEl = document.getElementById('invoice-selling-total');
+  if (sellingTotalEl) {
+    ['change', 'input'].forEach(function(ev) {
+      sellingTotalEl.addEventListener(ev, function() {
+        updateUsdHint();
+        updateLineProfit();
+        markFormDirty();
+      });
+    });
+  }
 
   document.getElementById('invoice-form').addEventListener('submit', function() {
     prepareFormForSave(true);
@@ -1705,7 +1740,7 @@
   function updateLineProfit() {
     var profitEl = document.getElementById('invoice-line-profit');
     if (!profitEl || !CAN_VIEW_COST) return;
-    var sell = parseFloat(document.getElementById('invoice-selling-total') && document.getElementById('invoice-selling-total').textContent || '0') || 0;
+    var sell = readSellingTotalInput();
     var net = parseFloat(document.getElementById('invoice-total-line-cost') && document.getElementById('invoice-total-line-cost').textContent || '0') || 0;
     var profit = sell - net;
     profitEl.textContent = profit.toFixed(2);

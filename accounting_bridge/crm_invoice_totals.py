@@ -27,6 +27,49 @@ def crm_lead_selling_total(lead) -> Decimal | None:
     return total
 
 
+def format_lead_selling_price(total: Decimal) -> str:
+    q = total.quantize(Decimal("0.01"))
+    text = f"{q:.2f}"
+    if text.endswith(".00"):
+        return text[:-3]
+    if text.endswith("0"):
+        return text.rstrip("0").rstrip(".")
+    return text
+
+
+def apply_invoice_header_selling(invoice, total: Decimal) -> None:
+    discount = invoice.discount_total or Decimal("0.00")
+    invoice.subtotal = total + discount
+    invoice.grand_total = total
+
+
+def push_invoice_selling_to_crm(invoice, total: Decimal) -> bool:
+    """Accounting → CRM: update lead.selling_price on the linked order."""
+    lead = get_crm_lead_for_invoice(invoice)
+    if not lead:
+        return False
+    new_value = format_lead_selling_price(total) if total > 0 else ""
+    if (lead.selling_price or "").strip() != new_value:
+        lead.selling_price = new_value
+        lead.save(update_fields=["selling_price"])
+    return True
+
+
+def apply_header_selling_from_post(request, invoice) -> bool:
+    """
+    Read total selling from the accounting invoice form.
+
+    Returns True when the header total was applied (skip re-summing line selling).
+    """
+    if not request or "invoice_total_selling" not in request.POST:
+        return False
+    raw = (request.POST.get("invoice_total_selling") or "").strip()
+    total = parse_money(raw) if raw else Decimal("0.00")
+    apply_invoice_header_selling(invoice, total)
+    push_invoice_selling_to_crm(invoice, total)
+    return True
+
+
 def apply_crm_lead_selling_to_invoice(invoice, lead=None) -> bool:
     """
     Use CRM order total selling on the accounting invoice header.

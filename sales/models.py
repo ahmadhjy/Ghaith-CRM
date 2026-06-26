@@ -153,12 +153,12 @@ class SalesInvoice(models.Model):
         if save:
             self.save(update_fields=["subtotal", "discount_total", "grand_total"])
 
-    def recalc_usd_amounts(self):
+    def recalc_usd_amounts(self, *, preserve_header=False):
         """
         Set grand_total_usd and per-line USD amounts from document currency and rate.
         Call after lines are saved (e.g. end of invoice edit view).
         """
-        if not self._state.adding:
+        if not self._state.adding and not preserve_header:
             self.sync_invoice_totals_from_crm_or_lines(save=False)
         r = self.get_effective_rate_to_usd()
         if r is None:
