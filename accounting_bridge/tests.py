@@ -156,3 +156,23 @@ class CrmInvoiceSyncTests(TestCase):
         self.assertEqual(refreshed.pk, self.invoice.pk)
         line = refreshed.lines.get(crm_service=service)
         self.assertEqual(line.sell_price, Decimal('175'))
+
+    def test_crm_lead_selling_price_sets_invoice_grand_total(self):
+        self.lead.selling_price = '500'
+        self.lead.save()
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.grand_total, Decimal('500.00'))
+        self.assertEqual(self.invoice.grand_total_usd, Decimal('500.00'))
+
+    def test_crm_lead_selling_price_updates_on_resync(self):
+        self.lead.selling_price = '320'
+        self.lead.save()
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.grand_total, Decimal('320.00'))
+        self.lead.selling_price = '410'
+        self.lead.save()
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.grand_total, Decimal('410.00'))

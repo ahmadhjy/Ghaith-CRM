@@ -144,13 +144,22 @@ class SalesInvoice(models.Model):
         if save:
             self.save(update_fields=["subtotal", "discount_total", "grand_total"])
 
+    def sync_invoice_totals_from_crm_or_lines(self, *, save=False):
+        """CRM-linked invoices use lead.selling_price; others sum service line selling."""
+        from accounting_bridge.crm_invoice_totals import apply_crm_lead_selling_to_invoice
+
+        if not apply_crm_lead_selling_to_invoice(self):
+            self.recalc_totals_from_lines(save=False)
+        if save:
+            self.save(update_fields=["subtotal", "discount_total", "grand_total"])
+
     def recalc_usd_amounts(self):
         """
         Set grand_total_usd and per-line USD amounts from document currency and rate.
         Call after lines are saved (e.g. end of invoice edit view).
         """
         if not self._state.adding:
-            self.recalc_totals_from_lines(save=False)
+            self.sync_invoice_totals_from_crm_or_lines(save=False)
         r = self.get_effective_rate_to_usd()
         if r is None:
             return
@@ -276,7 +285,6 @@ class SalesInvoice(models.Model):
                 "service_type__field_definitions"
             )
         )
-        self.recalc_totals_from_lines(save=False)
         self.subtotal_usd = sum((line.qty * (line.sell_price_usd or Decimal("0")) for line in lines), Decimal("0.00"))
         self.discount_total_usd = sum((line.line_discount_usd or Decimal("0") for line in lines), Decimal("0.00"))
         if self.grand_total < 0:

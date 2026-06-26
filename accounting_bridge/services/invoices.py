@@ -147,7 +147,6 @@ def refresh_accounting_invoice_from_crm(queue: InvoiceSyncQueue) -> SalesInvoice
     _update_invoice_header(invoice, leadtask)
     _sync_invoice_lines_from_crm(invoice, leadtask)
     invoice.recalc_usd_amounts()
-    invoice.recalc_totals_from_lines()
 
     if was_posted:
         invoice.publish_changes(None)
@@ -195,8 +194,6 @@ def build_sales_invoice_from_leadtask(leadtask: LeadTask, actor) -> SalesInvoice
         SalesInvoiceLine.objects.create(invoice=invoice, crm_service=service, **line_kwargs)
 
     invoice.recalc_usd_amounts()
-    invoice.recalc_totals_from_lines()
-    invoice.save()
     return invoice
 
 

@@ -140,3 +140,10 @@ def save_invoice_from_post(request, leadtask):
                 pass
 
     return updated, form
+
+
+def sync_accounting_after_crm_invoice_save(leadtask):
+    """Push CRM order totals (including lead.selling_price) to linked accounting invoice."""
+    from accounting_bridge.services.invoices import sync_crm_leadtask_to_accounting
+
+    sync_crm_leadtask_to_accounting(leadtask)

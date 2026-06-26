@@ -85,6 +85,30 @@ def _invoice_is_persisted(invoice):
     return invoice.pk is not None and not invoice._state.adding
 
 
+def _crm_invoice_context(invoice):
+    from accounting_bridge.crm_invoice_totals import crm_lead_selling_total, get_crm_lead_for_invoice
+    from accounting_bridge.models import InvoiceSyncQueue
+
+    queue = (
+        InvoiceSyncQueue.objects.filter(sales_invoice_id=invoice.pk)
+        .select_related("leadtask")
+        .first()
+    )
+    if not queue or not queue.leadtask_id:
+        return {
+            "crm_invoice_linked": False,
+            "crm_total_selling": None,
+            "crm_order_id": None,
+        }
+    lead = get_crm_lead_for_invoice(invoice)
+    total = crm_lead_selling_total(lead)
+    return {
+        "crm_invoice_linked": True,
+        "crm_total_selling": total,
+        "crm_order_id": queue.leadtask_id,
+    }
+
+
 def _invoice_page_context(form, formset, invoice, can_view_cost):
     emp = get_default_employee_for_accounting()
     default_emp = invoice.sales_employee if invoice.sales_employee_id else emp
@@ -107,6 +131,15 @@ def _invoice_page_context(form, formset, invoice, can_view_cost):
         "initial_line_cost_total_usd": line_cost_total_usd,
         "attachments": attachments,
         "invoice_is_new": not _invoice_is_persisted(invoice),
+        **(
+            _crm_invoice_context(invoice)
+            if _invoice_is_persisted(invoice)
+            else {
+                "crm_invoice_linked": False,
+                "crm_total_selling": None,
+                "crm_order_id": None,
+            }
+        ),
     }
 
 

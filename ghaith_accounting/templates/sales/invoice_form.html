@@ -135,6 +135,9 @@
                 <span class="inv-finance-card__prefix" id="invoice-selling-currency-prefix">{{ invoice.currency|default:"USD" }}</span>
                 <strong class="inv-finance-card__amount" id="invoice-selling-total">{{ invoice.grand_total|default:"0.00" }}</strong>
             </div>
+            {% if crm_invoice_linked %}
+            <span class="inv-finance-card__hint">From CRM order #{{ crm_order_id }}{% if crm_total_selling %} ({{ crm_total_selling }}){% endif %}</span>
+            {% endif %}
             <span id="invoice-selling-currency" style="display:none">{{ invoice.currency|default:"USD" }}</span>
         </div>
         {% if can_view_cost %}
@@ -334,6 +337,8 @@
   const DEFS = {{ service_field_defs_json|safe }};
   const DEFAULT_LINE_EMP = "{{ default_line_employee_id|escapejs }}";
   const CAN_VIEW_COST = {{ can_view_cost|yesno:"true,false" }};
+  const CRM_INVOICE_LINKED = {{ crm_invoice_linked|yesno:"true,false" }};
+  const CRM_TOTAL_SELLING = {% if crm_total_selling is not None %}{{ crm_total_selling }}{% else %}null{% endif %};
   const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
   const URL_CLIENT_QC = "{% url 'accounts_core:client_quick_create' %}";
   const URL_SUPPLIER_QC = "{% url 'accounts_core:supplier_quick_create' %}";
@@ -1148,6 +1153,9 @@
   }
 
   function computeSellingTotal() {
+    if (CRM_INVOICE_LINKED && CRM_TOTAL_SELLING !== null) {
+      return Math.max(0, parseFloat(CRM_TOTAL_SELLING) || 0);
+    }
     let total = 0;
     document.querySelectorAll('#invoice-lines .invoice-line').forEach(function(box) {
       const st = lineQuery(box, 'select[name$="service_type"]');

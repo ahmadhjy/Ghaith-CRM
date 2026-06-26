@@ -444,6 +444,8 @@ def edit_lead_task(request, pk):
     if request.method == 'POST':
         updated, form = save_invoice_from_post(request, instance)
         if updated:
+            from .invoice_save import sync_accounting_after_crm_invoice_save
+            sync_accounting_after_crm_invoice_save(updated)
             return redirect('edit_lead_tasks', pk)
     else:
         form = LeadTaskForm(instance=instance)
