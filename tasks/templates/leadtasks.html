@@ -31,7 +31,8 @@
                 <div class="req-filter-group">
                     <span class="req-filter-label">Status</span>
                     <select id="status" name="status" class="req-select">
-                        <option value="">All</option>
+                        <option value="default" {% if selected_status == 'default' or not selected_status %}selected{% endif %}>Default</option>
+                        <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All</option>
                         {% for choice in status_choices %}
                         <option value="{{ choice.0 }}" {% if choice.0 == selected_status %}selected{% endif %}>{{ choice.1 }}</option>
                         {% endfor %}

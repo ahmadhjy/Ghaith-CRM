@@ -588,7 +588,7 @@ def generate_client_pdf(request, pk):
 @login_required(login_url="/login/")
 def current_leadtasks(request):
     status_choices = LeadTask.STATUS_CHOICES
-    selected_status = request.GET.get('status', '')
+    selected_status = request.GET.get('status', 'default')
     search_query = request.GET.get('search', '')
     travel_date_only = request.GET.get('travel_date_only', '') == 'on'
     assigned_to_me = request.GET.get('assigned_to_me', '') == 'on'
@@ -598,7 +598,9 @@ def current_leadtasks(request):
     else:
         lead_tasks = LeadTask.objects.filter(assigned_to=request.user)
 
-    if selected_status:
+    if selected_status in ('', 'default'):
+        lead_tasks = lead_tasks.exclude(status='done')
+    elif selected_status != 'all':
         lead_tasks = lead_tasks.filter(status=selected_status)
 
     if travel_date_only:

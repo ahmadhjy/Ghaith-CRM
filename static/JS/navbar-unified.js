@@ -70,4 +70,52 @@
       if (group) group.open = true;
     }
   });
+
+  const backBtn = document.getElementById("appNavBack");
+  const forwardBtn = document.getElementById("appNavForward");
+
+  function updateBrowserNavButtons() {
+    if (!backBtn || !forwardBtn) return;
+    if (window.navigation) {
+      backBtn.disabled = !window.navigation.canGoBack;
+      forwardBtn.disabled = !window.navigation.canGoForward;
+      return;
+    }
+    backBtn.disabled = false;
+    forwardBtn.disabled = false;
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener("click", function () {
+      window.history.back();
+    });
+  }
+
+  if (forwardBtn) {
+    forwardBtn.addEventListener("click", function () {
+      window.history.forward();
+    });
+  }
+
+  window.addEventListener("popstate", updateBrowserNavButtons);
+  window.addEventListener("pageshow", updateBrowserNavButtons);
+  if (window.navigation) {
+    window.navigation.addEventListener("navigate", updateBrowserNavButtons);
+    window.navigation.addEventListener("currententrychange", updateBrowserNavButtons);
+  }
+  updateBrowserNavButtons();
+
+  document.addEventListener("keydown", function (event) {
+    if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const tag = (event.target && event.target.tagName) || "";
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (event.target && event.target.isContentEditable)) return;
+    if (event.key === "ArrowLeft" && backBtn && !backBtn.disabled) {
+      event.preventDefault();
+      window.history.back();
+    }
+    if (event.key === "ArrowRight" && forwardBtn && !forwardBtn.disabled) {
+      event.preventDefault();
+      window.history.forward();
+    }
+  });
 })();
