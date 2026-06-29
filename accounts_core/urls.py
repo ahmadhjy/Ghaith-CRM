@@ -14,6 +14,7 @@ urlpatterns = [
     path("clients/<uuid:client_id>/edit/", views.client_edit, name="client_edit"),
     path("clients/quick-create/", views.client_quick_create, name="client_quick_create"),
     path("suppliers/", views.suppliers_list, name="suppliers_list"),
+    path("suppliers/search/", views.supplier_search, name="supplier_search"),
     path("suppliers/new/", views.supplier_create, name="supplier_create"),
     path("suppliers/quick-create/", views.supplier_quick_create, name="supplier_quick_create"),
     path("suppliers/<uuid:supplier_id>/", views.supplier_detail, name="supplier_detail"),

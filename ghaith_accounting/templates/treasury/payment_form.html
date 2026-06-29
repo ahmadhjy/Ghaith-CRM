@@ -32,10 +32,10 @@
     </p>
     <p id="supplier-field-wrap" style="display:none;">
         <label>Supplier <span id="supplier-required" class="muted">*</span></label>
-        <select name="supplier" id="id_supplier">
+        <select name="supplier" id="id_supplier" class="supplier-select-search">
             <option value="">--- Select supplier ---</option>
             {% for s in suppliers %}
-            <option value="{{ s.id }}" {% if payment and payment.supplier_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            <option value="{{ s.id }}" {% if payment and payment.supplier_id == s.id %}selected{% endif %}>{{ s.supplier_code }} — {{ s.name }}</option>
             {% endfor %}
         </select>
     </p>

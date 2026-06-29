@@ -9,6 +9,7 @@ from accounts_core.list_utils import service_instance_list_filters, service_type
 from accounts_core.export_names import export_filename
 from accounts_core.pdf_utils import render_or_pdf
 from catalog.forms import ServiceFieldInlineFormSet, ServiceTypeForm
+from catalog.service_type_querysets import crm_predefined_service_types
 from catalog.models import Destination, ServiceInstance, ServiceType
 
 
@@ -49,9 +50,7 @@ def destination_quick_create(request):
 
 @login_required
 def service_types_list(request):
-    qs = ServiceType.objects.prefetch_related("field_definitions").order_by("name")
-    if request.GET.get("show_inactive") != "1":
-        qs = qs.filter(is_active=True)
+    qs = crm_predefined_service_types().prefetch_related("field_definitions")
     service_types = service_type_list_filters(qs, request)
     return render_or_pdf(
         request,

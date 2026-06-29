@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 
 from accounts_core.client_querysets import clients_for_select
+from accounts_core.supplier_querysets import suppliers_for_select
 from accounts_core.list_utils import parse_post_date
 from accounts_core.models import Client, Supplier
 from accounts_core.export_names import export_filename
@@ -207,7 +208,9 @@ def payment_create(request):
             "clients": clients_for_select(
                 extra_pk=payment.client_id if payment else None
             ),
-            "suppliers": Supplier.objects.order_by("name"),
+            "suppliers": suppliers_for_select(
+                extra_pk=payment.supplier_id if payment else None
+            ),
         },
     )
 
@@ -298,7 +301,9 @@ def payment_edit(request, payment_id):
             "clients": clients_for_select(
                 extra_pk=payment.client_id if payment else None
             ),
-            "suppliers": Supplier.objects.order_by("name"),
+            "suppliers": suppliers_for_select(
+                extra_pk=payment.supplier_id if payment else None
+            ),
         },
     )
 

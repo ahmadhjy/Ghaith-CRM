@@ -12,6 +12,12 @@ from accounts_core.client_querysets import (
     clients_with_accounting_activity,
     search_clients,
 )
+from accounts_core.supplier_querysets import (
+    search_suppliers,
+    supplier_choice_label,
+    suppliers_for_select,
+    suppliers_with_accounting_activity,
+)
 from accounts_core.forms import ClientForm, SupplierForm
 from accounts_core.list_utils import client_list_filters, supplier_list_filters
 from accounts_core.models import BookingFile, Client, Employee, Supplier
@@ -133,6 +139,21 @@ def client_edit(request, client_id):
 
 
 @login_required
+def supplier_search(request):
+    """JSON search for supplier dropdowns — searches all suppliers, not only active."""
+    q = (request.GET.get("q") or "").strip()
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 100)
+    except (TypeError, ValueError):
+        limit = 50
+    results = [
+        {"id": str(s.id), "label": supplier_choice_label(s)}
+        for s in search_suppliers(q, limit=limit)
+    ]
+    return JsonResponse({"results": results})
+
+
+@login_required
 def suppliers_list(request):
     from datetime import date
     from decimal import Decimal
@@ -140,8 +161,15 @@ def suppliers_list(request):
     from accounts_core.list_utils import parse_date
     from reporting.balances import supplier_ap_balance
 
-    qs = Supplier.objects.order_by("name")
-    qs = supplier_list_filters(qs, request)
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = Supplier.objects.order_by("name")
+        qs = supplier_list_filters(qs, request)
+        show_inactive_hint = False
+    else:
+        qs = suppliers_with_accounting_activity().order_by("name")
+        qs = supplier_list_filters(qs, request)
+        show_inactive_hint = True
     today = date.today()
     min_balance = request.GET.get("min_balance")
     sort_by = request.GET.get("sort", "name")
@@ -162,7 +190,12 @@ def suppliers_list(request):
     return render_or_pdf(
         request,
         "accounts_core/suppliers_list.html",
-        {"supplier_rows": rows[:500], "min_balance": min_balance or "", "sort": sort_by},
+        {
+            "supplier_rows": rows[:500],
+            "min_balance": min_balance or "",
+            "sort": sort_by,
+            "show_inactive_hint": show_inactive_hint,
+        },
         export_filename("Suppliers"),
     )
 

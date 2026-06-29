@@ -8,8 +8,10 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from accounts_core.client_querysets import clients_for_select
+from accounts_core.supplier_querysets import suppliers_for_select
 from accounts_core.models import Currency, Employee
 from catalog.models import Destination
+from catalog.service_type_querysets import crm_predefined_service_types
 from sales.models import SalesInvoice, SalesInvoiceLine
 
 
@@ -208,6 +210,14 @@ class SalesInvoiceLineBaseForm(forms.ModelForm):
             self.fields["notes"].label = "Details"
         if self.fields.get("service_type"):
             self.fields["service_type"].label = "Service"
+            self.fields["service_type"].queryset = crm_predefined_service_types(
+                extra_pk=_bound_pk(self, "service_type")
+            )
+            self.fields["service_type"].empty_label = "— Service —"
+        sup = self.fields.get("supplier")
+        if sup:
+            sup.queryset = suppliers_for_select(extra_pk=_bound_pk(self, "supplier"))
+            sup.widget.attrs.setdefault("class", "supplier-select-search")
         if self.fields.get("cost_price"):
             self.fields["cost_price"].label = "Net"
         if self.fields.get("sell_price"):

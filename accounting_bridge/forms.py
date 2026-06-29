@@ -4,7 +4,7 @@ from django import forms
 
 from accounting_bridge.models import PartyOpeningBalance
 from accounts_core.client_querysets import clients_for_select
-from accounts_core.models import Supplier
+from accounts_core.supplier_querysets import suppliers_for_select
 
 
 class OpeningBalanceForm(forms.ModelForm):
@@ -27,7 +27,13 @@ class OpeningBalanceForm(forms.ModelForm):
                 extra_pk = raw
         self.fields['client'].queryset = clients_for_select(extra_pk=extra_pk)
         self.fields['client'].widget.attrs.setdefault('class', 'client-select-search')
-        self.fields['supplier'].queryset = Supplier.objects.order_by('name')
+        extra_supplier = self.instance.supplier_id if self.instance.pk else None
+        if self.is_bound:
+            raw = self.data.get(self.add_prefix('supplier'))
+            if raw:
+                extra_supplier = raw
+        self.fields['supplier'].queryset = suppliers_for_select(extra_pk=extra_supplier)
+        self.fields['supplier'].widget.attrs.setdefault('class', 'supplier-select-search')
         self.fields['client'].required = False
         self.fields['supplier'].required = False
         self.fields['debit_usd'].label = 'Debit (USD)'
