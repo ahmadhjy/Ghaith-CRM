@@ -16,13 +16,11 @@
         <div>
             <div class="babylon-header__eyebrow">{% if portal_mode %}Supplier portal{% else %}Orders sync{% endif %}</div>
             <h1 class="babylon-header__title"><i class="fas fa-hotel"></i> Babylon Hotels</h1>
+            {% if not portal_mode %}
             <p class="babylon-header__sub">
-                {% if portal_mode %}
-                Update net prices and due dates. Selling prices are not shown.
-                {% else %}
                 Rows are created automatically when an order service uses <strong>BABYLON</strong> as supplier.
-                {% endif %}
             </p>
+            {% endif %}
         </div>
         <div class="babylon-header__actions">
             <form method="get" class="babylon-year-form">
