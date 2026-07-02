@@ -1,0 +1,41 @@
+{% comment %}
+  Read-only WhatsApp / dashboard sync context for workflow stages.
+  lead: Lead instance (required)
+{% endcomment %}
+<div class="req-source-panel">
+    <div class="req-source-panel__head">
+        <div class="req-card__icon req-card__icon--green" style="width:32px;height:32px;font-size:.85rem"><i class="fab fa-whatsapp"></i></div>
+        <div>
+            <h3 class="req-source-panel__title">WhatsApp &amp; Dashboard</h3>
+            <p class="req-source-panel__sub">Inbound line, department routing &amp; AI summary</p>
+        </div>
+    </div>
+    <div class="req-source-panel__grid">
+        <div class="req-source-panel__item">
+            <span class="req-source-panel__label"><i class="fab fa-whatsapp"></i> Received on</span>
+            <span class="req-source-panel__value">{{ lead.whatsapp_received_on|default:"—" }}</span>
+        </div>
+        <div class="req-source-panel__item">
+            <span class="req-source-panel__label"><i class="fas fa-broadcast-tower"></i> Channel</span>
+            <span class="req-source-panel__value">{{ lead.channel|default:"—" }}</span>
+        </div>
+        <div class="req-source-panel__item">
+            <span class="req-source-panel__label"><i class="fas fa-building"></i> Department</span>
+            <span class="req-source-panel__value">{% if lead.department %}{{ lead.department.name }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="req-source-panel__item">
+            <span class="req-source-panel__label"><i class="fas fa-envelope"></i> Email</span>
+            <span class="req-source-panel__value">{{ lead.email|default:"—" }}</span>
+        </div>
+        {% if lead.external_id %}
+        <div class="req-source-panel__item">
+            <span class="req-source-panel__label"><i class="fas fa-fingerprint"></i> Dashboard ID</span>
+            <span class="req-source-panel__value req-source-panel__value--mono">{{ lead.external_id }}</span>
+        </div>
+        {% endif %}
+        <div class="req-source-panel__item req-source-panel__item--full">
+            <span class="req-source-panel__label"><i class="fas fa-robot"></i> AI Chat Summary</span>
+            <span class="req-source-panel__value req-source-panel__value--block">{% if lead.chat_summary %}{{ lead.chat_summary }}{% else %}—{% endif %}</span>
+        </div>
+    </div>
+</div>

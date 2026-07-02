@@ -1,11 +1,12 @@
 from django import forms
-from .models import Lead, Attachment, DailyReport, Offer
+from .models import Lead, Attachment, DailyReport, Offer, Department
 
 class CreateLeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'name', 'country_code', 'phone', 'channel',
+            'name', 'country_code', 'phone', 'email', 'channel',
+            'whatsapp_received_on', 'department', 'chat_summary',
             'assigned_to', 'takeover', 'destination', 'type_of_service',
         ]
         widgets = {
@@ -14,13 +15,22 @@ class CreateLeadForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'country_code': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'channel': forms.Select(attrs={'class': 'form-control'}),
+            'whatsapp_received_on': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+96171111000'}),
+            'department': forms.Select(attrs={'class': 'form-control'}),
+            'chat_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'AI chat summary or initial notes'}),
             'assigned_to': forms.Select(attrs={'class': 'form-control'}),
             'takeover': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'type_of_service': forms.Select(attrs={'class': 'form-control'}),
             'offer_prepared': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'offer_details': forms.Textarea(attrs={'class': 'form-control', 'style': 'display:none;'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['department'].required = False
 
 
 class QualificationForm(forms.ModelForm):
@@ -32,11 +42,21 @@ class QualificationForm(forms.ModelForm):
             'assigned_to', 'follow_up',
             'why_this_destination',
             'budget_range_from', 'budget_range_to', 'finalization_notes',
+            'whatsapp_received_on', 'email', 'department', 'chat_summary',
         ]
         widgets = {
             'follow_up': forms.DateInput(attrs={'type': 'date'}),
             'offer_prepared': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'whatsapp_received_on': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'department': forms.Select(attrs={'class': 'form-control'}),
+            'chat_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['department'].required = False
 
 class SendOfferForm(forms.ModelForm):
     class Meta:
@@ -71,7 +91,16 @@ class LeadForm(forms.ModelForm):
             'travel_date_from': forms.DateInput(attrs={'type': 'date'}),
             'travel_date_to': forms.DateInput(attrs={'type': 'date'}),
             'follow_up': forms.DateInput(attrs={'type': 'date'}),
+            'whatsapp_received_on': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'department': forms.Select(attrs={'class': 'form-control'}),
+            'chat_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'external_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
 
 class AttachmentForm(forms.ModelForm):
     class Meta:

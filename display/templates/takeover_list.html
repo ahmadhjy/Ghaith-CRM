@@ -30,21 +30,23 @@
         <div class="req-table-wrap">
             <table class="req-table table">
                 <thead>
-                    <tr><th>Name</th><th>Phone</th><th>Destination</th><th>Travel Details</th><th>Action</th></tr>
+                    <tr><th>Name</th><th>Phone</th><th>Department</th><th>WhatsApp Line</th><th>Destination</th><th>Chat Summary</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                     {% for lead in leads %}
                     <tr class="{% if lead.is_highlighted %}highlighted{% endif %}">
                         <td data-label="Name"><strong>{{ lead.name }}</strong></td>
                         <td data-label="Phone">{{ lead.phone }}</td>
+                        <td data-label="Department">{% if lead.department %}{{ lead.department.name }}{% else %}—{% endif %}</td>
+                        <td data-label="WhatsApp Line">{{ lead.whatsapp_received_on|default:"—" }}</td>
                         <td data-label="Destination">{{ lead.destination|default:"—" }}</td>
-                        <td data-label="Details">{{ lead.reason_of_travel|truncatechars:40|default:"—" }}</td>
+                        <td data-label="Summary">{% if lead.chat_summary %}{{ lead.chat_summary|truncatechars:50 }}{% else %}{{ lead.reason_of_travel|truncatechars:50|default:"—" }}{% endif %}</td>
                         <td data-label="Action">
                             <button type="button" class="takeover-button" data-lead-id="{{ lead.id }}"><i class="fas fa-handshake"></i> Take Over</button>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5"><div class="req-empty"><i class="fas fa-inbox"></i>No leads in takeover list.</div></td></tr>
+                    <tr><td colspan="7"><div class="req-empty"><i class="fas fa-inbox"></i>No leads in takeover list.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

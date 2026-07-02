@@ -48,6 +48,24 @@
         <div class="req-card">
             <div class="req-card__head">
                 <div class="req-card__head-left">
+                    <div class="req-card__icon req-card__icon--green"><i class="fab fa-whatsapp"></i></div>
+                    <div><h2 class="req-card__title">WhatsApp &amp; Dashboard</h2></div>
+                </div>
+            </div>
+            <div class="req-card__body">
+                <div class="req-grid req-grid--2">
+                    <div class="req-field"><label for="id_whatsapp_received_on">WhatsApp Received On</label>{{ form.whatsapp_received_on }}</div>
+                    <div class="req-field"><label for="id_email">Email</label>{{ form.email }}</div>
+                    <div class="req-field"><label for="id_department">Department</label>{{ form.department }}</div>
+                    <div class="req-field"><label for="id_external_id">Dashboard ID</label>{{ form.external_id }}</div>
+                    <div class="req-field req-field--full"><label for="id_chat_summary">AI Chat Summary</label>{{ form.chat_summary }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="req-card">
+            <div class="req-card__head">
+                <div class="req-card__head-left">
                     <div class="req-card__icon req-card__icon--teal"><i class="fas fa-user"></i></div>
                     <div><h2 class="req-card__title">Basic Information</h2></div>
                 </div>

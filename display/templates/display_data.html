@@ -73,8 +73,10 @@
                     <tr>
                         <th>Name</th>
                         <th>Destination</th>
+                        <th>Department</th>
+                        <th>WhatsApp Line</th>
                         <th>Status</th>
-                        <th>What Happened</th>
+                        <th>Chat Summary</th>
                         <th>Created</th>
                         <th>Edit</th>
                         <th>Archive</th>
@@ -85,16 +87,18 @@
                     <tr class="{% if d.is_overdue %}overdue-lead{% elif d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">
                         <td data-label="Name"><strong>{{ d.name }}</strong></td>
                         <td data-label="Destination">{{ d.destination|default:"—" }}</td>
+                        <td data-label="Department">{% if d.department %}{{ d.department.name }}{% else %}—{% endif %}</td>
+                        <td data-label="WhatsApp Line">{{ d.whatsapp_received_on|default:"—" }}</td>
                         <td data-label="Status">
                             <span class="req-status-pill req-status-pill--{% if d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">{{ d.status }}</span>
                         </td>
-                        <td data-label="What Happened">{% include 'shared/table_tooltip.html' with text=d.finalization_notes max_length=40 %}</td>
+                        <td data-label="Chat Summary">{% include 'shared/table_tooltip.html' with text=d.chat_summary max_length=40 %}</td>
                         <td data-label="Created">{{ d.created_at|date:"M d, Y" }}</td>
                         <td data-label="Edit"><a href="{% url 'edit-model' d.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                         <td data-label="Archive"><a href="{% url 'archive_lead' d.pk %}" class="req-link--danger req-btn--sm">Archive</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7"><div class="req-empty"><i class="fas fa-inbox"></i>No requests found.</div></td></tr>
+                    <tr><td colspan="9"><div class="req-empty"><i class="fas fa-inbox"></i>No requests found.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

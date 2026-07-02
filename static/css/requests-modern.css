@@ -659,6 +659,90 @@ body.req-page {
 .req-lead-banner__item i { color: var(--req-primary); width: 16px; }
 .req-lead-banner__item strong { color: var(--req-muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; }
 
+/* WhatsApp / dashboard source panel */
+.req-source-panel {
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 55%, #f0f7ff 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--req-radius-sm);
+  margin-bottom: 20px;
+}
+
+.req-source-panel--form {
+  background: var(--req-surface);
+  border-color: var(--req-border);
+}
+
+.req-source-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.req-source-panel__title {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--req-text);
+}
+
+.req-source-panel__sub {
+  margin: 2px 0 0;
+  font-size: .8rem;
+  color: var(--req-muted);
+}
+
+.req-source-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px 20px;
+}
+
+.req-source-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.req-source-panel__item--full {
+  grid-column: 1 / -1;
+}
+
+.req-source-panel__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--req-muted);
+}
+
+.req-source-panel__label i { color: #16a34a; width: 14px; }
+
+.req-source-panel__value {
+  font-size: .9rem;
+  color: var(--req-text);
+  word-break: break-word;
+}
+
+.req-source-panel__value--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .82rem;
+}
+
+.req-source-panel__value--block {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--req-border);
+  border-radius: var(--req-radius-sm);
+}
+
 /* Attachments */
 .req-attach-list { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
 

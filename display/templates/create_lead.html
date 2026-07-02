@@ -86,6 +86,40 @@
                     </div>
                 </div>
 
+                <div class="req-source-panel req-source-panel--form" style="margin-top:24px">
+                    <div class="req-source-panel__head">
+                        <div class="req-card__icon req-card__icon--green" style="width:32px;height:32px;font-size:.85rem"><i class="fab fa-whatsapp"></i></div>
+                        <div>
+                            <h3 class="req-source-panel__title">WhatsApp &amp; Dashboard</h3>
+                            <p class="req-source-panel__sub">Inbound line, department routing &amp; AI summary</p>
+                        </div>
+                    </div>
+                    <div class="req-grid req-grid--2">
+                        <div class="req-field">
+                            <label for="id_whatsapp_received_on">WhatsApp Received On</label>
+                            {{ form.whatsapp_received_on }}
+                        </div>
+                        <div class="req-field">
+                            <label for="id_email">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="req-field">
+                            <label for="id_department">Department</label>
+                            {{ form.department }}
+                        </div>
+                        <div class="req-field req-field--full">
+                            <label for="id_chat_summary">AI Chat Summary</label>
+                            {{ form.chat_summary }}
+                        </div>
+                        {% if lead.external_id %}
+                        <div class="req-field">
+                            <label>Dashboard ID</label>
+                            <input type="text" class="form-control" value="{{ lead.external_id }}" readonly>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
             </div>
             <div class="req-card__foot">
                 {% if duplicate_warning %}

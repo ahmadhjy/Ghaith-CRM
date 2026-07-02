@@ -73,8 +73,10 @@
                     <tr>
                         <th>Name</th>
                         <th>Destination</th>
+                        <th>Department</th>
+                        <th>WhatsApp Line</th>
                         <th>Status</th>
-                        <th>What Happened</th>
+                        <th>Chat Summary</th>
                         <th>Edit</th>
                         <th>Unarchive</th>
                     </tr>
@@ -84,13 +86,15 @@
                     <tr class="{% if d.is_overdue %}overdue-lead{% elif d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">
                         <td><strong>{{ d.name }}</strong></td>
                         <td>{{ d.destination|default:"—" }}</td>
+                        <td>{% if d.department %}{{ d.department.name }}{% else %}—{% endif %}</td>
+                        <td>{{ d.whatsapp_received_on|default:"—" }}</td>
                         <td><span class="req-status-pill req-status-pill--{{ d.status }}">{{ d.status }}</span></td>
-                        <td>{% include 'shared/table_tooltip.html' with text=d.finalization_notes max_length=40 %}</td>
+                        <td>{% include 'shared/table_tooltip.html' with text=d.chat_summary max_length=40 %}</td>
                         <td><a href="{% url 'edit-model' d.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                         <td><a href="{% url 'unarchive_lead' d.pk %}" class="req-link req-btn--sm">Unarchive</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6"><div class="req-empty"><i class="fas fa-archive"></i>No archived requests.</div></td></tr>
+                    <tr><td colspan="8"><div class="req-empty"><i class="fas fa-archive"></i>No archived requests.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

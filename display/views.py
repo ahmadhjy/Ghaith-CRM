@@ -116,6 +116,8 @@ def create_lead(request, pk=None):
 
             lead = form.save(commit=False)
             lead.phone = full_phone
+            if lead.chat_summary:
+                lead.reason_of_travel = lead.chat_summary
             # Set default values for removed fields
             if not lead.duration:
                 lead.duration = ''
@@ -150,6 +152,8 @@ def qualify_lead(request, lead_id):
         form = QualificationForm(request.POST, instance=main_lead)
         if form.is_valid():
             lead = form.save(commit=False)
+            if lead.chat_summary:
+                lead.reason_of_travel = lead.chat_summary
             # Ensure default values for removed fields
             if not lead.type_of_service:
                 lead.type_of_service = ''
@@ -294,14 +298,17 @@ def edit_model(request, pk):
 def takeover_list(request):
     search_query = request.GET.get('search', '')
 
-    leads = Lead.objects.filter(takeover=True).order_by('-created_at')
+    leads = Lead.objects.filter(takeover=True).select_related('department').order_by('-created_at')
 
     if search_query:
         leads = leads.filter(
             Q(name__icontains=search_query) |
             Q(phone__icontains=search_query) |
             Q(channel__icontains=search_query) |
-            Q(reason_of_travel__icontains=search_query)
+            Q(reason_of_travel__icontains=search_query) |
+            Q(chat_summary__icontains=search_query) |
+            Q(whatsapp_received_on__icontains=search_query) |
+            Q(department__name__icontains=search_query)
         )
 
     for lead in leads:
@@ -333,7 +340,7 @@ def display_data(request):
     selected_status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
 
-    leads = Lead.objects.filter(assigned_to=request.user, is_archived=False).order_by('-created_at')
+    leads = Lead.objects.filter(assigned_to=request.user, is_archived=False).select_related('department').order_by('-created_at')
     
     if selected_status:
         if selected_status == 'sold':
@@ -351,7 +358,10 @@ def display_data(request):
             Q(passengers__name__icontains=search_query) |
             Q(destination__icontains=search_query) |
             Q(phone__icontains=search_query) |
-            Q(finalization_notes__icontains=search_query)
+            Q(finalization_notes__icontains=search_query) |
+            Q(chat_summary__icontains=search_query) |
+            Q(whatsapp_received_on__icontains=search_query) |
+            Q(department__name__icontains=search_query)
         ).distinct()
 
     paginator = Paginator(leads, 30)  # Show 30 leads per page
@@ -390,7 +400,7 @@ def display_archived(request):
     selected_status = request.GET.get('status', '')
     search_query = request.GET.get('search', '')
 
-    leads = Lead.objects.filter(assigned_to=request.user, is_archived=True).order_by('-created_at')
+    leads = Lead.objects.filter(assigned_to=request.user, is_archived=True).select_related('department').order_by('-created_at')
     
     if selected_status:
         leads = leads.filter(status=selected_status)
@@ -400,7 +410,10 @@ def display_archived(request):
             Q(passengers__name__icontains=search_query) |
             Q(destination__icontains=search_query) |
             Q(phone__icontains=search_query) |
-            Q(finalization_notes__icontains=search_query)
+            Q(finalization_notes__icontains=search_query) |
+            Q(chat_summary__icontains=search_query) |
+            Q(whatsapp_received_on__icontains=search_query) |
+            Q(department__name__icontains=search_query)
         ).distinct()
 
     paginator = Paginator(leads, 30)  # Show 30 leads per page
