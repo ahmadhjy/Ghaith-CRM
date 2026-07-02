@@ -171,7 +171,16 @@
   font: inherit;
 }
 
-.babylon-sheet .col-details .cell-display {
+.babylon-sheet .col-service .cell-display {
+  font-weight: 600;
+  color: #0f4c81;
+  white-space: nowrap;
+}
+
+.babylon-sheet .cell-input--select {
+  min-width: 120px;
+}
+
   white-space: pre-wrap;
   max-width: 360px;
   display: block;

@@ -34,8 +34,8 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(BabylonHotelEntry)
 class BabylonHotelEntryAdmin(admin.ModelAdmin):
-    list_display = ("client_name", "entry_date", "price", "due_date", "confirmation_number", "service")
-    search_fields = ("client_name", "details", "confirmation_number", "service__leadtask__lead__name")
+    list_display = ("client_name", "service_type", "entry_date", "price", "due_date", "confirmation_number", "service")
+    search_fields = ("client_name", "service_type", "details", "confirmation_number", "service__leadtask__lead__name")
     list_filter = ("entry_date", "due_date")
     raw_id_fields = ("service",)
 

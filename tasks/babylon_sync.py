@@ -49,6 +49,7 @@ def sync_entry_from_service(service: Service) -> BabylonHotelEntry | None:
         defaults={
             'entry_date': _service_entry_date(service),
             'client_name': lead.name or '',
+            'service_type': (service.service_name or '').strip(),
             'details': (service.details or '').strip(),
             'price': effective_service_net(service),
             'due_date': _service_due_date(service),
@@ -67,9 +68,10 @@ def sync_service_from_entry(entry: BabylonHotelEntry) -> Service | None:
     service.net = (entry.price or '').strip()
     service.issue_price = ''
     service.due_time = _due_datetime_from_date(entry.due_date)
+    service.service_name = (entry.service_type or '').strip()
     service._babylon_skip_sync = True
     service.save(
-        update_fields=['details', 'net', 'issue_price', 'due_time'],
+        update_fields=['details', 'net', 'issue_price', 'due_time', 'service_name'],
     )
     return service
 
@@ -80,6 +82,7 @@ def push_crm_fields_to_entry(entry: BabylonHotelEntry) -> BabylonHotelEntry:
     lead = service.leadtask.lead
     entry.entry_date = _service_entry_date(service)
     entry.client_name = lead.name or ''
+    entry.service_type = (service.service_name or '').strip()
     entry._babylon_skip_sync = True
-    entry.save(update_fields=['entry_date', 'client_name', 'updated_at'])
+    entry.save(update_fields=['entry_date', 'client_name', 'service_type', 'updated_at'])
     return entry

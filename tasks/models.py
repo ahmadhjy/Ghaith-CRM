@@ -114,6 +114,11 @@ class BabylonHotelEntry(models.Model):
     )
     entry_date = models.DateField(help_text='Date the CRM service was created.')
     client_name = models.CharField(max_length=200)
+    service_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='CRM service type (Hotel, Visa, etc.).',
+    )
     details = models.TextField(blank=True)
     price = models.CharField(max_length=100, blank=True, help_text='Net price (maps to service net).')
     due_date = models.DateField(null=True, blank=True)

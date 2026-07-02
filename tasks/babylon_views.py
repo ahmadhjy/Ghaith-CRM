@@ -12,11 +12,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from tasks.babylon_sync import is_babylon_supplier, push_crm_fields_to_entry, sync_service_from_entry
+from tasks.constants import get_service_choices
 from tasks.models import BabylonHotelEntry
 
 SESSION_KEY = 'babylon_portal_authenticated'
 
-EDITABLE_STAFF = {'entry_date', 'client_name', 'details', 'price', 'due_date', 'confirmation_number'}
+EDITABLE_STAFF = {
+    'entry_date', 'client_name', 'service_type', 'details',
+    'price', 'due_date', 'confirmation_number',
+}
 EDITABLE_PORTAL = {'details', 'price', 'due_date', 'confirmation_number'}
 
 
@@ -71,6 +75,7 @@ def _serialize_entry(entry: BabylonHotelEntry, *, portal: bool = False) -> dict:
         'id': entry.id,
         'entry_date': entry.entry_date.isoformat() if entry.entry_date else '',
         'client_name': entry.client_name,
+        'service_type': entry.service_type,
         'details': entry.details,
         'price': entry.price,
         'due_date': entry.due_date.isoformat() if entry.due_date else '',
@@ -79,8 +84,19 @@ def _serialize_entry(entry: BabylonHotelEntry, *, portal: bool = False) -> dict:
     if not portal:
         data['order_id'] = service.leadtask_id
         data['order_url'] = f'/tasks/leads/edit/{service.leadtask_id}/'
-        data['service_name'] = service.service_name
     return data
+
+
+def _sheet_context(entries, year, *, portal_mode: bool, portal_url: str = ''):
+    return {
+        'entries': entries,
+        'year': year,
+        'years': _available_years(),
+        'portal_mode': portal_mode,
+        'editable_fields': EDITABLE_PORTAL if portal_mode else EDITABLE_STAFF,
+        'service_choices': get_service_choices(),
+        'portal_url': portal_url,
+    }
 
 
 @require_http_methods(['GET', 'POST'])
@@ -104,13 +120,7 @@ def babylon_portal_login(request):
 def babylon_portal_sheet(request):
     year = _parse_year(request.GET.get('year'))
     entries = _entries_queryset(year)
-    return render(request, 'babylon_hotels_sheet.html', {
-        'entries': entries,
-        'year': year,
-        'years': _available_years(),
-        'portal_mode': True,
-        'editable_fields': EDITABLE_PORTAL,
-    })
+    return render(request, 'babylon_hotels_sheet.html', _sheet_context(entries, year, portal_mode=True))
 
 
 @babylon_portal_required
@@ -125,14 +135,9 @@ def babylon_portal_logout(request):
 def babylon_hotels_sheet(request):
     year = _parse_year(request.GET.get('year'))
     entries = _entries_queryset(year)
-    return render(request, 'babylon_hotels_sheet.html', {
-        'entries': entries,
-        'year': year,
-        'years': _available_years(),
-        'portal_mode': False,
-        'editable_fields': EDITABLE_STAFF,
-        'portal_url': '/babylon/',
-    })
+    return render(request, 'babylon_hotels_sheet.html', _sheet_context(
+        entries, year, portal_mode=False, portal_url='/babylon/',
+    ))
 
 
 @require_http_methods(['PATCH', 'POST'])
@@ -177,6 +182,8 @@ def babylon_entry_update(request, entry_id: int):
         entry.price = str(value or '').strip()
     elif field == 'client_name':
         entry.client_name = str(value or '').strip()
+    elif field == 'service_type':
+        entry.service_type = str(value or '').strip()
     elif field == 'details':
         entry.details = str(value or '').strip()
     elif field == 'confirmation_number':
@@ -185,7 +192,7 @@ def babylon_entry_update(request, entry_id: int):
     entry.save()
     sync_service_from_entry(entry)
 
-    if staff and field in {'entry_date', 'client_name'}:
+    if staff and field in {'entry_date', 'client_name', 'service_type'}:
         push_crm_fields_to_entry(entry)
 
     return JsonResponse({'ok': True, 'entry': _serialize_entry(entry, portal=portal)})

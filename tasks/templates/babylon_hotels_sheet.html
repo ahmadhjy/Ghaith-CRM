@@ -51,6 +51,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Client Name</th>
+                        <th>Service</th>
                         <th>Details</th>
                         <th>Price (Net)</th>
                         <th>Due</th>
@@ -68,6 +69,17 @@
                         <td data-field="client_name" data-editable="{% if 'client_name' in editable_fields %}1{% else %}0{% endif %}">
                             <span class="cell-display">{{ entry.client_name }}</span>
                             <input type="text" class="cell-input" value="{{ entry.client_name }}" hidden>
+                        </td>
+                        <td data-field="service_type" data-editable="{% if 'service_type' in editable_fields %}1{% else %}0{% endif %}" class="col-service">
+                            <span class="cell-display">{{ entry.service_type|default:entry.service.service_name|default:"—" }}</span>
+                            {% if 'service_type' in editable_fields %}
+                            <select class="cell-input cell-input--select" hidden>
+                                <option value="">—</option>
+                                {% for value, label in service_choices %}
+                                <option value="{{ value }}" {% if entry.service_type == value or entry.service.service_name == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
                         </td>
                         <td data-field="details" data-editable="{% if 'details' in editable_fields %}1{% else %}0{% endif %}" class="col-details">
                             <span class="cell-display">{{ entry.details|default:"—" }}</span>
@@ -93,7 +105,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{% if portal_mode %}6{% else %}7{% endif %}" class="babylon-empty">
+                        <td colspan="{% if portal_mode %}7{% else %}8{% endif %}" class="babylon-empty">
                             <i class="fas fa-inbox"></i>
                             No Babylon hotel rows for {{ year }} yet.
                             {% if not portal_mode %}Add a service with supplier <strong>BABYLON</strong> on an order to create one.{% endif %}
@@ -138,6 +150,9 @@
         if (!input || !entryId) return;
 
         var value = input.value;
+        if (input.tagName === 'SELECT') {
+            cell.querySelector('.cell-display').textContent = value || '—';
+        }
         cell.classList.remove('is-editing');
         display.hidden = false;
         input.hidden = true;
@@ -160,6 +175,7 @@
             if (field === 'details') display.textContent = entry.details || '—';
             else if (field === 'price') display.textContent = entry.price || '—';
             else if (field === 'client_name') display.textContent = entry.client_name;
+            else if (field === 'service_type') display.textContent = entry.service_type || '—';
             else if (field === 'confirmation_number') display.textContent = entry.confirmation_number || '—';
             else if (field === 'due_date') display.textContent = entry.due_date || '—';
             else if (field === 'entry_date') display.textContent = entry.entry_date;
@@ -186,6 +202,11 @@
             var cell = input.closest('td');
             if (cell.classList.contains('is-editing')) saveCell(cell);
         });
+        if (input.tagName === 'SELECT') {
+            input.addEventListener('change', function() {
+                saveCell(input.closest('td'));
+            });
+        }
     });
 })();
 </script>

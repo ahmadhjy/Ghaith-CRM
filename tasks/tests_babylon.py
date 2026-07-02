@@ -47,6 +47,7 @@ class BabylonHotelTests(TestCase):
     def test_service_creates_babylon_row(self):
         entry = BabylonHotelEntry.objects.get(service=self.service)
         self.assertEqual(entry.client_name, 'Sara Haddad')
+        self.assertEqual(entry.service_type, 'Hotel')
         self.assertEqual(entry.details, 'Alindra Villa — 3 nights pool villa')
         self.assertEqual(entry.price, '220')
 
@@ -92,4 +93,5 @@ class BabylonHotelTests(TestCase):
         response = self.client.get('/tasks/babylon-hotels/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sara Haddad')
+        self.assertContains(response, 'Hotel')
         self.assertNotContains(response, 'selling')
