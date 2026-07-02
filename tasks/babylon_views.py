@@ -63,7 +63,7 @@ def _entries_queryset(year: int | None = None):
     )
     if year:
         qs = qs.filter(entry_date__year=year)
-    return qs.order_by('entry_date', 'created_at')
+    return qs.order_by('-entry_date', '-created_at')
 
 
 def _available_years():
