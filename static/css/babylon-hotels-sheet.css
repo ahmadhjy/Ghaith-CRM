@@ -1,0 +1,206 @@
+/* Babylon hotels spreadsheet */
+
+.babylon-portal {
+  margin: 0;
+  background: #f0f4f8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #243b53;
+}
+
+.babylon-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+.babylon-portal .babylon-wrap {
+  padding-top: 28px;
+}
+
+.babylon-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.babylon-header__eyebrow {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #1a6b4a;
+}
+
+.babylon-header__title {
+  margin: 4px 0 6px;
+  font-size: 1.5rem;
+  color: #0f4c81;
+}
+
+.babylon-header__title i { color: #1a6b4a; margin-right: 8px; }
+
+.babylon-header__sub {
+  margin: 0;
+  color: #627d98;
+  font-size: .92rem;
+  max-width: 560px;
+}
+
+.babylon-header__actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.babylon-year-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.babylon-year-form label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #829ab1;
+}
+
+.babylon-year-form select {
+  padding: 8px 12px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: .95rem;
+}
+
+.babylon-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: .88rem;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.babylon-btn--ghost {
+  background: #fff;
+  border-color: #d9e2ec;
+  color: #486581;
+}
+
+.babylon-btn--outline {
+  background: #fff;
+  border-color: #1a6b4a;
+  color: #1a6b4a;
+}
+
+.babylon-sheet-card {
+  background: #fff;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(15, 76, 129, .06);
+  overflow: hidden;
+}
+
+.babylon-sheet-scroll {
+  overflow-x: auto;
+}
+
+.babylon-sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+  min-width: 900px;
+}
+
+.babylon-sheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #1a6b4a;
+  color: #fff;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.babylon-sheet tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8eef4;
+  vertical-align: top;
+}
+
+.babylon-sheet tbody tr:hover { background: #f8fafc; }
+
+.babylon-sheet td[data-editable="1"] {
+  cursor: pointer;
+}
+
+.babylon-sheet td[data-editable="1"]:hover {
+  background: #f0fdf4;
+  outline: 1px dashed #86efac;
+}
+
+.babylon-sheet td.is-editing {
+  background: #fff;
+  padding: 6px 8px;
+}
+
+.babylon-sheet td.is-saved {
+  animation: babylon-flash .8s ease;
+}
+
+@keyframes babylon-flash {
+  0% { background: #bbf7d0; }
+  100% { background: transparent; }
+}
+
+.babylon-sheet .cell-input {
+  width: 100%;
+  min-width: 100px;
+  padding: 6px 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.babylon-sheet .col-details .cell-display {
+  white-space: pre-wrap;
+  max-width: 360px;
+  display: block;
+}
+
+.babylon-sheet .col-details textarea.cell-input {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.babylon-sheet .col-order a {
+  color: #0f4c81;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.babylon-empty {
+  text-align: center;
+  padding: 48px 20px !important;
+  color: #829ab1;
+}
+
+.babylon-empty i {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  opacity: .5;
+}
+
+.babylon-portal .babylon-sheet td[data-editable="0"] .cell-display {
+  color: #486581;
+}

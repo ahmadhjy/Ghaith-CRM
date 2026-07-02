@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if portal_mode %}Babylon Hotels{% else %}Babylon Hotels Sheet{% endif %} — Ghaith Travel</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/babylon-hotels-sheet.css' %}">
+</head>
+<body class="{% if portal_mode %}babylon-portal{% else %}babylon-staff{% endif %}">
+{% if not portal_mode %}{% include 'navbar.html' %}{% endif %}
+
+<div class="babylon-wrap">
+    <header class="babylon-header">
+        <div>
+            <div class="babylon-header__eyebrow">{% if portal_mode %}Supplier portal{% else %}Orders sync{% endif %}</div>
+            <h1 class="babylon-header__title"><i class="fas fa-hotel"></i> Babylon Hotels</h1>
+            <p class="babylon-header__sub">
+                {% if portal_mode %}
+                Update net prices and due dates. Selling prices are not shown.
+                {% else %}
+                Rows are created automatically when an order service uses <strong>BABYLON</strong> as supplier.
+                {% endif %}
+            </p>
+        </div>
+        <div class="babylon-header__actions">
+            <form method="get" class="babylon-year-form">
+                <label for="year">Year</label>
+                <select name="year" id="year" onchange="this.form.submit()">
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if portal_mode %}
+            <form method="post" action="{% url 'babylon_portal_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="babylon-btn babylon-btn--ghost">Logout</button>
+            </form>
+            {% elif portal_url %}
+            <a href="{{ portal_url }}" class="babylon-btn babylon-btn--outline" target="_blank" rel="noopener">Supplier portal link</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="babylon-sheet-card">
+        <div class="babylon-sheet-scroll">
+            <table class="babylon-sheet" id="babylonSheet">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Client Name</th>
+                        <th>Details</th>
+                        <th>Price (Net)</th>
+                        <th>Due</th>
+                        <th>Conf #</th>
+                        {% if not portal_mode %}<th>Order</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                    <tr data-entry-id="{{ entry.id }}">
+                        <td data-field="entry_date" data-editable="{% if 'entry_date' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ entry.entry_date|date:"Y-m-d" }}</span>
+                            <input type="date" class="cell-input" value="{{ entry.entry_date|date:'Y-m-d' }}" hidden>
+                        </td>
+                        <td data-field="client_name" data-editable="{% if 'client_name' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ entry.client_name }}</span>
+                            <input type="text" class="cell-input" value="{{ entry.client_name }}" hidden>
+                        </td>
+                        <td data-field="details" data-editable="{% if 'details' in editable_fields %}1{% else %}0{% endif %}" class="col-details">
+                            <span class="cell-display">{{ entry.details|default:"—" }}</span>
+                            <textarea class="cell-input" hidden>{{ entry.details }}</textarea>
+                        </td>
+                        <td data-field="price" data-editable="{% if 'price' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ entry.price|default:"—" }}</span>
+                            <input type="text" class="cell-input" value="{{ entry.price }}" hidden>
+                        </td>
+                        <td data-field="due_date" data-editable="{% if 'due_date' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{% if entry.due_date %}{{ entry.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+                            <input type="date" class="cell-input" value="{% if entry.due_date %}{{ entry.due_date|date:'Y-m-d' }}{% endif %}" hidden>
+                        </td>
+                        <td data-field="confirmation_number" data-editable="{% if 'confirmation_number' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ entry.confirmation_number|default:"—" }}</span>
+                            <input type="text" class="cell-input" value="{{ entry.confirmation_number }}" hidden>
+                        </td>
+                        {% if not portal_mode %}
+                        <td class="col-order">
+                            <a href="{% url 'edit_lead_tasks' entry.service.leadtask_id %}">#{{ entry.service.leadtask_id }}</a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if portal_mode %}6{% else %}7{% endif %}" class="babylon-empty">
+                            <i class="fas fa-inbox"></i>
+                            No Babylon hotel rows for {{ year }} yet.
+                            {% if not portal_mode %}Add a service with supplier <strong>BABYLON</strong> on an order to create one.{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    function getCookie(name) {
+        var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : '';
+    }
+
+    var csrftoken = getCookie('csrftoken');
+
+    document.querySelectorAll('#babylonSheet td[data-editable="1"]').forEach(function(cell) {
+        cell.addEventListener('click', function() {
+            if (cell.classList.contains('is-editing')) return;
+            cell.classList.add('is-editing');
+            var display = cell.querySelector('.cell-display');
+            var input = cell.querySelector('.cell-input');
+            if (!input) return;
+            display.hidden = true;
+            input.hidden = false;
+            input.focus();
+            if (input.select) input.select();
+        });
+    });
+
+    function saveCell(cell) {
+        var row = cell.closest('tr');
+        var entryId = row.getAttribute('data-entry-id');
+        var field = cell.getAttribute('data-field');
+        var input = cell.querySelector('.cell-input');
+        var display = cell.querySelector('.cell-display');
+        if (!input || !entryId) return;
+
+        var value = input.value;
+        cell.classList.remove('is-editing');
+        display.hidden = false;
+        input.hidden = true;
+
+        fetch('/tasks/babylon-hotels/row/' + entryId + '/update/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({ field: field, value: value }),
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+            if (!res.ok) {
+                alert(res.data.error || 'Save failed');
+                return;
+            }
+            var entry = res.data.entry;
+            if (field === 'details') display.textContent = entry.details || '—';
+            else if (field === 'price') display.textContent = entry.price || '—';
+            else if (field === 'client_name') display.textContent = entry.client_name;
+            else if (field === 'confirmation_number') display.textContent = entry.confirmation_number || '—';
+            else if (field === 'due_date') display.textContent = entry.due_date || '—';
+            else if (field === 'entry_date') display.textContent = entry.entry_date;
+            cell.classList.add('is-saved');
+            setTimeout(function() { cell.classList.remove('is-saved'); }, 1200);
+        })
+        .catch(function() { alert('Network error'); });
+    }
+
+    document.querySelectorAll('#babylonSheet .cell-input').forEach(function(input) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && input.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                saveCell(input.closest('td'));
+            }
+            if (e.key === 'Escape') {
+                var cell = input.closest('td');
+                cell.classList.remove('is-editing');
+                cell.querySelector('.cell-display').hidden = false;
+                input.hidden = true;
+            }
+        });
+        input.addEventListener('blur', function() {
+            var cell = input.closest('td');
+            if (cell.classList.contains('is-editing')) saveCell(cell);
+        });
+    });
+})();
+</script>
+</body>
+</html>

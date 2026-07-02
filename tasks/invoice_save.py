@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from .calendar_sync import sync_payment_event, sync_service_event
 from .forms import LeadTaskForm, ServiceForm
 from .models import LeadTask, Payment, Service
+from .babylon_sync import sync_entry_from_service
 
 
 def _save_existing_services(request, leadtask, seen_ids):
@@ -27,6 +28,7 @@ def _save_existing_services(request, leadtask, seen_ids):
         if form.is_valid():
             saved = form.save()
             sync_service_event(saved)
+            sync_entry_from_service(saved)
 
 
 def _save_new_services(request, leadtask):
@@ -58,6 +60,7 @@ def _save_new_services(request, leadtask):
             service.leadtask = leadtask
             service.save()
             sync_service_event(service)
+            sync_entry_from_service(service)
 
 
 def save_invoice_from_post(request, leadtask):

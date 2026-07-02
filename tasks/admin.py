@@ -3,7 +3,7 @@ from django import forms
 from .admin_widgets import RichTextAdminWidget
 from .models import (
     Task, LeadTask, Payment, Tag, Supplier, ServiceType, Service,
-    ClientMediaUploadLink, ClientMediaFile, PdfPolicy,
+    ClientMediaUploadLink, ClientMediaFile, PdfPolicy, BabylonHotelEntry,
 )
 
 admin.site.register(Task)
@@ -30,6 +30,14 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ("service_name", "supplier", "leadtask", "due_time", "is_checked", "send_to_client", "processed")
     search_fields = ("service_name", "supplier", "leadtask__lead__name")
     list_filter = ("is_checked", "send_to_client", "processed")
+
+
+@admin.register(BabylonHotelEntry)
+class BabylonHotelEntryAdmin(admin.ModelAdmin):
+    list_display = ("client_name", "entry_date", "price", "due_date", "confirmation_number", "service")
+    search_fields = ("client_name", "details", "confirmation_number", "service__leadtask__lead__name")
+    list_filter = ("entry_date", "due_date")
+    raw_id_fields = ("service",)
 
 
 class ClientMediaFileInline(admin.TabularInline):

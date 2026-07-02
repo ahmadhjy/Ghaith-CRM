@@ -1,6 +1,7 @@
 # urls.py
 from django.urls import path
 from . import views
+from . import babylon_views
 
 urlpatterns = [
     path('current/', views.display_current_tasks, name='current tasks'),
@@ -46,4 +47,6 @@ urlpatterns = [
     path('client-media/<uuid:token>/delete/<int:file_id>/', views.client_media_delete_file, name='client_media_delete_file'),
     path('client-media/<uuid:token>/submit/', views.client_media_submit, name='client_media_submit'),
     path('client-media/<uuid:token>/', views.client_media_upload_page, name='client_media_upload'),
+    path('babylon-hotels/', babylon_views.babylon_hotels_sheet, name='babylon_hotels_sheet'),
+    path('babylon-hotels/row/<int:entry_id>/update/', babylon_views.babylon_entry_update, name='babylon_entry_update'),
 ]

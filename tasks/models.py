@@ -104,6 +104,32 @@ class Service(models.Model):
         return self.service_name
 
 
+class BabylonHotelEntry(models.Model):
+    """Spreadsheet row synced with a CRM service line when supplier is BABYLON."""
+
+    service = models.OneToOneField(
+        Service,
+        on_delete=models.CASCADE,
+        related_name='babylon_hotel_entry',
+    )
+    entry_date = models.DateField(help_text='Date the CRM service was created.')
+    client_name = models.CharField(max_length=200)
+    details = models.TextField(blank=True)
+    price = models.CharField(max_length=100, blank=True, help_text='Net price (maps to service net).')
+    due_date = models.DateField(null=True, blank=True)
+    confirmation_number = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-entry_date', '-created_at']
+        verbose_name = 'Babylon hotel entry'
+        verbose_name_plural = 'Babylon hotel entries'
+
+    def __str__(self):
+        return f'{self.client_name} — {self.entry_date}'
+
+
 # models.py
 class Payment(models.Model):
     leadtask = models.ForeignKey(LeadTask,

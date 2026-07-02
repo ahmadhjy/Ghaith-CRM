@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babylon Hotels — Ghaith Travel</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f4c81 0%, #1a6b4a 100%);
+            color: #334e68;
+            padding: 24px;
+        }
+        .card {
+            width: 100%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 32px 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,.2);
+        }
+        h1 { margin: 0 0 6px; font-size: 1.35rem; color: #0f4c81; }
+        .sub { margin: 0 0 24px; color: #627d98; font-size: .9rem; }
+        label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; }
+        input[type=password] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d9e2ec;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #1a6b4a;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover { background: #145a3d; }
+        .error {
+            background: #fef2f2;
+            color: #b91c1c;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 16px;
+        }
+        .brand { text-align: center; margin-bottom: 20px; }
+        .brand i { font-size: 2rem; color: #25d366; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand"><i class="fab fa-whatsapp"></i></div>
+        <h1>Babylon Hotels Sheet</h1>
+        <p class="sub">Enter your passcode to view and update hotel bookings.</p>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <label for="passcode">Passcode</label>
+            <input type="password" id="passcode" name="passcode" required autofocus autocomplete="off">
+            <button type="submit"><i class="fas fa-lock-open"></i> Enter</button>
+        </form>
+    </div>
+</body>
+</html>
