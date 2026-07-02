@@ -194,6 +194,9 @@ VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtrav
 CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'http://127.0.0.1:8000')
 CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 
+# Shared secret for WhatsApp AI dashboard → CRM lead sync API (header: X-API-Key)
+EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY', 'GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT')
+
 # Embedded accounting module (Ghaith branding — no Sama references)
 COMPANY_LEGAL_NAME = os.environ.get('COMPANY_LEGAL_NAME', 'Ghaith Travel')
 COMPANY_ADDRESS = os.environ.get('COMPANY_ADDRESS', 'Bechara El Khoury Highway, Beirut, Lebanon')

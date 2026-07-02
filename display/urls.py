@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from . import lead_api_views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
@@ -32,12 +33,20 @@ urlpatterns = [
     path('offers/<int:pk>/pdf/', views.download_offer_pdf, name='download_offer_pdf'),
     path('stats_dashboard/', views.stats_dashboard, name='stats_dashboard'),  # New URL pattern
 
-    # JSON API endpoints for external systems (no login required)
-    path('api/contacts/', views.api_create_contact, name='api_create_contact'),  # POST
-    path('api/contacts/search/', views.api_search_contact_by_phone, name='api_search_contact_by_phone'),  # GET
-    path('api/contacts/by-phone/', views.api_get_contact_by_phone, name='api_get_contact_by_phone'),  # GET
-    path('api/contacts/<int:lead_id>/follow-up/', views.api_create_followup, name='api_create_followup'),  # POST
-    path('api/destinations/', views.api_list_destinations, name='api_list_destinations'),  # GET
-    path('api/departures/', views.api_list_departures, name='api_list_departures'),  # GET
-    path('api/crm/notifications/', views.api_create_crm_notification, name='api_create_crm_notification'),  # POST
+    # JSON API — WhatsApp AI dashboard lead sync (Lead model only)
+    path('api/leads/', lead_api_views.api_sync_lead, name='api_sync_lead'),
+    path('api/leads/search/', lead_api_views.api_search_leads, name='api_search_leads'),
+    path('api/leads/stages/', lead_api_views.api_list_lead_stages, name='api_list_lead_stages'),
+    path('api/leads/<int:lead_id>/', lead_api_views.api_lead_detail, name='api_lead_detail'),
+    path('api/leads/<int:lead_id>/qualify/', lead_api_views.api_qualify_lead, name='api_qualify_lead'),
+    path('api/leads/<int:lead_id>/close-deal/', lead_api_views.api_close_deal, name='api_close_deal'),
+    path('api/leads/<int:lead_id>/update/', lead_api_views.api_update_lead, name='api_update_lead'),
+    path('api/departments/', lead_api_views.api_list_departments, name='api_list_departments'),
+    path('api/contacts/', lead_api_views.api_create_contact, name='api_create_contact'),
+    path('api/contacts/search/', lead_api_views.api_search_contact_by_phone, name='api_search_contact_by_phone'),
+    path('api/contacts/by-phone/', lead_api_views.api_get_contact_by_phone, name='api_get_contact_by_phone'),
+    path('api/contacts/<int:lead_id>/follow-up/', lead_api_views.api_create_followup, name='api_create_followup'),
+    path('api/destinations/', lead_api_views.api_list_destinations, name='api_list_destinations'),
+    path('api/departures/', lead_api_views.api_list_departures, name='api_list_departures'),
+    path('api/crm/notifications/', lead_api_views.api_create_crm_notification, name='api_create_crm_notification'),
 ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMonthlyTarget
+from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMonthlyTarget, Department, CrmUserProfile
 from django.db.models import Q, Sum
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
@@ -72,11 +72,11 @@ class TakeoverFilter(admin.SimpleListFilter):
         return queryset
 
 class LeadAdmin(admin.ModelAdmin):
-    search_fields = ['name', 'destination', 'phone']
-    list_display = ['__str__', 'status', 'destination', 'phone',
-                    'assigned_to', 'finalization_notes',
+    search_fields = ['name', 'destination', 'phone', 'external_id']
+    list_display = ['__str__', 'status', 'department', 'destination', 'phone',
+                    'whatsapp_received_on', 'assigned_to',
                     'created_at', 'last_modified', 'is_overdue', 'takeover_added_at']
-    list_filter = ['assigned_to__username', 'type_of_service',
+    list_filter = ['assigned_to__username', 'department', 'type_of_service',
                    'status', 'sold', 'lost', IsOverdueFilter, OnHoldNotTakeoverFilter, TakeoverFilter]
     ordering = ['-last_modified']
 
@@ -85,6 +85,21 @@ class LeadAdmin(admin.ModelAdmin):
     def is_overdue(self, obj):
         return obj.is_overdue
     is_overdue.boolean = True  # Displays a tick or cross icon
+
+
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'is_active', 'sort_order']
+    list_filter = ['is_active']
+    ordering = ['sort_order', 'name']
+    search_fields = ['name', 'code']
+
+
+class CrmUserProfileInline(admin.StackedInline):
+    model = CrmUserProfile
+    can_delete = False
+    fk_name = 'user'
+    verbose_name_plural = 'CRM profile'
+    fields = ('department', 'receives_lead_assignments')
 
 class DailyReportAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'date']
@@ -113,7 +128,7 @@ class UserProfileInline(admin.StackedInline):
 
 
 class CustomUserAdmin(UserAdmin):
-    inlines = list(getattr(UserAdmin, 'inlines', ()) or ()) + [UserProfileInline]
+    inlines = list(getattr(UserAdmin, 'inlines', ()) or ()) + [UserProfileInline, CrmUserProfileInline]
     list_display = UserAdmin.list_display + ('is_sales', 'administration')
     list_filter = UserAdmin.list_filter + ('is_sales', 'administration')
     fieldsets = UserAdmin.fieldsets + (
@@ -121,6 +136,7 @@ class CustomUserAdmin(UserAdmin):
     )
 
 admin.site.register(Lead, LeadAdmin)
+admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Destination)
 admin.site.register(DailyReport, DailyReportAdmin)
 admin.site.register(MonthlyTarget)

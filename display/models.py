@@ -19,6 +19,42 @@ class Destination(models.Model):
         return self.name
 
 
+class Department(models.Model):
+    """Sales department used for routing leads from the WhatsApp AI dashboard."""
+
+    code = models.SlugField(max_length=40, unique=True)
+    name = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class CrmUserProfile(models.Model):
+    """CRM-specific user settings (department membership for lead assignment)."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="crm_profile")
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+    )
+    receives_lead_assignments = models.BooleanField(
+        default=True,
+        help_text="When enabled, this user can receive auto-assigned leads from the dashboard API.",
+    )
+
+    def __str__(self):
+        dept = self.department.name if self.department_id else "No department"
+        return f"{self.user.username} — {dept}"
+
+
 def get_destination_choices():
     """Callable: loads destinations from DB when the field is rendered (e.g. add lead form). No server restart needed after adding in admin."""
     choices = [('', 'Select Destination')]
@@ -42,7 +78,29 @@ class Lead(models.Model):
     email = models.EmailField(blank=True, null=True)
     country_code = models.CharField(max_length=5, default='+961')
     phone = models.CharField(max_length=15)
-    
+    whatsapp_received_on = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Business WhatsApp line that received the inbound message.",
+    )
+    external_id = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Stable ID from the WhatsApp AI dashboard for idempotent sync.",
+    )
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+    )
+    chat_summary = models.TextField(
+        blank=True,
+        help_text="AI-generated chat summary synced from the WhatsApp dashboard.",
+    )
     CHANNEL_CHOICES = [
         ('', 'Select Channel'),
         ('Facebook', 'Facebook'),
@@ -260,3 +318,4 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         instance.is_sales = False
         instance.save()
+    CrmUserProfile.objects.get_or_create(user=instance)

@@ -163,3 +163,11 @@ class ServiceTypeVisibilityTests(TestCase):
     def test_extra_pk_included_for_saved_line(self):
         qs = crm_predefined_service_types(extra_pk=self.legacy.pk)
         self.assertIn(self.legacy, list(qs))
+
+    def test_unsynced_crm_type_included_in_full_list(self):
+        from tasks.models import ServiceType as CrmServiceType
+
+        CrmServiceType.objects.create(name="Train", is_active=True)
+        names = set(crm_predefined_service_types().values_list("name", flat=True))
+        self.assertIn("Train", names)
+        self.assertTrue(ServiceType.objects.filter(name="Train").exists())
