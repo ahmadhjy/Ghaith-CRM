@@ -54,6 +54,9 @@ VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'mailto:admin@ghaithtrav
 CRM_SITE_URL = os.environ.get('CRM_SITE_URL', 'https://ghaithtravel.pythonanywhere.com')
 CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 
+EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY') or 'GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT'
+BABYLON_PORTAL_PASSCODE = os.environ.get('BABYLON_PORTAL_PASSCODE') or 'Babylon-Ghaith-2026'
+
 # Optional: import local overrides
 # try:
 #     from .local_settings import *  # noqa: F403

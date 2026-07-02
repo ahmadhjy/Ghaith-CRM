@@ -198,7 +198,7 @@ CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY', 'GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT')
 
 # Passcode for Babylon supplier hotel spreadsheet portal (/babylon/)
-BABYLON_PORTAL_PASSCODE = os.environ.get('BABYLON_PORTAL_PASSCODE', 'Babylon-Ghaith-2026')
+BABYLON_PORTAL_PASSCODE = os.environ.get('BABYLON_PORTAL_PASSCODE') or 'Babylon-Ghaith-2026'
 
 # Embedded accounting module (Ghaith branding — no Sama references)
 COMPANY_LEGAL_NAME = os.environ.get('COMPANY_LEGAL_NAME', 'Ghaith Travel')

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import datetime
 
 from django.conf import settings
@@ -16,6 +17,7 @@ from tasks.constants import get_service_choices
 from tasks.models import BabylonHotelEntry
 
 SESSION_KEY = 'babylon_portal_authenticated'
+DEFAULT_BABYLON_PASSCODE = 'Babylon-Ghaith-2026'
 
 EDITABLE_STAFF = {
     'entry_date', 'client_name', 'service_type', 'details',
@@ -25,7 +27,18 @@ EDITABLE_PORTAL = {'details', 'price', 'due_date', 'confirmation_number'}
 
 
 def _portal_passcode() -> str:
-    return getattr(settings, 'BABYLON_PORTAL_PASSCODE', '') or ''
+    configured = getattr(settings, 'BABYLON_PORTAL_PASSCODE', None)
+    if configured is None:
+        return DEFAULT_BABYLON_PASSCODE
+    cleaned = str(configured).strip()
+    return cleaned or DEFAULT_BABYLON_PASSCODE
+
+
+def _passcode_is_valid(entered: str) -> bool:
+    expected = _portal_passcode()
+    if not expected:
+        return False
+    return secrets.compare_digest(entered.strip(), expected)
 
 
 def _is_portal_authenticated(request) -> bool:
@@ -107,7 +120,7 @@ def babylon_portal_login(request):
     error = ''
     if request.method == 'POST':
         passcode = (request.POST.get('passcode') or '').strip()
-        if passcode and passcode == _portal_passcode():
+        if passcode and _passcode_is_valid(passcode):
             request.session[SESSION_KEY] = True
             return redirect('babylon_portal_sheet')
         error = 'Invalid passcode. Please try again.'

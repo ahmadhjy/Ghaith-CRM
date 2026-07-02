@@ -95,3 +95,9 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Sara Haddad')
         self.assertContains(response, 'Hotel')
         self.assertNotContains(response, 'selling')
+
+    @override_settings(BABYLON_PORTAL_PASSCODE='')
+    def test_default_passcode_when_setting_empty(self):
+        response = self.client.post('/babylon/', {'passcode': 'Babylon-Ghaith-2026'})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/babylon/sheet', response.url)
