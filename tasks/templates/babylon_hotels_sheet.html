@@ -59,7 +59,7 @@
                 </thead>
                 <tbody>
                     {% for entry in entries %}
-                    <tr data-entry-id="{{ entry.id }}">
+                    <tr data-entry-id="{{ entry.id }}"{% if portal_mode %}{% if not entry.price or not entry.due_date %} class="is-incomplete"{% endif %}{% endif %}>
                         <td data-field="entry_date" data-editable="{% if 'entry_date' in editable_fields %}1{% else %}0{% endif %}">
                             <span class="cell-display">{{ entry.entry_date|date:"Y-m-d" }}</span>
                             <input type="date" class="cell-input" value="{{ entry.entry_date|date:'Y-m-d' }}" hidden>
@@ -124,6 +124,19 @@
     }
 
     var csrftoken = getCookie('csrftoken');
+
+    function rowIsIncomplete(entry) {
+        return !(entry.price && String(entry.price).trim()) || !(entry.due_date && String(entry.due_date).trim());
+    }
+
+    function updateRowHighlight(row, entry) {
+        if (!row || !document.body.classList.contains('babylon-portal')) return;
+        if (rowIsIncomplete(entry)) {
+            row.classList.add('is-incomplete');
+        } else {
+            row.classList.remove('is-incomplete');
+        }
+    }
 
     document.querySelectorAll('#babylonSheet td[data-editable="1"]').forEach(function(cell) {
         cell.addEventListener('click', function() {

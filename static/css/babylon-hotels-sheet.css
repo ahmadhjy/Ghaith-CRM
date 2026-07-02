@@ -213,3 +213,22 @@
 .babylon-portal .babylon-sheet td[data-editable="0"] .cell-display {
   color: #486581;
 }
+
+.babylon-portal .babylon-sheet tbody tr.is-incomplete {
+  background: #fff7ed;
+}
+
+.babylon-portal .babylon-sheet tbody tr.is-incomplete:hover {
+  background: #ffedd5;
+}
+
+.babylon-portal .babylon-sheet tbody tr.is-incomplete td[data-field="price"] .cell-display,
+.babylon-portal .babylon-sheet tbody tr.is-incomplete td[data-field="due_date"] .cell-display {
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.babylon-portal .babylon-sheet tbody tr.is-incomplete td[data-field="price"]:empty .cell-display,
+.babylon-portal .babylon-sheet tbody tr.is-incomplete td[data-field="due_date"] .cell-display {
+  font-weight: 700;
+}
