@@ -97,6 +97,24 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'View Other Hotels')
         self.assertContains(response, '/babylon/other-hotels/')
 
+    def test_portal_sheet_defaults_to_hotel_service_type(self):
+        Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Visa',
+            supplier='BABYLON',
+            details='Visa processing',
+            net='50',
+        )
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.get('/babylon/sheet/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Alindra Villa')
+        self.assertNotContains(response, 'Visa processing')
+        self.assertContains(response, 'value="Hotel" selected')
+
+        response_all = self.client.get('/babylon/sheet/', {'service_type': ''})
+        self.assertContains(response_all, 'Visa processing')
+
     def test_portal_other_hotels_page(self):
         self.lead.destination = OTHER_HOTELS_DESTINATION
         self.lead.save(update_fields=['destination'])

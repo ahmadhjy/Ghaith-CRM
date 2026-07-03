@@ -19,6 +19,7 @@ from tasks.babylon_sheet import (
     babylon_applied_filters,
     babylon_entries_queryset,
     babylon_export_table,
+    babylon_portal_query_params,
     other_hotels_applied_filters,
     other_hotels_queryset,
     row_from_entry,
@@ -129,6 +130,13 @@ def _babylon_filter_ctx(request):
     return sheet_filter_context(request.GET, default_sort=SORT_DUE_DESC)
 
 
+def _babylon_portal_filter_ctx(request):
+    return sheet_filter_context(
+        babylon_portal_query_params(request.GET),
+        default_sort=SORT_DUE_DESC,
+    )
+
+
 def _other_hotels_filter_ctx(request):
     return sheet_filter_context(request.GET, default_sort=SORT_TRAVEL_ASC)
 
@@ -136,7 +144,8 @@ def _other_hotels_filter_ctx(request):
 def _build_babylon_pdf_response(request, *, portal: bool):
     from tasks.pdf_template import build_report_pdf
 
-    entries = babylon_entries_queryset(request.GET)
+    params = babylon_portal_query_params(request.GET) if portal else request.GET
+    entries = babylon_entries_queryset(params)
     rows = [row_from_entry(entry, portal=portal) for entry in entries]
     headers, table_rows = babylon_export_table(rows, portal=portal, show_conf=True)
     response = HttpResponse(content_type='application/pdf')
@@ -145,7 +154,7 @@ def _build_babylon_pdf_response(request, *, portal: bool):
         response=response,
         doc_title='Babylon Hotels',
         subtitle=datetime.now().strftime('%Y-%m-%d %H:%M'),
-        applied_filters=babylon_applied_filters(request.GET),
+        applied_filters=babylon_applied_filters(params),
         headers=headers,
         rows=table_rows,
     )
@@ -153,7 +162,8 @@ def _build_babylon_pdf_response(request, *, portal: bool):
 
 
 def _build_babylon_xlsx_response(request, *, portal: bool):
-    entries = babylon_entries_queryset(request.GET)
+    params = babylon_portal_query_params(request.GET) if portal else request.GET
+    entries = babylon_entries_queryset(params)
     rows = [row_from_entry(entry, portal=portal) for entry in entries]
     headers, table_rows = babylon_export_table(rows, portal=portal, show_conf=True)
     return build_xlsx_response('babylon-hotels-report', headers, table_rows)
@@ -208,9 +218,10 @@ def babylon_portal_login(request):
 @babylon_portal_required
 @require_GET
 def babylon_portal_sheet(request):
-    entries = babylon_entries_queryset(request.GET)
+    params = babylon_portal_query_params(request.GET)
+    entries = babylon_entries_queryset(params)
     rows = [row_from_entry(entry, portal=True) for entry in entries]
-    q = request.GET.urlencode()
+    q = params.urlencode() if hasattr(params, 'urlencode') else ''
     return render(request, 'babylon_hotels_sheet.html', _sheet_context(
         rows=rows,
         sheet_kind='babylon',
@@ -218,7 +229,7 @@ def babylon_portal_sheet(request):
         subtitle='',
         portal_mode=True,
         editable_fields=EDITABLE_PORTAL,
-        filter_ctx=_babylon_filter_ctx(request),
+        filter_ctx=_babylon_portal_filter_ctx(request),
         export_pdf_url=f'/babylon/export/pdf/?{q}' if q else '/babylon/export/pdf/',
         export_xlsx_url=f'/babylon/export/xlsx/?{q}' if q else '/babylon/export/xlsx/',
         other_hotels_url='/babylon/other-hotels/',

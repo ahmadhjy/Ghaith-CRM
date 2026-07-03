@@ -14,6 +14,7 @@ from tasks.models import BabylonHotelEntry, Service
 
 OTHER_HOTELS_DESTINATION = 'Bali'
 OTHER_HOTELS_SERVICE = 'Hotel'
+BABYLON_PORTAL_DEFAULT_SERVICE = 'Hotel'
 
 SORT_DUE_ASC = 'due'
 SORT_DUE_DESC = '-due'
@@ -63,6 +64,17 @@ def _order_babylon_entries(qs, sort: str):
     if sort == SORT_DUE_DESC:
         return qs.order_by(F('due_date').desc(nulls_last=True), '-entry_date', '-created_at')
     return qs.order_by('-entry_date', '-created_at')
+
+
+def babylon_portal_query_params(params):
+    """Portal sheet defaults to Hotel; explicit empty service_type means All."""
+    if hasattr(params, 'copy'):
+        q = params.copy()
+    else:
+        q = dict(params)
+    if 'service_type' not in q:
+        q['service_type'] = BABYLON_PORTAL_DEFAULT_SERVICE
+    return q
 
 
 def babylon_entries_queryset(params):
