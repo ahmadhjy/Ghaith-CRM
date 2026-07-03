@@ -30,6 +30,19 @@ def _parse_date(raw: str):
         return None
 
 
+def _today(now):
+    return now.date() if hasattr(now, 'date') else now
+
+
+def apply_upcoming_travel_filter(services, *, now):
+    """Only services whose order travel date is today or later."""
+    today = _today(now)
+    return services.filter(
+        leadtask__travel_date__isnull=False,
+        leadtask__travel_date__date__gte=today,
+    )
+
+
 def apply_purchases_filters(services, params, *, now):
     due_from = _parse_date(params.get('due_from'))
     due_to = _parse_date(params.get('due_to'))
@@ -41,6 +54,8 @@ def apply_purchases_filters(services, params, *, now):
     service_filter = (params.get('service') or '').strip()
     show_cancelled = params.get('show_cancelled') == 'on'
 
+    services = apply_upcoming_travel_filter(services, now=now)
+
     if not show_cancelled:
         services = services.exclude(leadtask__status='cancelled')
 
@@ -50,7 +65,8 @@ def apply_purchases_filters(services, params, *, now):
     if due_to:
         services = services.filter(due_time__date__lte=due_to)
 
-    if travel_from:
+    today = _today(now)
+    if travel_from and travel_from > today:
         services = services.filter(leadtask__travel_date__date__gte=travel_from)
     if travel_to:
         services = services.filter(leadtask__travel_date__date__lte=travel_to)
@@ -106,6 +122,7 @@ def purchases_applied_filters(params) -> list[str]:
     sort = (params.get('sort') or SORT_DUE_ASC).strip()
     sort_labels = dict(SORT_CHOICES)
 
+    filters.append('Upcoming travel only')
     if due_from:
         filters.append(f'Due from: {due_from}')
     if due_to:

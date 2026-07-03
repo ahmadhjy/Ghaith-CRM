@@ -20,6 +20,7 @@ from tasks.purchases_filters import (
     SORT_CHOICES as PURCHASES_SORT_CHOICES,
     SORT_DUE_ASC,
     apply_purchases_filters,
+    apply_upcoming_travel_filter,
     order_purchases,
 )
 from display.models import Lead
@@ -250,7 +251,7 @@ def supplier_payments_list(request):
     show_cancelled = request.GET.get('show_cancelled', '') == 'on'
     sort = request.GET.get('sort', SORT_DUE_ASC).strip()
 
-    base_qs = services
+    base_qs = apply_upcoming_travel_filter(services, now=now)
     if not show_cancelled:
         base_qs = base_qs.exclude(leadtask__status='cancelled')
 

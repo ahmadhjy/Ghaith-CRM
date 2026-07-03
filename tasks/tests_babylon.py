@@ -116,6 +116,7 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Bali resort')
         self.assertContains(response, 'Babylon Hotels')
         self.assertNotContains(response, 'Conf #')
+        self.assertNotContains(response, '<th>Issued</th>')
 
     def test_staff_sheet_lists_entries(self):
         self.client.login(username='sales1', password='pass')
@@ -158,6 +159,7 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Bali resort')
         self.assertContains(response, 'Other Hotels')
         self.assertNotContains(response, 'Conf #')
+        self.assertNotContains(response, '<th>Issued</th>')
         self.assertEqual(other_hotels_queryset({}).filter(pk=other.pk).count(), 1)
 
     def test_other_hotels_excludes_babylon_supplier(self):

@@ -88,6 +88,43 @@ class PurchasesFilterTests(TestCase):
         self.assertNotIn(self.early.pk, ids)
         self.assertNotIn(self.late.pk, ids)
 
+    def test_excludes_past_and_missing_travel_dates_by_default(self):
+        past_task = LeadTask.objects.create(
+            lead=self.lead,
+            assigned_to=self.user,
+            status='progress',
+            travel_date=timezone.now() - timedelta(days=5),
+        )
+        past_service = Service.objects.create(
+            leadtask=past_task,
+            service_name='Hotel',
+            supplier='YARDS',
+            net='80',
+            due_time=timezone.now() + timedelta(days=2),
+            is_checked=False,
+        )
+        no_travel_task = LeadTask.objects.create(
+            lead=self.lead,
+            assigned_to=self.user,
+            status='progress',
+            travel_date=None,
+        )
+        no_travel_service = Service.objects.create(
+            leadtask=no_travel_task,
+            service_name='Visa',
+            supplier='YARDS',
+            net='40',
+            due_time=timezone.now() + timedelta(days=2),
+            is_checked=False,
+        )
+        qs = Service.objects.all()
+        filtered = apply_purchases_filters(qs, {'issued': 'unissued'}, now=timezone.now())
+        ids = list(filtered.values_list('pk', flat=True))
+        self.assertIn(self.early.pk, ids)
+        self.assertIn(self.late.pk, ids)
+        self.assertNotIn(past_service.pk, ids)
+        self.assertNotIn(no_travel_service.pk, ids)
+
     def test_missing_due_date_sorted_last(self):
         no_due = Service.objects.create(
             leadtask=self.leadtask,

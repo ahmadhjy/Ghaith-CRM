@@ -96,7 +96,7 @@
                         <th>Price (Net)</th>
                         <th>Due</th>
                         <th>Travel date</th>
-                        <th>Issued</th>
+                        {% if show_issued %}<th>Issued</th>{% endif %}
                         {% if show_conf %}<th>Conf #</th>{% endif %}
                         {% if show_order %}<th>Order</th>{% endif %}
                     </tr>
@@ -148,6 +148,7 @@
                         <td class="col-travel">
                             <span class="cell-display">{% if row.travel_date %}{{ row.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
                         </td>
+                        {% if show_issued %}
                         <td class="col-issued">
                             {% if portal_mode and row.row_kind == 'service' %}
                             <span class="cell-display">{% if row.is_checked %}Yes{% else %}No{% endif %}</span>
@@ -161,6 +162,7 @@
                             </form>
                             {% endif %}
                         </td>
+                        {% endif %}
                         {% if show_conf %}
                         <td data-field="confirmation_number" data-editable="{% if row.row_kind == 'babylon' and 'confirmation_number' in editable_fields %}1{% else %}0{% endif %}">
                             <span class="cell-display">{{ row.confirmation_number|default:"—" }}</span>
@@ -177,7 +179,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{% if show_order %}{% if show_conf %}10{% else %}9{% endif %}{% else %}{% if show_conf %}9{% else %}8{% endif %}{% endif %}" class="babylon-empty">
+                        <td colspan="{% if show_order %}{% if show_conf %}{% if show_issued %}10{% else %}9{% endif %}{% else %}{% if show_issued %}9{% else %}8{% endif %}{% endif %}{% else %}{% if show_conf %}{% if show_issued %}9{% else %}8{% endif %}{% else %}{% if show_issued %}8{% else %}7{% endif %}{% endif %}{% endif %}" class="babylon-empty">
                             <i class="fas fa-inbox"></i>
                             {{ empty_message }}
                         </td>

@@ -211,8 +211,10 @@ def other_hotels_applied_filters(params) -> list[str]:
     return filters
 
 
-def babylon_export_table(rows, *, portal: bool, show_conf: bool = True) -> tuple[list[str], list[list]]:
-    headers = ['Date', 'Client Name', 'Service', 'Details', 'Price (Net)', 'Due', 'Travel date', 'Issued']
+def babylon_export_table(rows, *, portal: bool, show_conf: bool = True, show_issued: bool = True) -> tuple[list[str], list[list]]:
+    headers = ['Date', 'Client Name', 'Service', 'Details', 'Price (Net)', 'Due', 'Travel date']
+    if show_issued:
+        headers.append('Issued')
     if show_conf:
         headers.append('Conf #')
     if not portal:
@@ -228,8 +230,9 @@ def babylon_export_table(rows, *, portal: bool, show_conf: bool = True) -> tuple
             row.get('price') or '—',
             _fmt_date(row.get('due_date')),
             _fmt_travel_date(row.get('travel_date')),
-            'Yes' if row.get('is_checked') else 'No',
         ]
+        if show_issued:
+            line.append('Yes' if row.get('is_checked') else 'No')
         if show_conf:
             line.append(row.get('confirmation_number') or '—')
         if not portal:

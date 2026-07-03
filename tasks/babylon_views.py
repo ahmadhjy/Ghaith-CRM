@@ -102,6 +102,7 @@ def _sheet_context(
     other_hotels_url: str = '',
     babylon_url: str = '',
     show_conf: bool = True,
+    show_issued: bool = True,
     empty_message: str = '',
 ):
     return {
@@ -112,6 +113,7 @@ def _sheet_context(
         'portal_mode': portal_mode,
         'editable_fields': editable_fields,
         'show_conf': show_conf,
+        'show_issued': show_issued,
         'show_order': not portal_mode,
         'portal_url': portal_url,
         'export_pdf_url': export_pdf_url,
@@ -164,7 +166,7 @@ def _build_other_hotels_pdf_response(request):
 
     services = other_hotels_queryset(request.GET, now=timezone.now())
     rows = [row_from_service(service) for service in services]
-    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False)
+    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="other-hotels-bali-report.pdf"'
     build_report_pdf(
@@ -183,7 +185,7 @@ def _build_other_hotels_xlsx_response(request):
 
     services = other_hotels_queryset(request.GET, now=timezone.now())
     rows = [row_from_service(service) for service in services]
-    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False)
+    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False)
     return build_xlsx_response('other-hotels-bali-report', headers, table_rows)
 
 
@@ -259,6 +261,7 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
             editable_fields=set(),
             filter_ctx=_other_hotels_filter_ctx(request),
             show_conf=False,
+            show_issued=False,
             export_pdf_url=f'/babylon/other-hotels/pdf/?{q}' if q else '/babylon/other-hotels/pdf/',
             export_xlsx_url=f'/babylon/other-hotels/xlsx/?{q}' if q else '/babylon/other-hotels/xlsx/',
             babylon_url='/babylon/sheet/',
@@ -273,6 +276,7 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
         editable_fields=set(),
         filter_ctx=_other_hotels_filter_ctx(request),
         show_conf=False,
+        show_issued=False,
         export_pdf_url=f'/tasks/other-hotels/pdf/?{q}' if q else '/tasks/other-hotels/pdf/',
         export_xlsx_url=f'/tasks/other-hotels/xlsx/?{q}' if q else '/tasks/other-hotels/xlsx/',
         babylon_url='/tasks/babylon-hotels/',
