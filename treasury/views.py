@@ -160,6 +160,7 @@ def _resolve_payment_party_type(direction, party_type):
 
 @login_required
 def payment_create(request):
+    payment = None
     if request.method == "POST":
         try:
             direction = request.POST.get("direction")

@@ -70,6 +70,7 @@
                     <th>Supplier</th>
                     <th>Service</th>
                     <th>Lead name</th>
+                    <th>Travel date</th>
                     <th>Amount</th>
                     <th>Due time</th>
                     <th>Order</th>
@@ -82,6 +83,9 @@
                     <td data-label="Supplier">{{ service.supplier|default:"—" }}</td>
                     <td data-label="Service">{{ service.service_name|default:"—" }}</td>
                     <td data-label="Lead name">{{ service.leadtask.lead.name }}</td>
+                    <td data-label="Travel date">
+                        {% if service.leadtask.travel_date %}{{ service.leadtask.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}
+                    </td>
                     <td data-label="Amount">{{ service.issue_price|default:service.net|default:"—" }}</td>
                     <td data-label="Due time">
                         {{ service.due_time|date:"Y-m-d H:i" }}
@@ -104,7 +108,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="list-table__empty">No purchases found.</td>
+                    <td colspan="8" class="list-table__empty">No purchases found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

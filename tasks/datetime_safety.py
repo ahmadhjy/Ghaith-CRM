@@ -45,6 +45,7 @@ def purchases_services_queryset(queryset):
         'leadtask_id',
         'leadtask__id',
         'leadtask__status',
+        'leadtask__travel_date',
         'leadtask__lead_id',
         'leadtask__lead__id',
         'leadtask__lead__name',

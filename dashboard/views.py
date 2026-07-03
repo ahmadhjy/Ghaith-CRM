@@ -363,7 +363,8 @@ def supplier_payments_pdf(request):
             s.supplier or "—",
             s.service_name or "—",
             s.leadtask.lead.name,
-            s.net or "—",
+            s.leadtask.travel_date.strftime("%Y-%m-%d") if s.leadtask.travel_date else "—",
+            s.issue_price or s.net or "—",
             s.due_time.strftime("%Y-%m-%d %H:%M") if s.due_time else "—",
             str(s.leadtask_id),
             "Yes" if s.is_checked else "No",
@@ -374,7 +375,7 @@ def supplier_payments_pdf(request):
     from tasks.pdf_policy import PDF_TARGET_PURCHASES_REPORT
     return _build_modern_pdf(
         "Purchases Report",
-        ["Supplier", "Service", "Lead name", "Amount", "Due time", "Order ID", "Issued", "Order status"],
+        ["Supplier", "Service", "Lead name", "Travel date", "Amount", "Due time", "Order ID", "Issued", "Order status"],
         rows,
         "supplier-payments-report.pdf",
         applied_filters=applied_filters,

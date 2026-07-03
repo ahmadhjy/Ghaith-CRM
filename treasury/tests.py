@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from accounts_core.models import Client, Employee, Supplier
+from accounts_core.models import Client, Employee, Supplier, UserProfile
 from catalog.models import Destination, ServiceInstance, ServiceType
 from sales.models import SalesInvoice, SalesInvoiceLine
 from treasury.models import ARAllocation, MoneyAccount, Payment
@@ -14,6 +14,9 @@ from treasury.payment_flow import post_payment_and_allocate
 class TreasuryAllocationTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="acc", password="test12345")
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.is_main_accountant = True
+        profile.save(update_fields=["is_main_accountant"])
         self.client_obj = Client.objects.create(client_code="C0002", name_en="Client B")
         self.employee = Employee.objects.create(name="Emp B", role=Employee.EmployeeRole.ACCOUNTING)
         self.service_type = ServiceType.objects.create(name="Hotel", code="HTL")
@@ -209,3 +212,8 @@ class TreasuryAllocationTests(TestCase):
         )
         with self.assertRaises(ValueError):
             payment.post(self.user)
+
+    def test_payment_create_page_loads(self):
+        self.client.force_login(self.user)
+        response = self.client.get("/accounting/treasury/payments/new/")
+        self.assertEqual(response.status_code, 200)

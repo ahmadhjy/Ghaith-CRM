@@ -190,6 +190,7 @@
             else if (field === 'confirmation_number') display.textContent = entry.confirmation_number || '—';
             else if (field === 'due_date') display.textContent = entry.due_date || '—';
             else if (field === 'entry_date') display.textContent = entry.entry_date;
+            updateRowHighlight(row, entry);
             cell.classList.add('is-saved');
             setTimeout(function() { cell.classList.remove('is-saved'); }, 1200);
         })
