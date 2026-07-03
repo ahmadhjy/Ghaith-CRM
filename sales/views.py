@@ -150,7 +150,10 @@ def _invoice_page_context(form, formset, invoice, can_view_cost):
 
 @login_required
 def invoice_list(request):
-    qs = SalesInvoice.objects.select_related("client", "sales_employee").order_by("-created_at")
+    qs = (
+        SalesInvoice.objects.select_related("client", "sales_employee", "crm_sync_queue__leadtask")
+        .order_by("-created_at")
+    )
     qs = invoice_search_filters(qs, request)[:500]
     return render_or_pdf(request, "sales/invoice_list.html", {"invoices": qs}, export_filename("Invoices"))
 
@@ -185,7 +188,10 @@ def invoice_create(request):
 
 @login_required
 def invoice_edit(request, invoice_id):
-    invoice = get_object_or_404(SalesInvoice, pk=invoice_id)
+    invoice = get_object_or_404(
+        SalesInvoice.objects.select_related("crm_sync_queue__leadtask"),
+        pk=invoice_id,
+    )
     can_view_cost = not request.user.groups.filter(name="Sales").exists()
     line_formset_cls = SalesInvoiceLineFormSet if can_view_cost else SalesInvoiceLineSalesFormSet
     if not invoice.is_editable():
@@ -212,7 +218,10 @@ def invoice_edit(request, invoice_id):
 @login_required
 def invoice_open(request, invoice_id):
     """Read-only invoice view with void/delete actions."""
-    invoice = get_object_or_404(SalesInvoice, pk=invoice_id)
+    invoice = get_object_or_404(
+        SalesInvoice.objects.select_related("crm_sync_queue__leadtask"),
+        pk=invoice_id,
+    )
     can_edit = invoice.is_editable()
     can_void = invoice.is_editable() and not invoice.allocations.exists()
     return render(
@@ -236,7 +245,7 @@ def invoice_open(request, invoice_id):
 @login_required
 def invoice_pdf(request, invoice_id):
     invoice = get_object_or_404(
-        SalesInvoice.objects.select_related("client", "main_destination", "sales_employee"),
+        SalesInvoice.objects.select_related("client", "main_destination", "sales_employee", "crm_sync_queue__leadtask"),
         pk=invoice_id,
     )
     version = (request.GET.get("version") or "client").lower()

@@ -20,6 +20,7 @@
             <th>No</th>
             <th>Client</th>
             <th>Date</th>
+            <th>Travel date</th>
             <th>Service</th>
             <th class="num">Total</th>
             <th class="num">Cost</th>
@@ -36,6 +37,7 @@
             </td>
             <td>{{ invoice.client.name_en|default:"—" }}</td>
             <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
+            <td>{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
             <td class="invoice-list-service">{% if invoice.package_type %}{{ invoice.get_package_type_display }}{% else %}—{% endif %}</td>
             <td class="num">
                 {{ invoice.grand_total }} {{ invoice.currency }}
@@ -51,7 +53,7 @@
             </td>
         </tr>
     {% empty %}
-        <tr><td colspan="8">No invoices found.</td></tr>
+        <tr><td colspan="9">No invoices found.</td></tr>
     {% endfor %}
     </tbody>
 </table>

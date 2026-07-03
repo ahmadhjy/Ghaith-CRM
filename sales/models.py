@@ -97,6 +97,19 @@ class SalesInvoice(models.Model):
     def is_editable(self):
         return self.status != self.Status.VOIDED
 
+    @property
+    def crm_travel_date(self):
+        """Travel date from the linked CRM order, when present."""
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            travel = self.crm_sync_queue.leadtask.travel_date
+        except ObjectDoesNotExist:
+            return None
+        if not travel:
+            return None
+        return travel.date() if hasattr(travel, 'date') else travel
+
     def document_currency_is_usd(self):
         return (self.currency or "USD").upper() == "USD"
 
@@ -460,21 +473,16 @@ class SalesInvoiceLine(models.Model):
         return details
 
     def supplier_statement_description(self):
-        """Supplier statement: client name prefix plus line details."""
-        details = self.statement_line_details()
-        client_name = ''
+        """Supplier statement: client name only."""
         if self.invoice_id:
             invoice = getattr(self, 'invoice', None)
             if invoice is None:
                 invoice = SalesInvoice.objects.filter(pk=self.invoice_id).select_related('client').first()
             if invoice and invoice.client_id:
                 client_name = (invoice.client.name_en or '').strip()
-        if client_name:
-            prefix = f'client- {client_name}'
-            if details:
-                return f'{prefix} — {details}'
-            return prefix
-        return details
+                if client_name:
+                    return client_name
+        return self.statement_line_details()
 
     def line_summary_label(self):
         st = self.service_type

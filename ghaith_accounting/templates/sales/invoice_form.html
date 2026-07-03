@@ -88,6 +88,9 @@
       </span>
       {% if form.main_destination.errors %}<span class="errorlist">{{ form.main_destination.errors }}</span>{% endif %}
     </p>
+    {% if invoice.crm_travel_date %}
+    <p class="invoice-field-travel_date"><strong>Travel date:</strong> {{ invoice.crm_travel_date|date:"Y-m-d" }}</p>
+    {% endif %}
 
     <div id="invoice-fx-summary" class="panel" style="margin:12px 0;padding:12px;background:#f8fafc;border-radius:8px;display:none;">
       <strong>Currency conversion</strong>

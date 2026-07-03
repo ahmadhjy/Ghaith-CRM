@@ -19,7 +19,7 @@
       <span class="app-nav__brand-mark" aria-hidden="true">G</span>
       <div class="app-nav__brand-text">
         <strong>Ghaith Accounting</strong>
-        <small>Finance &amp; Reports</small>
+        <small>Finance</small>
       </div>
     </div>
     <button class="app-nav__close" id="appNavClose" aria-label="Close menu">
@@ -77,9 +77,6 @@
     <div class="app-nav__section-label">Finance</div>
     <a class="app-nav__item{% if '/accounting/expenses/' in request.path %} is-active{% endif %}" href="{% url 'expenses:expense_list' %}">
       <i class="fas fa-wallet"></i><span>Operating expenses</span>
-    </a>
-    <a class="app-nav__item{% if '/accounting/reporting/' in request.path %} is-active{% endif %}" href="{% url 'reporting:reports_home' %}">
-      <i class="fas fa-chart-pie"></i><span>Reports</span>
     </a>
 
     <div class="app-nav__section-label">Tools</div>

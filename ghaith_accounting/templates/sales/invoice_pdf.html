@@ -19,6 +19,8 @@
             <div class="pdf-doc-panel__value">{{ invoice.issue_date|date:"d/m/Y" }}</div>
             <div class="pdf-doc-panel__label">Due date</div>
             <div class="pdf-doc-panel__value">{{ invoice.due_date|date:"d/m/Y" }}</div>
+            <div class="pdf-doc-panel__label">Travel date</div>
+            <div class="pdf-doc-panel__value">{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"d/m/Y" }}{% else %}—{% endif %}</div>
             <div class="pdf-doc-panel__label">Currency</div>
             <div class="pdf-doc-panel__value">{{ invoice.currency }}</div>
         </div>
@@ -80,6 +82,7 @@
 <div class="panel">
     <p><strong>Client:</strong> {{ invoice.client.name_en }}</p>
     <p><strong>Issue / Due:</strong> {{ invoice.issue_date }} / {{ invoice.due_date }}</p>
+    <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</p>
     {% if invoice.package_type %}<p><strong>Type of service:</strong> {{ invoice.get_package_type_display }}</p>{% endif %}
     <p><strong>Currency:</strong> {{ invoice.currency }}</p>
     <p><strong>Total selling:</strong> {{ invoice.grand_total }} {{ invoice.currency }}

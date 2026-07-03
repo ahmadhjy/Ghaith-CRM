@@ -337,6 +337,6 @@ class StatementLineDetailsTests(TestCase):
         )
         self.assertEqual(
             line.supplier_statement_description(),
-            "client- Client B — Deluxe room",
+            "Client B",
         )
 

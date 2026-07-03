@@ -263,7 +263,7 @@ class SupplierStatementServiceDateTests(TestCase):
         self._post_invoice_with_line(date.today())
         rows = build_supplier_statement_rows(self.supplier)
         self.assertEqual(len(rows), 1)
-        self.assertTrue(rows[0]["description"].startswith("client- Future Client"))
+        self.assertEqual(rows[0]["description"], "Future Client")
 
 
 class AllSuppliersSummaryTests(TestCase):
