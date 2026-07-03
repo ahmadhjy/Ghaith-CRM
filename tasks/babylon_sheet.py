@@ -86,7 +86,10 @@ def babylon_entries_queryset(params):
         'service',
         'service__leadtask',
         'service__leadtask__lead',
-    ).filter(entry_date__year=year)
+    ).filter(
+        entry_date__year=year,
+        service__is_checked=False,
+    )
 
     if service_type:
         qs = qs.filter(
@@ -197,6 +200,7 @@ def babylon_applied_filters(params) -> list[str]:
     filters = []
     year = _parse_year(params.get('year'))
     filters.append(f'Year: {year}')
+    filters.append('Unissued only')
     service_type = (params.get('service_type') or '').strip()
     if service_type:
         filters.append(f'Service: {service_type}')

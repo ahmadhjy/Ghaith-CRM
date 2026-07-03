@@ -7,10 +7,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from display.models import Lead
-from tasks.babylon_sheet import OTHER_HOTELS_DESTINATION, other_hotels_queryset
+from tasks.babylon_sheet import OTHER_HOTELS_DESTINATION, babylon_entries_queryset, other_hotels_queryset
 from tasks.babylon_sync import is_babylon_supplier, sync_entry_from_service
 from tasks.models import BabylonHotelEntry, LeadTask, Service
 
@@ -145,6 +146,31 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Travel date')
         self.assertContains(response, 'Other Hotels')
         self.assertNotContains(response, 'selling')
+
+    @patch('accounting_bridge.signals._master_sync_enabled', return_value=False)
+    def test_babylon_sheet_excludes_issued_services(self, _mock_sync):
+        self.service.is_checked = True
+        self.service.save(update_fields=['is_checked'])
+        self.assertEqual(babylon_entries_queryset({}).count(), 0)
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/')
+        self.assertNotContains(response, 'Sara Haddad')
+
+    @patch('accounting_bridge.signals._master_sync_enabled', return_value=False)
+    def test_marking_issued_removes_row_from_babylon_sheet(self, _mock_sync):
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/')
+        self.assertContains(response, 'Sara Haddad')
+        mark_url = reverse('service_mark_done', args=[self.service.pk])
+        response = self.client.post(
+            f'{mark_url}?next=/tasks/babylon-hotels/',
+            {'is_checked': 'on'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.service.refresh_from_db()
+        self.assertTrue(self.service.is_checked)
+        response = self.client.get('/tasks/babylon-hotels/')
+        self.assertNotContains(response, 'Sara Haddad')
 
     def test_service_type_filter_on_staff_sheet(self):
         self.client.login(username='sales1', password='pass')
