@@ -238,7 +238,9 @@ def supplier_statement(request, supplier_id):
 def all_suppliers_statement(request):
     df, dt, _ = resolve_report_dates(request)
     q = (request.GET.get("q") or "").strip()
-    suppliers = Supplier.objects.all().order_by("name")
+    from accounts_core.supplier_querysets import suppliers_with_accounting_activity
+
+    suppliers = suppliers_with_accounting_activity().order_by("name")
     if q:
         suppliers = suppliers.filter(Q(name__icontains=q) | Q(supplier_code__icontains=q))
     rows = build_supplier_summary_rows(suppliers, df, dt)

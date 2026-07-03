@@ -460,8 +460,21 @@ class SalesInvoiceLine(models.Model):
         return details
 
     def supplier_statement_description(self):
-        """Supplier statement line details without destination duplication."""
-        return self.statement_line_details()
+        """Supplier statement: client name prefix plus line details."""
+        details = self.statement_line_details()
+        client_name = ''
+        if self.invoice_id:
+            invoice = getattr(self, 'invoice', None)
+            if invoice is None:
+                invoice = SalesInvoice.objects.filter(pk=self.invoice_id).select_related('client').first()
+            if invoice and invoice.client_id:
+                client_name = (invoice.client.name_en or '').strip()
+        if client_name:
+            prefix = f'client- {client_name}'
+            if details:
+                return f'{prefix} — {details}'
+            return prefix
+        return details
 
     def line_summary_label(self):
         st = self.service_type

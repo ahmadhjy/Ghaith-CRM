@@ -308,3 +308,25 @@ class StatementLineDetailsTests(TestCase):
         combined = line.statement_description()
         self.assertIn("Paris", combined)
 
+    def test_supplier_statement_description_prefixes_client_name(self):
+        invoice = SalesInvoice.objects.create(
+            invoice_no="TMP-3",
+            client=self.client_obj,
+            sales_employee=self.employee,
+            issue_date=date.today(),
+            currency="USD",
+        )
+        line = SalesInvoiceLine.objects.create(
+            invoice=invoice,
+            service_type=self.service_type,
+            destination=self.destination,
+            line_employee=self.employee,
+            qty=Decimal("1"),
+            sell_price=Decimal("100"),
+            notes="Deluxe room",
+        )
+        self.assertEqual(
+            line.supplier_statement_description(),
+            "client- Client B — Deluxe room",
+        )
+

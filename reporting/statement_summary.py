@@ -107,8 +107,12 @@ def build_supplier_summary_rows(suppliers, date_from=None, date_to=None):
     day_before = (date_from - timedelta(days=1)) if date_from else None
     rows = []
     for supplier in suppliers:
+        sub = build_supplier_statement_rows(supplier, date_from, date_to)
+        if not sub:
+            continue
         opening = supplier_ap_balance(supplier, day_before) if date_from else Decimal("0.00")
-        debit, credit = _supplier_period_movement(supplier, date_from, date_to)
+        debit = sum((r["debit"] for r in sub), Decimal("0.00"))
+        credit = sum((r["credit"] for r in sub), Decimal("0.00"))
         closing = opening + credit - debit
         if debit == 0 and credit == 0 and opening == 0 and closing == 0:
             continue

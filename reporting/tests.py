@@ -259,6 +259,54 @@ class SupplierStatementServiceDateTests(TestCase):
         dates = [r["date"] for r in rows if r.get("date")]
         self.assertEqual(dates, sorted(dates))
 
+    def test_supplier_statement_description_includes_client_prefix(self):
+        self._post_invoice_with_line(date.today())
+        rows = build_supplier_statement_rows(self.supplier)
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]["description"].startswith("client- Future Client"))
+
+
+class AllSuppliersSummaryTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="soa1", password="test12345")
+        self.active_supplier = Supplier.objects.create(supplier_code="S-ACT", name="Active Supplier")
+        self.empty_supplier = Supplier.objects.create(supplier_code="S-EMP", name="Empty Supplier")
+        self.client = Client.objects.create(client_code="C-SOA", name_en="SOA Client")
+        self.employee = Employee.objects.create(name="Emp", role=Employee.EmployeeRole.ACCOUNTING)
+        self.service_type = ServiceType.objects.create(name="Hotel", code="HTL")
+        self.destination = Destination.objects.create(name="Dubai")
+        inv = SalesInvoice.objects.create(
+            invoice_no="TMP-SOA",
+            client=self.client,
+            sales_employee=self.employee,
+            issue_date=date.today(),
+            currency="USD",
+        )
+        SalesInvoiceLine.objects.create(
+            invoice=inv,
+            supplier=self.active_supplier,
+            service_type=self.service_type,
+            destination=self.destination,
+            line_employee=self.employee,
+            service_date=date.today(),
+            qty=Decimal("1"),
+            sell_price=Decimal("200"),
+            cost_price=Decimal("120"),
+            crm_issued=True,
+        )
+        inv.recalc_usd_amounts()
+        inv.post(self.user)
+
+    def test_summary_excludes_suppliers_with_empty_statement(self):
+        from reporting.statement_summary import build_supplier_summary_rows
+
+        rows = build_supplier_summary_rows(
+            Supplier.objects.filter(pk__in=[self.active_supplier.pk, self.empty_supplier.pk]),
+        )
+        names = [r["name"] for r in rows]
+        self.assertIn("Active Supplier", names)
+        self.assertNotIn("Empty Supplier", names)
+
 
 class SalesmanReportLineAttributionTests(TestCase):
     def setUp(self):

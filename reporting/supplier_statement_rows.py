@@ -74,6 +74,7 @@ def build_supplier_statement_rows(supplier, date_from=None, date_to=None):
         )
         .select_related(
             "invoice",
+            "invoice__client",
             "service_type",
             "destination",
             "service_instance__service_type",
