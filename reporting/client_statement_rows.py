@@ -33,8 +33,25 @@ def _payment_statement_description(payment: Payment) -> str:
     return f"{ref_no} - {account}"
 
 
+def _line_visible_by_report_dates(line, date_from=None, date_to=None):
+    line_date = line.effective_service_date()
+    if date_from and line_date and line_date < date_from:
+        return False
+    if date_to and line_date and line_date > date_to:
+        return False
+    return True
+
+
+def _invoice_total_debit(inv: SalesInvoice) -> tuple[Decimal, bool]:
+    """Return (debit amount, show N/A) using invoice header total selling in USD."""
+    amt = (inv.grand_total_usd or Decimal("0.00")).quantize(Decimal("0.01"))
+    if amt <= 0:
+        return Decimal("0.00"), True
+    return amt, False
+
+
 def build_client_statement_rows(client, date_from=None, date_to=None):
-    """One debit row per posted invoice service line; one credit row per posted client payment."""
+    """Service line detail rows plus one debit per invoice (header total selling)."""
     today = date.today()
     rows = []
     if client_opening_balance_dr_cr and date_from:
@@ -52,6 +69,7 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
                     'ref_url': None,
                     'debit': opening_debit,
                     'credit': opening_credit,
+                    'debit_display_na': False,
                     'sort_seq': None,
                     'sort_id': 'opening',
                     'is_pending': False,
@@ -66,13 +84,16 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
         )
     )
     for inv in invoices.order_by("issue_date", "created_at"):
-        for line in inv.lines.select_related("destination").all():
+        visible_lines = []
+        for line in inv.lines.select_related("destination", "service_type", "service_instance__service_type").all():
+            if not _line_visible_by_report_dates(line, date_from, date_to):
+                continue
+            visible_lines.append(line)
+        if not visible_lines:
+            continue
+
+        for line in visible_lines:
             line_date = line.effective_service_date()
-            if date_from and line_date and line_date < date_from:
-                continue
-            if date_to and line_date and line_date > date_to:
-                continue
-            amt = line.line_selling_amount_usd().quantize(Decimal("0.01"))
             st = line.service_type
             if not st and line.service_instance_id and line.service_instance:
                 st = line.service_instance.service_type
@@ -84,13 +105,32 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
                     "destination": line.destination.name if line.destination_id else "—",
                     "ref": invoice_statement_ref(inv),
                     "ref_url": invoice_ref_url(inv.id),
-                    "debit": amt,
+                    "debit": Decimal("0.00"),
                     "credit": Decimal("0.00"),
+                    "debit_display_na": True,
                     "sort_seq": inv.created_at,
                     "sort_id": str(line.id),
                     "is_pending": bool(line_date and line_date > today),
                 }
             )
+
+        total_debit, total_na = _invoice_total_debit(inv)
+        rows.append(
+            {
+                "date": inv.issue_date,
+                "type": "Invoice",
+                "description": "Total selling",
+                "destination": "—",
+                "ref": invoice_statement_ref(inv),
+                "ref_url": invoice_ref_url(inv.id),
+                "debit": total_debit,
+                "credit": Decimal("0.00"),
+                "debit_display_na": total_na,
+                "sort_seq": inv.created_at,
+                "sort_id": f"total-{inv.id}",
+                "is_pending": bool(inv.issue_date and inv.issue_date > today),
+            }
+        )
 
     for pay in _client_payments_qs(client, date_from, date_to).order_by("date", "created_at"):
         rows.append(
@@ -103,6 +143,7 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
                 "ref_url": payment_ref_url(pay.id),
                 "debit": Decimal("0.00"),
                 "credit": payment_usd_amount(pay),
+                "debit_display_na": False,
                 "sort_seq": pay.created_at,
                 "sort_id": str(pay.id),
                 "is_pending": False,

@@ -1,21 +1,27 @@
-import uuid
+"""Invoice number assignment — final INV sequence at creation (no TMP drafts)."""
+
+from django.utils import timezone
 
 from sales.models import SalesInvoice
 
 
+def next_invoice_no(*, year=None) -> str:
+    from accounts_core.models import DocumentSequence
+
+    y = year or timezone.localdate().year
+    return DocumentSequence.next_value("INV", "INV-", y)
+
+
 def next_temp_invoice_no() -> str:
-    """Display-friendly temporary invoice number before posting assigns final sequence."""
-    while True:
-        candidate = f"TMP-{uuid.uuid4().hex[:8].upper()}"
-        if not SalesInvoice.objects.filter(invoice_no=candidate).exists():
-            return candidate
+    """Backward-compatible alias; new invoices use INV- immediately."""
+    return next_invoice_no()
 
 
 def ensure_invoice_has_number(invoice: SalesInvoice) -> str:
-    """Assign a temporary number to drafts that have none (e.g. CRM sync)."""
+    """Assign an invoice number when missing (e.g. CRM sync)."""
     if invoice.invoice_no and not invoice.invoice_no.startswith("TMP-"):
         return invoice.invoice_no
-    if invoice.invoice_no and invoice.invoice_no.startswith("TMP-"):
-        return invoice.invoice_no
-    invoice.invoice_no = next_temp_invoice_no()
+    invoice.invoice_no = next_invoice_no(
+        year=invoice.issue_date.year if invoice.issue_date else None
+    )
     return invoice.invoice_no

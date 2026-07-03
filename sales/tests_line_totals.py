@@ -68,7 +68,7 @@ class InvoiceLineTotalTests(TestCase):
         invoice.recalc_totals_from_lines()
         self.assertEqual(invoice.grand_total, Decimal("500.00"))
 
-    def test_statement_one_row_per_service_line(self):
+    def test_statement_uses_invoice_total_not_line_selling(self):
         invoice = SalesInvoice.objects.create(
             invoice_no="TMP-ST",
             client=self.client_obj,
@@ -83,7 +83,7 @@ class InvoiceLineTotalTests(TestCase):
             destination=self.destination,
             line_employee=self.employee,
             qty=Decimal("1"),
-            sell_price=Decimal("300"),
+            sell_price=Decimal("0"),
             cost_price=Decimal("100"),
             notes="Jane - Rome",
         )
@@ -94,17 +94,24 @@ class InvoiceLineTotalTests(TestCase):
             destination=self.hotel_destination,
             line_employee=self.employee,
             qty=Decimal("1"),
-            sell_price=Decimal("200"),
+            sell_price=Decimal("0"),
             cost_price=Decimal("80"),
         )
         invoice.recalc_usd_amounts()
         invoice.post(self.user)
+        invoice.grand_total_usd = Decimal("500.00")
+        invoice.grand_total = Decimal("500.00")
+        invoice.save(update_fields=["grand_total", "grand_total_usd"])
         rows = build_client_statement_rows(self.client_obj)
         invoice_rows = [r for r in rows if r["ref"] == invoice.invoice_no]
-        self.assertEqual(len(invoice_rows), 2)
-        descriptions = {r["description"] for r in invoice_rows}
-        destinations = {r["destination"] for r in invoice_rows}
-        self.assertTrue(any("Jane" in d and "Rome" in d for d in descriptions))
-        self.assertIn("Paris", destinations)
-        debits = sorted(r["debit"] for r in invoice_rows)
-        self.assertEqual(debits, [Decimal("200.00"), Decimal("300.00")])
+        self.assertEqual(len(invoice_rows), 3)
+        service_rows = [r for r in invoice_rows if r["type"] != "Invoice"]
+        total_rows = [r for r in invoice_rows if r["type"] == "Invoice"]
+        self.assertEqual(len(service_rows), 2)
+        self.assertTrue(all(r["debit_display_na"] for r in service_rows))
+        self.assertEqual(len(total_rows), 1)
+        self.assertEqual(total_rows[0]["debit"], Decimal("500.00"))
+        from reporting.statement_running import annotate_client_statement_rows
+
+        _, tot_dr, _, _ = annotate_client_statement_rows(rows)
+        self.assertEqual(tot_dr, Decimal("500.00"))

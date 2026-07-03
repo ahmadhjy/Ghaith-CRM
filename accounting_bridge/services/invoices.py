@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from sales.invoice_numbers import next_temp_invoice_no
+from sales.invoice_numbers import next_invoice_no
 from sales.models import SalesInvoice, SalesInvoiceLine
 from tasks.models import LeadTask
 
@@ -178,7 +178,7 @@ def build_sales_invoice_from_leadtask(leadtask: LeadTask, actor) -> SalesInvoice
         currency='USD',
         exchange_rate_to_usd=Decimal('1'),
         status=SalesInvoice.Status.DRAFT,
-        invoice_no=next_temp_invoice_no(),
+        invoice_no=next_invoice_no(),
     )
 
     sort_order = 0

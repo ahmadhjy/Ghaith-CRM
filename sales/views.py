@@ -78,11 +78,11 @@ def _service_field_defs_json():
     return json.dumps({})
 
 
-from sales.invoice_numbers import next_temp_invoice_no
+from sales.invoice_numbers import next_invoice_no
 
 
-def _next_temp_invoice_no():
-    return next_temp_invoice_no()
+def _next_invoice_no():
+    return next_invoice_no()
 
 
 def _invoice_is_persisted(invoice):
@@ -173,7 +173,7 @@ def invoice_create(request):
         emp = get_default_employee_for_accounting()
         if emp:
             initial["sales_employee"] = emp
-        invoice.invoice_no = _next_temp_invoice_no()
+        invoice.invoice_no = _next_invoice_no()
         form = SalesInvoiceForm(instance=invoice, initial=initial)
         formset = line_formset_cls(instance=invoice)
     return render(
@@ -352,7 +352,7 @@ def adjust_invoice(request, invoice_id):
             old_invoice_no = invoice.invoice_no
             old_invoice_id = invoice.id
             corrected = SalesInvoice.objects.create(
-                invoice_no=_next_temp_invoice_no(),
+                invoice_no=_next_invoice_no(),
                 client=invoice.client,
                 file=invoice.file,
                 sales_employee=invoice.sales_employee,

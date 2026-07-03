@@ -7,9 +7,11 @@ def annotate_client_statement_rows(rows):
     total_dr = Decimal("0.00")
     total_cr = Decimal("0.00")
     for row in rows:
-        total_dr += row["debit"]
+        if not row.get("debit_display_na"):
+            total_dr += row["debit"]
+            running = running + row["debit"]
         total_cr += row["credit"]
-        running = running + row["debit"] - row["credit"]
+        running = running - row["credit"]
         row["running_balance"] = running
     return rows, total_dr, total_cr, running
 

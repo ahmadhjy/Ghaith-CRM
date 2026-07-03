@@ -47,6 +47,16 @@ class SalesInvoiceWorkflowTests(TestCase):
         invoice.recalc_usd_amounts()
         return invoice
 
+    def test_new_invoice_gets_inv_number_on_save(self):
+        invoice = SalesInvoice.objects.create(
+            client=self.client_obj,
+            sales_employee=self.employee,
+            issue_date=date.today(),
+            currency="USD",
+        )
+        self.assertTrue(invoice.invoice_no.startswith("INV-"))
+        self.assertFalse(invoice.invoice_no.startswith("TMP-"))
+
     def test_publish_invoice_calculates_totals(self):
         invoice = self._create_ready_invoice()
         invoice.publish_changes(self.user)

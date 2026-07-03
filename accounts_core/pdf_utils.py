@@ -172,6 +172,12 @@ def _prepare_income_statement_pdf(context):
     return context
 
 
+def _statement_debit_cell(row):
+    if row.get("debit_display_na"):
+        return "N/A"
+    return _format_cell(row.get("debit"))
+
+
 def _flatten_statement_row(r):
     return [
         _format_cell(r.get("date")),
@@ -179,7 +185,7 @@ def _flatten_statement_row(r):
         _format_cell(r.get("description")),
         _format_cell(r.get("destination")),
         _format_cell(r.get("ref")),
-        _format_cell(r.get("debit")),
+        _statement_debit_cell(r),
         _format_cell(r.get("credit")),
         _format_cell(r.get("running_balance")),
     ]
@@ -193,7 +199,7 @@ def _flatten_statement_row_with_party(r, party_label):
         _format_cell(r.get("description")),
         _format_cell(r.get("destination")),
         _format_cell(r.get("ref")),
-        _format_cell(r.get("debit")),
+        _statement_debit_cell(r),
         _format_cell(r.get("credit")),
         _format_cell(r.get("running_balance")),
     ]
@@ -203,7 +209,8 @@ def _statement_pdf_meta(context, rows, *, with_party=False):
     total_dr = Decimal("0")
     total_cr = Decimal("0")
     for r in rows:
-        total_dr += Decimal(str(r.get("debit") or 0))
+        if not r.get("debit_display_na"):
+            total_dr += Decimal(str(r.get("debit") or 0))
         total_cr += Decimal(str(r.get("credit") or 0))
     closing = rows[-1].get("running_balance") if rows else Decimal("0")
     if with_party:

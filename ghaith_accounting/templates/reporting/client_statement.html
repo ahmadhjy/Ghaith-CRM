@@ -18,7 +18,7 @@
             <td class="col-detail">{{ row.description|default:"—"|truncate_detail }}</td>
             <td>{{ row.destination|default:"—" }}</td>
             <td>{% include "reporting/partials/statement_ref.html" %}</td>
-            <td class="num">{{ row.debit }}</td>
+            <td class="num">{% if row.debit_display_na %}N/A{% else %}{{ row.debit|money }}{% endif %}</td>
             <td class="num">{{ row.credit }}</td>
             <td class="num">{{ row.running_balance }}</td>
         </tr>

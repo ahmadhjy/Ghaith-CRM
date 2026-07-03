@@ -246,9 +246,9 @@ class SalesInvoice(models.Model):
         if self.issue_date and self.due_date is None:
             self.due_date = self.issue_date
         if not self.invoice_no:
-            from sales.invoice_numbers import next_temp_invoice_no
+            from sales.invoice_numbers import next_invoice_no
 
-            self.invoice_no = next_temp_invoice_no()
+            self.invoice_no = next_invoice_no(year=self.issue_date.year if self.issue_date else None)
         super().save(*args, **kwargs)
 
     def _publish_validation_lines(self):
