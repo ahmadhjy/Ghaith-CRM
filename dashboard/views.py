@@ -233,17 +233,16 @@ def supplier_payments_list(request):
     today = now.date()
 
     if user.is_staff:
-        services = Service.objects.filter(due_time__isnull=False)
+        services = Service.objects.all()
     else:
-        services = Service.objects.filter(
-            leadtask__assigned_to=user,
-            due_time__isnull=False,
-        )
+        services = Service.objects.filter(leadtask__assigned_to=user)
 
     services = purchases_services_queryset(services)
 
     due_from = request.GET.get('due_from', '').strip()
     due_to = request.GET.get('due_to', '').strip()
+    travel_from = request.GET.get('travel_from', '').strip()
+    travel_to = request.GET.get('travel_to', '').strip()
     issued_filter = request.GET.get('issued', request.GET.get('paid', '')).strip()
     overdue_filter = request.GET.get('overdue', '') == 'on' or request.GET.get('late', '') == 'on'
     supplier_filter = request.GET.get('supplier', '').strip()
@@ -255,7 +254,7 @@ def supplier_payments_list(request):
     if not show_cancelled:
         base_qs = base_qs.exclude(leadtask__status='cancelled')
 
-    overdue_q = dict(is_checked=False, due_time__lt=now)
+    overdue_q = dict(is_checked=False, due_time__lt=now, due_time__isnull=False)
     overdue_count = base_qs.filter(**overdue_q).count()
     issued_count = base_qs.filter(is_checked=True).count()
 
@@ -268,6 +267,8 @@ def supplier_payments_list(request):
         'services': services,
         'due_from': due_from,
         'due_to': due_to,
+        'travel_from': travel_from,
+        'travel_to': travel_to,
         'issued_filter': issued_filter,
         'overdue_filter': overdue_filter,
         'overdue_count': overdue_count,
@@ -299,9 +300,9 @@ def _supplier_payments_export(request, *, fmt: str):
     user = request.user
     now = timezone.now()
     if user.is_staff:
-        services = Service.objects.filter(due_time__isnull=False)
+        services = Service.objects.all()
     else:
-        services = Service.objects.filter(leadtask__assigned_to=user, due_time__isnull=False)
+        services = Service.objects.filter(leadtask__assigned_to=user)
     services = purchases_services_queryset(services)
     sort = request.GET.get('sort', SORT_DUE_ASC).strip()
     services = apply_purchases_filters(services, request.GET, now=now)

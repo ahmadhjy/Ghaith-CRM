@@ -219,6 +219,7 @@ def babylon_portal_sheet(request):
         filter_ctx=_babylon_filter_ctx(request),
         export_pdf_url=f'/babylon/export/pdf/?{q}' if q else '/babylon/export/pdf/',
         export_xlsx_url=f'/babylon/export/xlsx/?{q}' if q else '/babylon/export/xlsx/',
+        other_hotels_url='/babylon/other-hotels/',
         empty_message=f'No Babylon hotel rows for {request.GET.get("year") or datetime.now().year} yet.',
     ))
 
@@ -240,6 +241,61 @@ def babylon_portal_export_xlsx(request):
 def babylon_portal_logout(request):
     request.session.pop(SESSION_KEY, None)
     return redirect('babylon_portal_login')
+
+
+def _other_hotels_sheet_context(request, *, portal_mode: bool):
+    from django.utils import timezone
+
+    services = other_hotels_queryset(request.GET, now=timezone.now())
+    rows = [row_from_service(service) for service in services]
+    q = request.GET.urlencode()
+    if portal_mode:
+        return _sheet_context(
+            rows=rows,
+            sheet_kind='other_hotels',
+            title='Other Hotels — Bali',
+            subtitle='Upcoming Bali hotel bookings from other suppliers.',
+            portal_mode=True,
+            editable_fields=set(),
+            filter_ctx=_other_hotels_filter_ctx(request),
+            show_conf=False,
+            export_pdf_url=f'/babylon/other-hotels/pdf/?{q}' if q else '/babylon/other-hotels/pdf/',
+            export_xlsx_url=f'/babylon/other-hotels/xlsx/?{q}' if q else '/babylon/other-hotels/xlsx/',
+            babylon_url='/babylon/sheet/',
+            empty_message='No upcoming Bali hotel services from other suppliers.',
+        )
+    return _sheet_context(
+        rows=rows,
+        sheet_kind='other_hotels',
+        title='Other Hotels — Bali',
+        subtitle='Hotel services for upcoming Bali travel from suppliers other than BABYLON.',
+        portal_mode=False,
+        editable_fields=set(),
+        filter_ctx=_other_hotels_filter_ctx(request),
+        show_conf=False,
+        export_pdf_url=f'/tasks/other-hotels/pdf/?{q}' if q else '/tasks/other-hotels/pdf/',
+        export_xlsx_url=f'/tasks/other-hotels/xlsx/?{q}' if q else '/tasks/other-hotels/xlsx/',
+        babylon_url='/tasks/babylon-hotels/',
+        empty_message='No upcoming Bali hotel services from other suppliers.',
+    )
+
+
+@babylon_portal_required
+@require_GET
+def babylon_portal_other_hotels(request):
+    return render(request, 'babylon_hotels_sheet.html', _other_hotels_sheet_context(request, portal_mode=True))
+
+
+@babylon_portal_required
+@require_GET
+def babylon_portal_other_hotels_export_pdf(request):
+    return _build_other_hotels_pdf_response(request)
+
+
+@babylon_portal_required
+@require_GET
+def babylon_portal_other_hotels_export_xlsx(request):
+    return _build_other_hotels_xlsx_response(request)
 
 
 @login_required(login_url='/login/')
@@ -279,25 +335,7 @@ def babylon_hotels_export_xlsx(request):
 @login_required(login_url='/login/')
 @require_GET
 def other_hotels_sheet(request):
-    from django.utils import timezone
-
-    services = other_hotels_queryset(request.GET, now=timezone.now())
-    rows = [row_from_service(service) for service in services]
-    q = request.GET.urlencode()
-    return render(request, 'babylon_hotels_sheet.html', _sheet_context(
-        rows=rows,
-        sheet_kind='other_hotels',
-        title='Other Hotels — Bali',
-        subtitle='Hotel services for upcoming Bali travel from suppliers other than BABYLON.',
-        portal_mode=False,
-        editable_fields=set(),
-        filter_ctx=_other_hotels_filter_ctx(request),
-        show_conf=False,
-        export_pdf_url=f'/tasks/other-hotels/pdf/?{q}' if q else '/tasks/other-hotels/pdf/',
-        export_xlsx_url=f'/tasks/other-hotels/xlsx/?{q}' if q else '/tasks/other-hotels/xlsx/',
-        babylon_url='/tasks/babylon-hotels/',
-        empty_message='No upcoming Bali hotel services from other suppliers.',
-    ))
+    return render(request, 'babylon_hotels_sheet.html', _other_hotels_sheet_context(request, portal_mode=False))
 
 
 @login_required(login_url='/login/')

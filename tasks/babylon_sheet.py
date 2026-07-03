@@ -93,6 +93,7 @@ def other_hotels_queryset(params, *, now=None):
     qs = filter_valid_due_times(
         Service.objects.filter(
             due_time__isnull=False,
+            is_checked=False,
             service_name__iexact=OTHER_HOTELS_SERVICE,
             leadtask__lead__destination__iexact=OTHER_HOTELS_DESTINATION,
             leadtask__travel_date__isnull=False,
@@ -199,6 +200,7 @@ def other_hotels_applied_filters(params) -> list[str]:
         'Upcoming travel only',
         f'Service: {OTHER_HOTELS_SERVICE}',
         'Supplier: not BABYLON',
+        'Unissued only',
     ]
     service_type = (params.get('service_type') or '').strip()
     if service_type:

@@ -32,8 +32,11 @@ def filter_valid_due_times(queryset, prefix=''):
 
 
 def purchases_services_queryset(queryset):
-    """List queryset: valid due_time only; defer heavy leadtask date fields."""
-    qs = filter_valid_due_times(queryset)
+    """List queryset: include missing due dates; skip corrupt due_time values."""
+    lo, hi = valid_datetime_bounds()
+    qs = queryset.filter(
+        Q(due_time__isnull=True) | Q(due_time__gte=lo, due_time__lte=hi),
+    )
     return qs.select_related('leadtask', 'leadtask__lead').only(
         'id',
         'service_name',

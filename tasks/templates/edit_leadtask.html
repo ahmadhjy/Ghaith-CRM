@@ -155,18 +155,6 @@
                                 {% endif %}
                             </select>
                         </div>
-                        <div class="inv-field">
-                            <label for="lead_date_of_birth">Date of birth</label>
-                            <input type="date" name="lead_date_of_birth" id="lead_date_of_birth" class="form-control" value="{% if form.instance.date_of_birth %}{{ form.instance.date_of_birth|date:'Y-m-d' }}{% endif %}">
-                        </div>
-                        <div class="inv-field">
-                            <label for="lead_passport_expiry">Passport expiry</label>
-                            <input type="date" name="lead_passport_expiry" id="lead_passport_expiry" class="form-control" value="{% if form.instance.passport_expiry_date %}{{ form.instance.passport_expiry_date|date:'Y-m-d' }}{% endif %}">
-                        </div>
-                        <div class="inv-field inv-field--full">
-                            <label for="lead_special_request_input">Request details</label>
-                            <textarea name="lead_special_request" id="lead_special_request_input" class="form-control" rows="3" placeholder="Special requests, preferences, notes…">{{ lead.special_request|default:'' }}</textarea>
-                        </div>
                     </div>
 
                     <div class="inv-passengers-panel">
@@ -428,9 +416,9 @@
             </div>
             <div class="inv-card__body">
                 <div class="client-media-link-row">
-                    <button type="button" class="inv-btn inv-btn--primary" id="btnCreateMediaLink"><i class="fas fa-link"></i> Create Upload Link</button>
-                    <input type="text" id="clientMediaLinkInput" class="client-media-link-input" readonly placeholder="Generated link appears here…">
-                    <button type="button" class="inv-btn inv-btn--outline" id="btnCopyMediaLink" disabled><i class="fas fa-copy"></i> Copy</button>
+                    <button type="button" class="inv-btn inv-btn--primary" id="btnCreateMediaLink" {% if active_media_upload_link %}disabled{% endif %}><i class="fas fa-link"></i> Create Upload Link</button>
+                    <input type="text" id="clientMediaLinkInput" class="client-media-link-input" readonly placeholder="Generated link appears here…" value="{{ active_media_upload_url }}">
+                    <button type="button" class="inv-btn inv-btn--outline" id="btnCopyMediaLink" {% if not active_media_upload_url %}disabled{% endif %}><i class="fas fa-copy"></i> Copy</button>
                 </div>
                 {% if media_upload_links %}
                 <ul class="inv-media-links">
@@ -926,6 +914,7 @@ document.querySelectorAll('.service-send-to-client-cb').forEach(function(cb) { s
 
 document.getElementById('btnCreateMediaLink').addEventListener('click', function() {
     var btn = this;
+    if (btn.disabled) return;
     btn.disabled = true;
     fetch('{% url "create_client_media_link" leadid %}', {
         method: 'POST',
@@ -933,10 +922,11 @@ document.getElementById('btnCreateMediaLink').addEventListener('click', function
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-        btn.disabled = false;
         if (data.status === 'success') {
             document.getElementById('clientMediaLinkInput').value = data.url;
             document.getElementById('btnCopyMediaLink').disabled = false;
+        } else {
+            btn.disabled = false;
         }
     })
     .catch(function() { btn.disabled = false; });

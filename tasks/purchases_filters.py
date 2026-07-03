@@ -33,6 +33,8 @@ def _parse_date(raw: str):
 def apply_purchases_filters(services, params, *, now):
     due_from = _parse_date(params.get('due_from'))
     due_to = _parse_date(params.get('due_to'))
+    travel_from = _parse_date(params.get('travel_from'))
+    travel_to = _parse_date(params.get('travel_to'))
     issued_filter = (params.get('issued') or params.get('paid') or '').strip()
     overdue_filter = params.get('overdue') == 'on' or params.get('late') == 'on'
     supplier_filter = (params.get('supplier') or '').strip()
@@ -47,6 +49,11 @@ def apply_purchases_filters(services, params, *, now):
         services = services.filter(due_time__date__gte=due_from)
     if due_to:
         services = services.filter(due_time__date__lte=due_to)
+
+    if travel_from:
+        services = services.filter(leadtask__travel_date__date__gte=travel_from)
+    if travel_to:
+        services = services.filter(leadtask__travel_date__date__lte=travel_to)
 
     if overdue_filter:
         services = services.filter(is_checked=False, due_time__lt=now)
@@ -69,18 +76,28 @@ def apply_purchases_filters(services, params, *, now):
 def order_purchases(services, sort: str):
     sort = (sort or SORT_DUE_ASC).strip()
     if sort == SORT_DUE_DESC:
-        return services.order_by('-due_time')
+        return services.order_by(F('due_time').desc(nulls_last=True), 'pk')
     if sort == SORT_TRAVEL_ASC:
-        return services.order_by(F('leadtask__travel_date').asc(nulls_last=True), 'due_time')
+        return services.order_by(
+            F('leadtask__travel_date').asc(nulls_last=True),
+            F('due_time').asc(nulls_last=True),
+            'pk',
+        )
     if sort == SORT_TRAVEL_DESC:
-        return services.order_by(F('leadtask__travel_date').desc(nulls_last=True), 'due_time')
-    return services.order_by('due_time')
+        return services.order_by(
+            F('leadtask__travel_date').desc(nulls_last=True),
+            F('due_time').asc(nulls_last=True),
+            'pk',
+        )
+    return services.order_by(F('due_time').asc(nulls_last=True), 'pk')
 
 
 def purchases_applied_filters(params) -> list[str]:
     filters = []
     due_from = (params.get('due_from') or '').strip()
     due_to = (params.get('due_to') or '').strip()
+    travel_from = (params.get('travel_from') or '').strip()
+    travel_to = (params.get('travel_to') or '').strip()
     issued = (params.get('issued') or params.get('paid') or '').strip()
     overdue = params.get('overdue') == 'on' or params.get('late') == 'on'
     supplier = (params.get('supplier') or '').strip()
@@ -93,6 +110,10 @@ def purchases_applied_filters(params) -> list[str]:
         filters.append(f'Due from: {due_from}')
     if due_to:
         filters.append(f'Due to: {due_to}')
+    if travel_from:
+        filters.append(f'Travel from: {travel_from}')
+    if travel_to:
+        filters.append(f'Travel to: {travel_to}')
     if overdue:
         filters.append('Overdue only')
     elif issued in ('issued', 'paid'):

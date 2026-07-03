@@ -469,6 +469,15 @@ def edit_lead_task(request, pk):
     has_issue_mismatch = any(service_has_issue_override(s) for s in services_list)
     post_issue_profit = total_selling - total_issue_net
     media_upload_links = ClientMediaUploadLink.objects.filter(leadtask=instance)
+    active_media_upload_link = media_upload_links.filter(
+        is_active=True,
+        submitted_at__isnull=True,
+    ).order_by('-created_at').first()
+    active_media_upload_url = ''
+    if active_media_upload_link:
+        active_media_upload_url = request.build_absolute_uri(
+            reverse('client_media_upload', kwargs={'token': active_media_upload_link.token}),
+        )
     from accounting_bridge.services.invoices import leadtask_accounting_sync_context
     accounting_ctx = leadtask_accounting_sync_context(instance)
     return render(request, 'edit_leadtask.html', {
@@ -493,6 +502,8 @@ def edit_lead_task(request, pk):
         'has_issue_mismatch': has_issue_mismatch,
         'post_issue_profit': post_issue_profit,
         'media_upload_links': media_upload_links,
+        'active_media_upload_link': active_media_upload_link,
+        'active_media_upload_url': active_media_upload_url,
         'supplier_form': SupplierForm(),
         **accounting_ctx,
     })
@@ -966,13 +977,19 @@ def _sanitize_filename(name, max_len=255):
 @require_POST
 def create_client_media_link(request, pk):
     leadtask = get_object_or_404(LeadTask, pk=pk)
-    upload_link = ClientMediaUploadLink.objects.create(
+    upload_link = ClientMediaUploadLink.objects.filter(
         leadtask=leadtask,
-        client_name=leadtask.lead.name,
-        created_by=request.user,
-    )
+        is_active=True,
+        submitted_at__isnull=True,
+    ).order_by('-created_at').first()
+    if not upload_link:
+        upload_link = ClientMediaUploadLink.objects.create(
+            leadtask=leadtask,
+            client_name=leadtask.lead.name,
+            created_by=request.user,
+        )
     upload_url = request.build_absolute_uri(
-        f'/tasks/client-media/{upload_link.token}/'
+        reverse('client_media_upload', kwargs={'token': upload_link.token}),
     )
     return JsonResponse({
         'status': 'success',

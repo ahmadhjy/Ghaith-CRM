@@ -25,7 +25,7 @@
             <a href="{{ babylon_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-arrow-left"></i> Babylon Hotels</a>
             {% endif %}
             {% if other_hotels_url %}
-            <a href="{{ other_hotels_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-globe-asia"></i> Other Hotels</a>
+            <a href="{{ other_hotels_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-globe-asia"></i> View Other Hotels</a>
             {% endif %}
             {% if export_pdf_url %}
             <a href="{{ export_pdf_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-file-pdf"></i> PDF</a>
@@ -76,6 +76,8 @@
             <button type="submit" class="babylon-btn babylon-btn--primary">Apply</button>
             {% if sheet_kind == 'babylon' %}
             <a href="{% if portal_mode %}{% url 'babylon_portal_sheet' %}{% else %}{% url 'babylon_hotels_sheet' %}{% endif %}" class="babylon-btn babylon-btn--ghost">Clear</a>
+            {% elif portal_mode %}
+            <a href="{% url 'babylon_portal_other_hotels' %}" class="babylon-btn babylon-btn--ghost">Clear</a>
             {% else %}
             <a href="{% url 'other_hotels_sheet' %}" class="babylon-btn babylon-btn--ghost">Clear</a>
             {% endif %}
@@ -147,6 +149,9 @@
                             <span class="cell-display">{% if row.travel_date %}{{ row.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
                         </td>
                         <td class="col-issued">
+                            {% if portal_mode and row.row_kind == 'service' %}
+                            <span class="cell-display">{% if row.is_checked %}Yes{% else %}No{% endif %}</span>
+                            {% else %}
                             <form method="post" action="{% url 'service_mark_done' row.service_id %}?next={{ request.get_full_path|urlencode }}" class="babylon-issued-form">
                                 {% csrf_token %}
                                 <label class="babylon-toggle">
@@ -154,6 +159,7 @@
                                     <span class="babylon-toggle__slider"></span>
                                 </label>
                             </form>
+                            {% endif %}
                         </td>
                         {% if show_conf %}
                         <td data-field="confirmation_number" data-editable="{% if row.row_kind == 'babylon' and 'confirmation_number' in editable_fields %}1{% else %}0{% endif %}">

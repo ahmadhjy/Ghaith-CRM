@@ -90,6 +90,33 @@ class BabylonHotelTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('/login', response.url)
 
+    def test_portal_sheet_shows_other_hotels_link(self):
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.get('/babylon/sheet/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Other Hotels')
+        self.assertContains(response, '/babylon/other-hotels/')
+
+    def test_portal_other_hotels_page(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='YARDS',
+            details='Bali resort',
+            net='300',
+            due_time=timezone.now() + timedelta(days=3),
+        )
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.get('/babylon/other-hotels/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bali resort')
+        self.assertContains(response, 'Babylon Hotels')
+        self.assertNotContains(response, 'Conf #')
+
     def test_staff_sheet_lists_entries(self):
         self.client.login(username='sales1', password='pass')
         response = self.client.get('/tasks/babylon-hotels/')
@@ -141,6 +168,37 @@ class BabylonHotelTests(TestCase):
         self.service.due_time = timezone.now() + timedelta(days=2)
         self.service.save(update_fields=['due_time'])
         self.assertEqual(other_hotels_queryset({}).count(), 0)
+
+    def test_other_hotels_excludes_issued_services(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        issued = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='YARDS',
+            details='Issued Bali stay',
+            net='400',
+            due_time=timezone.now() + timedelta(days=3),
+            is_checked=True,
+        )
+        unissued = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='YARDS',
+            details='Open Bali stay',
+            net='350',
+            due_time=timezone.now() + timedelta(days=4),
+            is_checked=False,
+        )
+        qs = other_hotels_queryset({})
+        self.assertEqual(qs.filter(pk=issued.pk).count(), 0)
+        self.assertEqual(qs.filter(pk=unissued.pk).count(), 1)
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/other-hotels/')
+        self.assertNotContains(response, 'Issued Bali stay')
+        self.assertContains(response, 'Open Bali stay')
 
     @override_settings(BABYLON_PORTAL_PASSCODE='')
     def test_default_passcode_when_setting_empty(self):

@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from display.models import Lead
 from tasks.models import LeadTask, Service
-from tasks.purchases_filters import SORT_TRAVEL_ASC, apply_purchases_filters, order_purchases
+from tasks.purchases_filters import SORT_DUE_ASC, SORT_TRAVEL_ASC, apply_purchases_filters, order_purchases
 
 
 class PurchasesFilterTests(TestCase):
@@ -57,3 +57,48 @@ class PurchasesFilterTests(TestCase):
         qs = Service.objects.filter(due_time__isnull=False)
         ordered = list(order_purchases(qs, SORT_TRAVEL_ASC))
         self.assertEqual(len(ordered), 2)
+
+    def test_travel_date_range_filter(self):
+        qs = Service.objects.all()
+        filtered = apply_purchases_filters(
+            qs,
+            {
+                'travel_from': '2026-06-01',
+                'travel_to': '2026-12-31',
+                'issued': 'unissued',
+            },
+            now=timezone.now(),
+        )
+        ids = list(filtered.values_list('pk', flat=True))
+        self.assertIn(self.late.pk, ids)
+        self.assertIn(self.early.pk, ids)
+
+        self.leadtask.travel_date = timezone.make_aware(datetime(2026, 1, 15, 12, 0))
+        self.leadtask.save(update_fields=['travel_date'])
+        filtered = apply_purchases_filters(
+            qs,
+            {
+                'travel_from': '2026-06-01',
+                'travel_to': '2026-12-31',
+                'issued': 'unissued',
+            },
+            now=timezone.now(),
+        )
+        ids = list(filtered.values_list('pk', flat=True))
+        self.assertNotIn(self.early.pk, ids)
+        self.assertNotIn(self.late.pk, ids)
+
+    def test_missing_due_date_sorted_last(self):
+        no_due = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Transfer',
+            supplier='YARDS',
+            net='75',
+            due_time=None,
+            is_checked=False,
+        )
+        qs = Service.objects.all()
+        filtered = apply_purchases_filters(qs, {'issued': 'unissued'}, now=timezone.now())
+        ordered = list(order_purchases(filtered, SORT_DUE_ASC))
+        self.assertEqual(ordered[-1].pk, no_due.pk)
+        self.assertIn(no_due.pk, [s.pk for s in ordered])
