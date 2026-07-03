@@ -1214,6 +1214,13 @@ body.has-unified-nav .purchases-filters.list-page__filters {
   background: transparent;
   border: none;
   margin-bottom: 20px;
+  position: relative;
+  z-index: 30;
+}
+
+.list-page--supplier > .table-wrapper {
+  position: relative;
+  z-index: 1;
 }
 
 .purchases-filters__form {
@@ -1252,7 +1259,12 @@ body.has-unified-nav .purchases-filters.list-page__filters {
   border: 1px solid var(--req-border);
   border-radius: var(--req-radius-sm);
   box-shadow: var(--req-shadow);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.purchases-filters__field:focus-within {
+  position: relative;
+  z-index: 50;
 }
 
 .purchases-filters__grid {
