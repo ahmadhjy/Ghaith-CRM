@@ -1,14 +1,16 @@
 """Tests for Babylon hotel spreadsheet sync and portal."""
 
 import json
-from datetime import date
+from datetime import date, timedelta
 
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
+from django.utils import timezone
 
 from display.models import Lead
+from tasks.babylon_sheet import OTHER_HOTELS_DESTINATION, other_hotels_queryset
 from tasks.babylon_sync import is_babylon_supplier, sync_entry_from_service
 from tasks.models import BabylonHotelEntry, LeadTask, Service
 
@@ -94,7 +96,51 @@ class BabylonHotelTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sara Haddad')
         self.assertContains(response, 'Hotel')
+        self.assertContains(response, 'Travel date')
+        self.assertContains(response, 'Other Hotels')
         self.assertNotContains(response, 'selling')
+
+    def test_service_type_filter_on_staff_sheet(self):
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/', {'service_type': 'Visa'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Sara Haddad')
+
+    def test_staff_export_pdf(self):
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/pdf/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_other_hotels_lists_bali_non_babylon_hotel(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        other = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='YARDS',
+            details='Bali resort',
+            net='300',
+            due_time=timezone.now() + timedelta(days=3),
+        )
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/other-hotels/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bali resort')
+        self.assertContains(response, 'Other Hotels')
+        self.assertNotContains(response, 'Conf #')
+        self.assertEqual(other_hotels_queryset({}).filter(pk=other.pk).count(), 1)
+
+    def test_other_hotels_excludes_babylon_supplier(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        self.service.due_time = timezone.now() + timedelta(days=2)
+        self.service.save(update_fields=['due_time'])
+        self.assertEqual(other_hotels_queryset({}).count(), 0)
 
     @override_settings(BABYLON_PORTAL_PASSCODE='')
     def test_default_passcode_when_setting_empty(self):

@@ -69,6 +69,62 @@
   min-width: 140px;
 }
 
+.filter-form--purchases {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-form--purchases .filter-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.filter-form--purchases .filter-form__row--actions {
+  align-items: center;
+  padding-top: 0.25rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.filter-form--purchases .filter-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.filter-form--purchases .filter-form__field--wide {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.filter-form--purchases label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.filter-form--purchases .filter-input,
+.filter-form--purchases .filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-form--purchases .filter-select--fixed {
+  width: 220px;
+  max-width: 100%;
+}
+
+.filter-form--purchases .filter-form__actions {
+  margin-left: auto;
+}
+
 .filter-form__checkbox {
   display: flex;
   align-items: center;

@@ -16,6 +16,12 @@ from django.contrib.auth.decorators import login_required
 from tasks.models import Task, LeadTask, Payment, Service
 from tasks.constants import get_supplier_choices, get_service_choices
 from tasks.datetime_safety import purchases_services_queryset
+from tasks.purchases_filters import (
+    SORT_CHOICES as PURCHASES_SORT_CHOICES,
+    SORT_DUE_ASC,
+    apply_purchases_filters,
+    order_purchases,
+)
 from display.models import Lead
 from django.utils import timezone
 from tasks.forms import TaskForm, LeadTaskForm
@@ -234,62 +240,34 @@ def supplier_payments_list(request):
             due_time__isnull=False,
         )
 
-    services = purchases_services_queryset(services).order_by('due_time')
+    services = purchases_services_queryset(services)
 
-    month_str = request.GET.get('month', '').strip()
-    date_str = request.GET.get('date', '').strip()
+    due_from = request.GET.get('due_from', '').strip()
+    due_to = request.GET.get('due_to', '').strip()
     issued_filter = request.GET.get('issued', request.GET.get('paid', '')).strip()
     overdue_filter = request.GET.get('overdue', '') == 'on' or request.GET.get('late', '') == 'on'
     supplier_filter = request.GET.get('supplier', '').strip()
     service_filter = request.GET.get('service', '').strip()
     show_cancelled = request.GET.get('show_cancelled', '') == 'on'
+    sort = request.GET.get('sort', SORT_DUE_ASC).strip()
 
     base_qs = services
     if not show_cancelled:
-        services = services.exclude(leadtask__status='cancelled')
+        base_qs = base_qs.exclude(leadtask__status='cancelled')
 
     overdue_q = dict(is_checked=False, due_time__lt=now)
     overdue_count = base_qs.filter(**overdue_q).count()
-    if not show_cancelled:
-        overdue_count = base_qs.exclude(leadtask__status='cancelled').filter(**overdue_q).count()
-
     issued_count = base_qs.filter(is_checked=True).count()
-    if not show_cancelled:
-        issued_count = base_qs.exclude(leadtask__status='cancelled').filter(is_checked=True).count()
 
-    if date_str:
-        try:
-            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            services = services.filter(due_time__date=filter_date)
-        except ValueError:
-            pass
-    elif month_str:
-        try:
-            year, month = (int(x) for x in month_str.split('-'))
-            services = services.filter(due_time__year=year, due_time__month=month)
-        except (ValueError, TypeError):
-            pass
-    elif overdue_filter:
-        services = services.filter(is_checked=False, due_time__lt=now)
-    elif not issued_filter:
-        services = services.filter(is_checked=False)
-
-    if issued_filter == 'issued':
-        services = services.filter(is_checked=True)
-    elif issued_filter == 'unissued':
-        services = services.filter(is_checked=False)
-
-    if supplier_filter:
-        services = services.filter(supplier__iexact=supplier_filter)
-    if service_filter:
-        services = services.filter(service_name__iexact=service_filter)
+    services = apply_purchases_filters(services, request.GET, now=now)
+    services = order_purchases(services, sort)
 
     supplier_choices = get_supplier_choices()
     service_choices = get_service_choices()
     return render(request, 'supplier_payments_list.html', {
         'services': services,
-        'month': month_str,
-        'date_filter': date_str,
+        'due_from': due_from,
+        'due_to': due_to,
         'issued_filter': issued_filter,
         'overdue_filter': overdue_filter,
         'overdue_count': overdue_count,
@@ -300,6 +278,8 @@ def supplier_payments_list(request):
         'service_filter_options': service_choices,
         'supplier_choices': supplier_choices,
         'show_cancelled': show_cancelled,
+        'sort': sort,
+        'sort_choices': PURCHASES_SORT_CHOICES,
         'today': today,
         'now': now,
     })
@@ -307,56 +287,27 @@ def supplier_payments_list(request):
 
 @login_required(login_url="/login/")
 def supplier_payments_pdf(request):
+    return _supplier_payments_export(request, fmt='pdf')
+
+
+@login_required(login_url="/login/")
+def supplier_payments_xlsx(request):
+    return _supplier_payments_export(request, fmt='xlsx')
+
+
+def _supplier_payments_export(request, *, fmt: str):
     user = request.user
     now = timezone.now()
-    today = now.date()
     if user.is_staff:
         services = Service.objects.filter(due_time__isnull=False)
     else:
         services = Service.objects.filter(leadtask__assigned_to=user, due_time__isnull=False)
-    services = purchases_services_queryset(services).order_by("due_time")
-
-    month_str = request.GET.get("month", "").strip()
-    date_str = request.GET.get("date", "").strip()
-    paid_filter = request.GET.get("paid", request.GET.get("issued", "")).strip()
-    late_filter = request.GET.get("late", "") == "on" or request.GET.get("overdue", "") == "on"
-    supplier_filter = request.GET.get("supplier", "").strip()
-    service_filter = request.GET.get("service", "").strip()
-    show_cancelled = request.GET.get("show_cancelled", "") == "on"
-
-    if not show_cancelled:
-        services = services.exclude(leadtask__status="cancelled")
-    if date_str:
-        try:
-            filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            services = services.filter(due_time__date=filter_date)
-        except ValueError:
-            pass
-    elif month_str:
-        try:
-            year, month = (int(x) for x in month_str.split("-"))
-            services = services.filter(due_time__year=year, due_time__month=month)
-        except (ValueError, TypeError):
-            pass
-    elif late_filter:
-        services = services.filter(is_checked=False, due_time__lt=now)
-    elif not paid_filter:
-        services = services.filter(is_checked=False)
-    if paid_filter == "paid":
-        services = services.filter(is_checked=True)
-    elif paid_filter == "unpaid":
-        services = services.filter(is_checked=False)
-    elif paid_filter == "issued":
-        services = services.filter(is_checked=True)
-    elif paid_filter == "unissued":
-        services = services.filter(is_checked=False)
-    if supplier_filter:
-        services = services.filter(supplier__iexact=supplier_filter)
-    if service_filter:
-        services = services.filter(service_name__iexact=service_filter)
+    services = purchases_services_queryset(services)
+    sort = request.GET.get('sort', SORT_DUE_ASC).strip()
+    services = apply_purchases_filters(services, request.GET, now=now)
+    services = order_purchases(services, sort)
 
     from tasks.pdf_template import purchases_applied_filters
-    applied_filters = purchases_applied_filters(request.GET)
 
     rows = [
         [
@@ -365,17 +316,27 @@ def supplier_payments_pdf(request):
             s.leadtask.lead.name,
             s.leadtask.travel_date.strftime("%Y-%m-%d") if s.leadtask.travel_date else "—",
             s.issue_price or s.net or "—",
-            s.due_time.strftime("%Y-%m-%d %H:%M") if s.due_time else "—",
+            s.due_time.strftime("%Y-%m-%d") if s.due_time else "—",
             str(s.leadtask_id),
             "Yes" if s.is_checked else "No",
             s.leadtask.status,
         ]
         for s in services
     ]
+    headers = [
+        "Supplier", "Service", "Lead name", "Travel date", "Amount",
+        "Due date", "Order ID", "Issued", "Order status",
+    ]
+    applied_filters = purchases_applied_filters(request.GET)
+
+    if fmt == 'xlsx':
+        from accounts_core.export_utils import build_xlsx_response
+        return build_xlsx_response('supplier-payments-report', headers, rows)
+
     from tasks.pdf_policy import PDF_TARGET_PURCHASES_REPORT
     return _build_modern_pdf(
         "Purchases Report",
-        ["Supplier", "Service", "Lead name", "Travel date", "Amount", "Due time", "Order ID", "Issued", "Order status"],
+        headers,
         rows,
         "supplier-payments-report.pdf",
         applied_filters=applied_filters,

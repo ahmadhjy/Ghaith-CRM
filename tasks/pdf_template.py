@@ -49,34 +49,8 @@ def company_info_pairs():
 
 def purchases_applied_filters(params):
     """Human-readable filters for Purchases PDF from query params."""
-    filters = []
-    month = (params.get('month') or '').strip()
-    date = (params.get('date') or '').strip()
-    issued = (params.get('issued') or params.get('paid') or '').strip()
-    overdue = params.get('overdue') == 'on' or params.get('late') == 'on'
-    supplier = (params.get('supplier') or '').strip()
-    service = (params.get('service') or '').strip()
-    show_cancelled = params.get('show_cancelled') == 'on'
-
-    if month:
-        filters.append(f'Month: {month}')
-    if date:
-        filters.append(f'Date: {date}')
-    if overdue:
-        filters.append('Overdue only')
-    elif issued in ('issued', 'paid'):
-        filters.append('Issued only')
-    elif issued in ('unissued', 'unpaid'):
-        filters.append('Unissued only')
-    elif not month and not date:
-        filters.append('Unissued only (default)')
-    if supplier:
-        filters.append(f'Supplier: {supplier}')
-    if service:
-        filters.append(f'Service: {service}')
-    if show_cancelled:
-        filters.append('Including cancelled orders')
-    return filters
+    from tasks.purchases_filters import purchases_applied_filters as _filters
+    return _filters(params)
 
 
 def client_payments_applied_filters(params):

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if portal_mode %}Babylon Hotels{% else %}Babylon Hotels Sheet{% endif %} — Ghaith Travel</title>
+    <title>{{ title }} — Ghaith Travel</title>
     {% load static %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" type="text/css" href="{% static 'css/babylon-hotels-sheet.css' %}">
@@ -14,23 +14,25 @@
 <div class="babylon-wrap">
     <header class="babylon-header">
         <div>
-            <div class="babylon-header__eyebrow">{% if portal_mode %}Supplier portal{% else %}Orders sync{% endif %}</div>
-            <h1 class="babylon-header__title"><i class="fas fa-hotel"></i> Babylon Hotels</h1>
-            {% if not portal_mode %}
-            <p class="babylon-header__sub">
-                Rows are created automatically when an order service uses <strong>BABYLON</strong> as supplier.
-            </p>
+            <div class="babylon-header__eyebrow">{% if portal_mode %}Supplier portal{% elif sheet_kind == 'other_hotels' %}Staff sheet{% else %}Orders sync{% endif %}</div>
+            <h1 class="babylon-header__title"><i class="fas fa-hotel"></i> {{ title }}</h1>
+            {% if subtitle %}
+            <p class="babylon-header__sub">{{ subtitle }}</p>
             {% endif %}
         </div>
         <div class="babylon-header__actions">
-            <form method="get" class="babylon-year-form">
-                <label for="year">Year</label>
-                <select name="year" id="year" onchange="this.form.submit()">
-                    {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-                    {% endfor %}
-                </select>
-            </form>
+            {% if babylon_url %}
+            <a href="{{ babylon_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-arrow-left"></i> Babylon Hotels</a>
+            {% endif %}
+            {% if other_hotels_url %}
+            <a href="{{ other_hotels_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-globe-asia"></i> Other Hotels</a>
+            {% endif %}
+            {% if export_pdf_url %}
+            <a href="{{ export_pdf_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-file-pdf"></i> PDF</a>
+            {% endif %}
+            {% if export_xlsx_url %}
+            <a href="{{ export_xlsx_url }}" class="babylon-btn babylon-btn--outline"><i class="fas fa-file-excel"></i> Excel</a>
+            {% endif %}
             {% if portal_mode %}
             <form method="post" action="{% url 'babylon_portal_logout' %}">
                 {% csrf_token %}
@@ -41,6 +43,44 @@
             {% endif %}
         </div>
     </header>
+
+    <form method="get" class="babylon-filters" id="babylonFilters">
+        {% if sheet_kind == 'babylon' %}
+        <div class="babylon-filter-field">
+            <label for="year">Year</label>
+            <select name="year" id="year">
+                {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="babylon-filter-field">
+            <label for="service_type">Service type</label>
+            <select name="service_type" id="service_type">
+                <option value="">All</option>
+                {% for value, label in service_choices %}
+                <option value="{{ value }}" {% if service_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="babylon-filter-field">
+            <label for="sort">Sort by</label>
+            <select name="sort" id="sort">
+                {% for value, label in sort_choices %}
+                <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="babylon-filter-field babylon-filter-field--actions">
+            <button type="submit" class="babylon-btn babylon-btn--primary">Apply</button>
+            {% if sheet_kind == 'babylon' %}
+            <a href="{% if portal_mode %}{% url 'babylon_portal_sheet' %}{% else %}{% url 'babylon_hotels_sheet' %}{% endif %}" class="babylon-btn babylon-btn--ghost">Clear</a>
+            {% else %}
+            <a href="{% url 'other_hotels_sheet' %}" class="babylon-btn babylon-btn--ghost">Clear</a>
+            {% endif %}
+        </div>
+    </form>
 
     <div class="babylon-sheet-card">
         <div class="babylon-sheet-scroll">
@@ -53,60 +93,87 @@
                         <th>Details</th>
                         <th>Price (Net)</th>
                         <th>Due</th>
-                        <th>Conf #</th>
-                        {% if not portal_mode %}<th>Order</th>{% endif %}
+                        <th>Travel date</th>
+                        <th>Issued</th>
+                        {% if show_conf %}<th>Conf #</th>{% endif %}
+                        {% if show_order %}<th>Order</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for entry in entries %}
-                    <tr data-entry-id="{{ entry.id }}"{% if portal_mode %}{% if not entry.price or not entry.due_date %} class="is-incomplete"{% endif %}{% endif %}>
-                        <td data-field="entry_date" data-editable="{% if 'entry_date' in editable_fields %}1{% else %}0{% endif %}">
-                            <span class="cell-display">{{ entry.entry_date|date:"Y-m-d" }}</span>
-                            <input type="date" class="cell-input" value="{{ entry.entry_date|date:'Y-m-d' }}" hidden>
+                    {% for row in rows %}
+                    <tr data-entry-id="{{ row.entry_id|default:'' }}" data-service-id="{{ row.service_id }}"{% if row.is_incomplete %} class="is-incomplete"{% endif %}>
+                        <td data-field="entry_date" data-editable="{% if row.row_kind == 'babylon' and 'entry_date' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{% if row.entry_date %}{{ row.entry_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+                            {% if row.row_kind == 'babylon' and 'entry_date' in editable_fields %}
+                            <input type="date" class="cell-input" value="{% if row.entry_date %}{{ row.entry_date|date:'Y-m-d' }}{% endif %}" hidden>
+                            {% endif %}
                         </td>
-                        <td data-field="client_name" data-editable="{% if 'client_name' in editable_fields %}1{% else %}0{% endif %}">
-                            <span class="cell-display">{{ entry.client_name }}</span>
-                            <input type="text" class="cell-input" value="{{ entry.client_name }}" hidden>
+                        <td data-field="client_name" data-editable="{% if row.row_kind == 'babylon' and 'client_name' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ row.client_name }}</span>
+                            {% if row.row_kind == 'babylon' and 'client_name' in editable_fields %}
+                            <input type="text" class="cell-input" value="{{ row.client_name }}" hidden>
+                            {% endif %}
                         </td>
-                        <td data-field="service_type" data-editable="{% if 'service_type' in editable_fields %}1{% else %}0{% endif %}" class="col-service">
-                            <span class="cell-display">{{ entry.service_type|default:entry.service.service_name|default:"—" }}</span>
-                            {% if 'service_type' in editable_fields %}
+                        <td data-field="service_type" data-editable="{% if row.row_kind == 'babylon' and 'service_type' in editable_fields %}1{% else %}0{% endif %}" class="col-service">
+                            <span class="cell-display">{{ row.service_type|default:"—" }}</span>
+                            {% if row.row_kind == 'babylon' and 'service_type' in editable_fields %}
                             <select class="cell-input cell-input--select" hidden>
                                 <option value="">—</option>
                                 {% for value, label in service_choices %}
-                                <option value="{{ value }}" {% if entry.service_type == value or entry.service.service_name == value %}selected{% endif %}>{{ label }}</option>
+                                <option value="{{ value }}" {% if row.service_type == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
                             {% endif %}
                         </td>
-                        <td data-field="details" data-editable="{% if 'details' in editable_fields %}1{% else %}0{% endif %}" class="col-details">
-                            <span class="cell-display">{{ entry.details|default:"—" }}</span>
-                            <textarea class="cell-input" hidden>{{ entry.details }}</textarea>
+                        <td data-field="details" data-editable="{% if row.row_kind == 'babylon' and 'details' in editable_fields %}1{% else %}0{% endif %}" class="col-details">
+                            <span class="cell-display">{{ row.details|default:"—" }}</span>
+                            {% if row.row_kind == 'babylon' and 'details' in editable_fields %}
+                            <textarea class="cell-input" hidden>{{ row.details }}</textarea>
+                            {% endif %}
                         </td>
-                        <td data-field="price" data-editable="{% if 'price' in editable_fields %}1{% else %}0{% endif %}">
-                            <span class="cell-display">{{ entry.price|default:"—" }}</span>
-                            <input type="text" class="cell-input" value="{{ entry.price }}" hidden>
+                        <td data-field="price" data-editable="{% if row.row_kind == 'babylon' and 'price' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ row.price|default:"—" }}</span>
+                            {% if row.row_kind == 'babylon' and 'price' in editable_fields %}
+                            <input type="text" class="cell-input" value="{{ row.price }}" hidden>
+                            {% endif %}
                         </td>
-                        <td data-field="due_date" data-editable="{% if 'due_date' in editable_fields %}1{% else %}0{% endif %}">
-                            <span class="cell-display">{% if entry.due_date %}{{ entry.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
-                            <input type="date" class="cell-input" value="{% if entry.due_date %}{{ entry.due_date|date:'Y-m-d' }}{% endif %}" hidden>
+                        <td data-field="due_date" data-editable="{% if row.row_kind == 'babylon' and 'due_date' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{% if row.due_date %}{{ row.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+                            {% if row.row_kind == 'babylon' and 'due_date' in editable_fields %}
+                            <input type="date" class="cell-input" value="{% if row.due_date %}{{ row.due_date|date:'Y-m-d' }}{% endif %}" hidden>
+                            {% endif %}
                         </td>
-                        <td data-field="confirmation_number" data-editable="{% if 'confirmation_number' in editable_fields %}1{% else %}0{% endif %}">
-                            <span class="cell-display">{{ entry.confirmation_number|default:"—" }}</span>
-                            <input type="text" class="cell-input" value="{{ entry.confirmation_number }}" hidden>
+                        <td class="col-travel">
+                            <span class="cell-display">{% if row.travel_date %}{{ row.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
                         </td>
-                        {% if not portal_mode %}
+                        <td class="col-issued">
+                            <form method="post" action="{% url 'service_mark_done' row.service_id %}?next={{ request.get_full_path|urlencode }}" class="babylon-issued-form">
+                                {% csrf_token %}
+                                <label class="babylon-toggle">
+                                    <input type="checkbox" name="is_checked" value="on" onchange="this.form.submit();" {% if row.is_checked %}checked{% endif %}>
+                                    <span class="babylon-toggle__slider"></span>
+                                </label>
+                            </form>
+                        </td>
+                        {% if show_conf %}
+                        <td data-field="confirmation_number" data-editable="{% if row.row_kind == 'babylon' and 'confirmation_number' in editable_fields %}1{% else %}0{% endif %}">
+                            <span class="cell-display">{{ row.confirmation_number|default:"—" }}</span>
+                            {% if row.row_kind == 'babylon' and 'confirmation_number' in editable_fields %}
+                            <input type="text" class="cell-input" value="{{ row.confirmation_number }}" hidden>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if show_order %}
                         <td class="col-order">
-                            <a href="{% url 'edit_lead_tasks' entry.service.leadtask_id %}">#{{ entry.service.leadtask_id }}</a>
+                            <a href="{% url 'edit_lead_tasks' row.order_id %}">#{{ row.order_id }}</a>
                         </td>
                         {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{% if portal_mode %}7{% else %}8{% endif %}" class="babylon-empty">
+                        <td colspan="{% if show_order %}{% if show_conf %}10{% else %}9{% endif %}{% else %}{% if show_conf %}9{% else %}8{% endif %}{% endif %}" class="babylon-empty">
                             <i class="fas fa-inbox"></i>
-                            No Babylon hotel rows for {{ year }} yet.
-                            {% if not portal_mode %}Add a service with supplier <strong>BABYLON</strong> on an order to create one.{% endif %}
+                            {{ empty_message }}
                         </td>
                     </tr>
                     {% endfor %}

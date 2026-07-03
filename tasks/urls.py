@@ -48,5 +48,10 @@ urlpatterns = [
     path('client-media/<uuid:token>/submit/', views.client_media_submit, name='client_media_submit'),
     path('client-media/<uuid:token>/', views.client_media_upload_page, name='client_media_upload'),
     path('babylon-hotels/', babylon_views.babylon_hotels_sheet, name='babylon_hotels_sheet'),
+    path('babylon-hotels/pdf/', babylon_views.babylon_hotels_export_pdf, name='babylon_hotels_export_pdf'),
+    path('babylon-hotels/xlsx/', babylon_views.babylon_hotels_export_xlsx, name='babylon_hotels_export_xlsx'),
     path('babylon-hotels/row/<int:entry_id>/update/', babylon_views.babylon_entry_update, name='babylon_entry_update'),
+    path('other-hotels/', babylon_views.other_hotels_sheet, name='other_hotels_sheet'),
+    path('other-hotels/pdf/', babylon_views.other_hotels_export_pdf, name='other_hotels_export_pdf'),
+    path('other-hotels/xlsx/', babylon_views.other_hotels_export_xlsx, name='other_hotels_export_xlsx'),
 ]
