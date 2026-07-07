@@ -148,9 +148,9 @@
             <a href="{% url 'add_attachment' pk=leadid %}" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-plus"></i> Add</a>
         </div>
         <div class="req-card__body">
-            {% if attachments.all %}
+            {% if lead.attachments.all %}
             <ul class="req-attach-list">
-                {% for attachment in attachments.all %}
+                {% for attachment in lead.attachments.all %}
                 <li class="req-attach-item">
                     <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-file"></i> {{ attachment.attachment_name }}</a>
                     <a href="{% url 'delete_attachment' lead_id=leadid attachment_id=attachment.pk %}" class="req-link--danger">Delete</a>

@@ -1,5 +1,11 @@
 from django import forms
-from .models import Lead, Attachment, DailyReport, Offer, Department
+from .models import Lead, Attachment, DailyReport, Offer, Department, get_destination_choices
+
+
+def _destination_field(**widget_attrs):
+    attrs = {"class": "form-control"}
+    attrs.update(widget_attrs)
+    return forms.CharField(required=False, widget=forms.Select(attrs=attrs, choices=get_destination_choices()))
 
 class CreateLeadForm(forms.ModelForm):
     class Meta:
@@ -11,7 +17,6 @@ class CreateLeadForm(forms.ModelForm):
         ]
         widgets = {
             'reason_of_travel': forms.Textarea(attrs={'class': 'form-control'}),
-            'destination': forms.Select(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'country_code': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -31,6 +36,7 @@ class CreateLeadForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
         self.fields['department'].required = False
+        self.fields['destination'] = _destination_field()
 
 
 class QualificationForm(forms.ModelForm):
@@ -57,6 +63,21 @@ class QualificationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
         self.fields['department'].required = False
+        self.fields['destination'] = _destination_field()
+
+    def save(self, commit=True):
+        lead = super().save(commit=False)
+        summary = (lead.chat_summary or "").strip()
+        if summary:
+            lead.reason_of_travel = summary
+            lead.finalization_notes = summary
+        elif (lead.finalization_notes or "").strip():
+            lead.chat_summary = lead.finalization_notes.strip()
+            lead.reason_of_travel = lead.chat_summary
+        if commit:
+            lead.save()
+            self.save_m2m()
+        return lead
 
 class SendOfferForm(forms.ModelForm):
     class Meta:
@@ -83,6 +104,10 @@ class CreateLeadDetailsForm(forms.ModelForm):
                   'date_notes', 'special_request', 'urgent',
                   'assignment_notes', 'assigned_to']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['destination'] = _destination_field()
+
 class LeadForm(forms.ModelForm):
     class Meta:
         model = Lead
@@ -101,6 +126,21 @@ class LeadForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['destination'] = _destination_field()
+
+    def save(self, commit=True):
+        lead = super().save(commit=False)
+        summary = (lead.chat_summary or "").strip()
+        if summary:
+            lead.reason_of_travel = summary
+            lead.finalization_notes = summary
+        elif (lead.finalization_notes or "").strip():
+            lead.chat_summary = lead.finalization_notes.strip()
+            lead.reason_of_travel = lead.chat_summary
+        if commit:
+            lead.save()
+            self.save_m2m()
+        return lead
 
 class AttachmentForm(forms.ModelForm):
     class Meta:

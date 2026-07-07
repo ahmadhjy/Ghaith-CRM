@@ -15,15 +15,7 @@
     </p>
     <p><strong>Issue / Due:</strong> {{ invoice.issue_date }} / {{ invoice.due_date }}</p>
     <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</p>
-    <p><strong>Currency:</strong> {{ invoice.currency }}
-        {% if invoice.exchange_rate_to_usd %}
-        <span class="muted">— Rate to USD: {{ invoice.exchange_rate_to_usd }} (USD = amount × rate)</span>
-        {% endif %}
-    </p>
-    <p><strong>Total selling (document):</strong> {{ invoice.grand_total }} {{ invoice.currency }}
-        <span class="muted">(sum of service line selling prices)</span></p>
     <p><strong>Total selling (USD):</strong> {{ invoice.grand_total_usd }} USD</p>
-    <p><strong>Total cost (document):</strong> {{ invoice.total_line_cost }} {{ invoice.currency }}</p>
     <p><strong>Total cost (USD):</strong> {{ invoice.total_line_cost_usd }} USD</p>
     <p><strong>Profit (USD):</strong> {{ invoice.profit_amount }} USD</p>
 </div>
@@ -40,10 +32,8 @@
             <th>Supplier</th>
             <th>Employee</th>
             <th class="num">Qty</th>
-            <th class="num">Net</th>
-            <th class="num">Selling</th>
-            <th class="num">Sell USD</th>
-            <th class="num">Cost USD</th>
+            <th class="num">Selling (USD)</th>
+            <th class="num">Cost (USD)</th>
         </tr>
     </thead>
     <tbody>
@@ -56,13 +46,11 @@
             <td>{{ line.supplier.name|default:"—" }}</td>
             <td>{{ line.line_employee.name|default:"—" }}</td>
             <td class="num">{{ line.qty }}</td>
-            <td class="num">{{ line.cost_price }}</td>
-            <td class="num">{{ line.sell_price }}</td>
             <td class="num">{{ line.sell_price_usd }}</td>
             <td class="num">{{ line.cost_price_usd }}</td>
         </tr>
     {% empty %}
-        <tr><td colspan="11">No lines.</td></tr>
+        <tr><td colspan="9">No lines.</td></tr>
     {% endfor %}
     </tbody>
 </table>

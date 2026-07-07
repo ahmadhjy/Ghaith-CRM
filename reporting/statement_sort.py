@@ -13,7 +13,8 @@ def sort_statement_rows(rows):
             seq_val = seq
         else:
             seq_val = datetime.min
-        return (d, seq_val, row.get("sort_id") or "")
+        tier = row.get("sort_tier", 0)
+        return (d, seq_val, tier, row.get("sort_id") or "")
 
     rows.sort(key=_key)
     return rows

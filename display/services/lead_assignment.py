@@ -7,22 +7,45 @@ from django.db.models import Count, Q
 
 from display.models import Department
 
+HONEYMOON_DEPT_CODE = "honeymoon_far_east"
+
+
+def resolve_assignee_from_chat_label(
+    department: Department | None,
+    chat_label: str | None,
+) -> str | None:
+    """
+    Honeymoon & Far East: route by WhatsApp chat label (Alaa / Fouad).
+    Case-insensitive; Alaa is the fallback when the label is missing or unknown.
+    """
+    if not department or department.code != HONEYMOON_DEPT_CODE:
+        return None
+    label = (chat_label or "").strip().lower()
+    if label == "fouad":
+        return "fouad"
+    return "alaa"
+
 
 def assign_user_for_department(
     department: Department | None,
     *,
     explicit_username: str | None = None,
+    chat_label: str | None = None,
 ) -> User | None:
     """
     Pick the active CRM user in the department with the fewest open leads.
 
     Priority:
       1) explicit_username when provided and user belongs to the department
-      2) active users in department with receives_lead_assignments=True
-      3) first active user in department (any)
-      4) first active user in CRM (fallback)
+      2) chat_label routing for Honeymoon & Far East (Alaa / Fouad)
+      3) active users in department with receives_lead_assignments=True
+      4) first active user in department (any)
+      5) first active user in CRM (fallback)
     """
     users_qs = User.objects.filter(is_active=True)
+
+    if not explicit_username:
+        explicit_username = resolve_assignee_from_chat_label(department, chat_label)
 
     if explicit_username:
         user = users_qs.filter(username__iexact=explicit_username).first()

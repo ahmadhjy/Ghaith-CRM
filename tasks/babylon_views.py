@@ -27,7 +27,7 @@ from tasks.babylon_sheet import (
     sheet_filter_context,
 )
 from tasks.babylon_sync import push_crm_fields_to_entry, sync_service_from_entry
-from tasks.models import BabylonHotelEntry
+from tasks.models import BabylonHotelEntry, Service
 
 SESSION_KEY = 'babylon_portal_authenticated'
 DEFAULT_BABYLON_PASSCODE = 'Babylon-Ghaith-2026'
@@ -37,6 +37,7 @@ EDITABLE_STAFF = {
     'price', 'due_date', 'confirmation_number',
 }
 EDITABLE_PORTAL = {'details', 'price', 'due_date', 'confirmation_number'}
+EDITABLE_OTHER_HOTELS = {'supplier'}
 
 
 def _portal_passcode() -> str:
@@ -104,6 +105,7 @@ def _sheet_context(
     babylon_url: str = '',
     show_conf: bool = True,
     show_issued: bool = True,
+    show_supplier: bool = False,
     empty_message: str = '',
 ):
     return {
@@ -115,6 +117,7 @@ def _sheet_context(
         'editable_fields': editable_fields,
         'show_conf': show_conf,
         'show_issued': show_issued,
+        'show_supplier': show_supplier,
         'show_order': not portal_mode,
         'portal_url': portal_url,
         'export_pdf_url': export_pdf_url,
@@ -176,7 +179,7 @@ def _build_other_hotels_pdf_response(request):
 
     services = other_hotels_queryset(request.GET, now=timezone.now())
     rows = [row_from_service(service) for service in services]
-    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False)
+    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False, show_supplier=True)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="other-hotels-bali-report.pdf"'
     build_report_pdf(
@@ -195,7 +198,7 @@ def _build_other_hotels_xlsx_response(request):
 
     services = other_hotels_queryset(request.GET, now=timezone.now())
     rows = [row_from_service(service) for service in services]
-    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False)
+    headers, table_rows = babylon_export_table(rows, portal=False, show_conf=False, show_issued=False, show_supplier=True)
     return build_xlsx_response('other-hotels-bali-report', headers, table_rows)
 
 
@@ -269,10 +272,11 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
             title='Other Hotels — Bali',
             subtitle='Upcoming Bali hotel bookings from other suppliers.',
             portal_mode=True,
-            editable_fields=set(),
+            editable_fields=EDITABLE_OTHER_HOTELS,
             filter_ctx=_other_hotels_filter_ctx(request),
             show_conf=False,
             show_issued=False,
+            show_supplier=True,
             export_pdf_url=f'/babylon/other-hotels/pdf/?{q}' if q else '/babylon/other-hotels/pdf/',
             export_xlsx_url=f'/babylon/other-hotels/xlsx/?{q}' if q else '/babylon/other-hotels/xlsx/',
             babylon_url='/babylon/sheet/',
@@ -284,10 +288,11 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
         title='Other Hotels — Bali',
         subtitle='Hotel services for upcoming Bali travel from suppliers other than BABYLON.',
         portal_mode=False,
-        editable_fields=set(),
+        editable_fields=EDITABLE_OTHER_HOTELS,
         filter_ctx=_other_hotels_filter_ctx(request),
         show_conf=False,
         show_issued=False,
+        show_supplier=True,
         export_pdf_url=f'/tasks/other-hotels/pdf/?{q}' if q else '/tasks/other-hotels/pdf/',
         export_xlsx_url=f'/tasks/other-hotels/xlsx/?{q}' if q else '/tasks/other-hotels/xlsx/',
         babylon_url='/tasks/babylon-hotels/',
@@ -421,3 +426,34 @@ def babylon_entry_update(request, entry_id: int):
         push_crm_fields_to_entry(entry)
 
     return JsonResponse({'ok': True, 'entry': _serialize_entry(entry, portal=portal)})
+
+
+@require_http_methods(['PATCH', 'POST'])
+def other_hotels_service_update(request, service_id: int):
+    portal = _is_portal_authenticated(request)
+    staff = request.user.is_authenticated
+    if not portal and not staff:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    service = get_object_or_404(Service.objects.select_related('leadtask', 'leadtask__lead'), pk=service_id)
+
+    if request.content_type == 'application/json':
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    else:
+        payload = request.POST.dict()
+
+    field = (payload.get('field') or '').strip()
+    if field not in EDITABLE_OTHER_HOTELS:
+        return JsonResponse({'error': f'Field "{field}" cannot be edited here.'}, status=400)
+
+    if field == 'supplier':
+        service.supplier = str(payload.get('value') or '').strip()
+        service.save(update_fields=['supplier'])
+        from tasks.babylon_sync import sync_entry_from_service
+        sync_entry_from_service(service)
+
+    row = row_from_service(service)
+    return JsonResponse({'ok': True, 'service': row})

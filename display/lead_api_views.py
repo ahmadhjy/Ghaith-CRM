@@ -237,8 +237,10 @@ def api_list_destinations(request):
     if unauthorized:
         return unauthorized
 
+    from display.destinations import sync_catalog_destinations_to_crm
     from display.models import Destination
 
+    sync_catalog_destinations_to_crm()
     destinations = Destination.objects.all().order_by("name")
     data = [{"id": d.id, "name": d.name} for d in destinations]
     return JsonResponse({"destinations": data}, status=200)

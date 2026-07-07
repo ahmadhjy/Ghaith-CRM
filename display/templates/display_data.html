@@ -75,6 +75,8 @@
                         <th>Destination</th>
                         <th>Department</th>
                         <th>WhatsApp Line</th>
+                        <th>Last Customer Msg</th>
+                        <th>Last Agent Action</th>
                         <th>Status</th>
                         <th>Chat Summary</th>
                         <th>Created</th>
@@ -89,6 +91,8 @@
                         <td data-label="Destination">{{ d.destination|default:"—" }}</td>
                         <td data-label="Department">{% if d.department %}{{ d.department.name }}{% else %}—{% endif %}</td>
                         <td data-label="WhatsApp Line">{{ d.whatsapp_received_on|default:"—" }}</td>
+                        <td data-label="Last Customer Msg">{% if d.last_customer_message_at %}{{ d.last_customer_message_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
+                        <td data-label="Last Agent Action">{% if d.last_agent_action_at %}{{ d.last_agent_action_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
                         <td data-label="Status">
                             <span class="req-status-pill req-status-pill--{% if d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">{{ d.status }}</span>
                         </td>
@@ -98,7 +102,7 @@
                         <td data-label="Archive"><a href="{% url 'archive_lead' d.pk %}" class="req-link--danger req-btn--sm">Archive</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="9"><div class="req-empty"><i class="fas fa-inbox"></i>No requests found.</div></td></tr>
+                    <tr><td colspan="11"><div class="req-empty"><i class="fas fa-inbox"></i>No requests found.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

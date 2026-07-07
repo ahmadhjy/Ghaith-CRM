@@ -72,6 +72,15 @@
                 {% endfor %}
             </select>
         </div>
+        {% if sheet_kind == 'other_hotels' %}
+        <div class="babylon-filter-field">
+            <label for="no_supplier">Supplier</label>
+            <select name="no_supplier" id="no_supplier">
+                <option value="">All non-Babylon</option>
+                <option value="1" {% if no_supplier %}selected{% endif %}>Pending supplier only</option>
+            </select>
+        </div>
+        {% endif %}
         <div class="babylon-filter-field babylon-filter-field--actions">
             <button type="submit" class="babylon-btn babylon-btn--primary">Apply</button>
             {% if sheet_kind == 'babylon' %}
@@ -96,6 +105,7 @@
                         <th>Price (Net)</th>
                         <th>Due</th>
                         <th>Travel date</th>
+                        {% if show_supplier %}<th>Supplier</th>{% endif %}
                         {% if show_issued %}<th>Issued</th>{% endif %}
                         {% if show_conf %}<th>Conf #</th>{% endif %}
                         {% if show_order %}<th>Order</th>{% endif %}
@@ -148,6 +158,19 @@
                         <td class="col-travel">
                             <span class="cell-display">{% if row.travel_date %}{{ row.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
                         </td>
+                        {% if show_supplier %}
+                        <td data-field="supplier" data-editable="{% if row.row_kind == 'service' and 'supplier' in editable_fields %}1{% else %}0{% endif %}" class="col-supplier{% if row.needs_supplier %} is-pending-supplier{% endif %}">
+                            <span class="cell-display">{{ row.supplier_label|default:"—" }}</span>
+                            {% if row.row_kind == 'service' and 'supplier' in editable_fields %}
+                            <select class="cell-input cell-input--select" hidden>
+                                <option value="">Pending supplier</option>
+                                {% for value, label in supplier_choices %}
+                                <option value="{{ value }}" {% if row.supplier == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </td>
+                        {% endif %}
                         {% if show_issued %}
                         <td class="col-issued">
                             {% if portal_mode and row.row_kind == 'service' %}
@@ -230,20 +253,25 @@
     function saveCell(cell) {
         var row = cell.closest('tr');
         var entryId = row.getAttribute('data-entry-id');
+        var serviceId = row.getAttribute('data-service-id');
         var field = cell.getAttribute('data-field');
         var input = cell.querySelector('.cell-input');
         var display = cell.querySelector('.cell-display');
-        if (!input || !entryId) return;
+        if (!input || (!entryId && !serviceId)) return;
 
         var value = input.value;
         if (input.tagName === 'SELECT') {
-            cell.querySelector('.cell-display').textContent = value || '—';
+            cell.querySelector('.cell-display').textContent = value || 'Pending supplier';
         }
         cell.classList.remove('is-editing');
         display.hidden = false;
         input.hidden = true;
 
-        fetch('/tasks/babylon-hotels/row/' + entryId + '/update/', {
+        var url = entryId
+            ? '/tasks/babylon-hotels/row/' + entryId + '/update/'
+            : '/tasks/other-hotels/service/' + serviceId + '/update/';
+
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -257,6 +285,14 @@
                 alert(res.data.error || 'Save failed');
                 return;
             }
+            if (res.data.service) {
+                var svc = res.data.service;
+                if (field === 'supplier') {
+                    display.textContent = svc.supplier_label || svc.supplier || 'Pending supplier';
+                    if (svc.needs_supplier) row.classList.add('is-pending-supplier');
+                    else row.classList.remove('is-pending-supplier');
+                }
+            } else {
             var entry = res.data.entry;
             if (field === 'details') display.textContent = entry.details || '—';
             else if (field === 'price') display.textContent = entry.price || '—';
@@ -266,6 +302,7 @@
             else if (field === 'due_date') display.textContent = entry.due_date || '—';
             else if (field === 'entry_date') display.textContent = entry.entry_date;
             updateRowHighlight(row, entry);
+            }
             cell.classList.add('is-saved');
             setTimeout(function() { cell.classList.remove('is-saved'); }, 1200);
         })

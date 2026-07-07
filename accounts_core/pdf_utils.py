@@ -315,16 +315,21 @@ def _flatten_opex_category_row(r):
 
 
 def _flatten_invoice(inv):
+    usd_total = inv.grand_total_usd if inv.grand_total_usd is not None else inv.grand_total
     return [
         inv.invoice_no or "",
         inv.client.name_en if inv.client_id else "",
         _format_cell(inv.issue_date),
         inv.status,
-        f"{_format_cell(inv.grand_total)} {inv.currency}",
-        f"{_format_cell(inv.grand_total_usd)} USD",
-        f"{_format_cell(inv.total_line_cost())} {inv.currency}",
+        f"{_format_cell(usd_total)} USD",
+        f"{_format_cell(inv.total_line_cost_usd())} USD",
         f"{_format_cell(inv.profit_amount)} USD",
     ]
+
+
+def _invoice_selling_usd_display(invoice) -> str:
+    amount = invoice.grand_total_usd if invoice.grand_total_usd is not None else invoice.grand_total
+    return f"{_format_cell(amount)} USD"
 
 
 def _prepare_invoice_document_pdf(context):
@@ -334,66 +339,52 @@ def _prepare_invoice_document_pdf(context):
     if not invoice or lines is None:
         return
     show_costs = context.get("show_costs")
-    headers = ["Date", "Service", "Description", "Destination"]
+    headers = ["Date", "Description", "Destination"]
     if show_costs:
-        headers.extend(["Supplier", "Sell", "Cost", "Cost USD"])
-    else:
-        headers.append("Sell")
+        headers.extend(["Supplier", "Cost", "Cost USD"])
 
     table_rows = []
     for line in lines:
         row = [
             _format_cell(line.effective_service_date() if callable(getattr(line, "effective_service_date", None)) else line.effective_service_date),
-            line.service_type.name if line.service_type_id else "—",
             (line.statement_line_details() if callable(getattr(line, "statement_line_details", None)) else "") or "—",
             line.destination.name if line.destination_id else "—",
         ]
         if show_costs:
             row.append(line.supplier.name if line.supplier_id else "—")
-            row.extend([_format_cell(line.sell_price), _format_cell(line.cost_price), _format_cell(line.cost_price_usd)])
-        else:
-            row.append(_format_cell(line.sell_price))
+            row.extend([_format_cell(line.cost_price), _format_cell(line.cost_price_usd)])
         table_rows.append(row)
 
-    numeric_start = 4 if not show_costs else 5
-    numeric_indexes = list(range(numeric_start, len(headers)))
+    numeric_start = 3 if not show_costs else 4
+    numeric_indexes = list(range(numeric_start, len(headers))) if show_costs else []
     context["pdf_table_headers"] = headers
     context["pdf_table_rows"] = table_rows
     context["pdf_numeric_column_indexes"] = numeric_indexes
-    context["pdf_description_column_index"] = 2
-    context["pdf_wrap_column_indexes"] = [2, 3]
+    context["pdf_description_column_index"] = 1
+    context["pdf_wrap_column_indexes"] = [1, 2]
     context["pdf_hide_subtitle_in_body"] = True
 
     context["pdf_account_name"] = invoice.client.name_en if invoice.client_id else "Draft"
     context["pdf_account_id"] = invoice.invoice_no or "—"
 
     cards = [
-        {"label": "Total Selling", "value": f"{_format_cell(invoice.grand_total)} {invoice.currency}", "kind": "balance"},
+        {"label": "Total Selling", "value": _invoice_selling_usd_display(invoice), "kind": "balance"},
     ]
     if show_costs:
         cards.append({"label": "Total Cost (USD)", "value": _format_cell(invoice.total_line_cost_usd()), "kind": "debit"})
         cards.append({"label": "Profit (USD)", "value": _format_cell(invoice.profit_amount), "kind": "credit"})
-    else:
-        if invoice.grand_total_usd:
-            cards.append({"label": "Total (USD)", "value": f"{_format_cell(invoice.grand_total_usd)} USD", "kind": "credit"})
-        cards.append({
-            "label": "Type of Service",
-            "value": invoice.get_package_type_display() if invoice.package_type else "—",
-            "kind": "neutral",
-        })
     context["pdf_stat_cards"] = cards
     context["pdf_section_title"] = "Invoice Details"
     context["pdf_section_subtitle"] = "Services billed on this invoice."
     context["pdf_hide_period"] = True
 
-    totals = [("Grand total", f"{_format_cell(invoice.grand_total)} {invoice.currency}")]
-    if invoice.grand_total_usd:
-        totals.append(("Total (USD)", f"{_format_cell(invoice.grand_total_usd)} USD"))
+    totals = [("Grand total", _invoice_selling_usd_display(invoice))]
     if show_costs:
         totals.append(("Total cost (USD)", _format_cell(invoice.total_line_cost_usd())))
         totals.append(("Profit (USD)", _format_cell(invoice.profit_amount)))
     context["pdf_totals"] = totals
     context["pdf_totals_closing_last"] = True
+    context["pdf_currency"] = "USD"
     _apply_pdf_table_layout(context)
 
 
@@ -606,7 +597,7 @@ def prepare_pdf_export(context):
 
     if context.get("invoices"):
         context["pdf_table_headers"] = [
-            "Invoice", "Client", "Date", "Status", "Total (doc)", "Total (USD)", "Cost", "Profit (USD)"
+            "Invoice", "Client", "Date", "Status", "Total (USD)", "Cost (USD)", "Profit (USD)"
         ]
         context["pdf_table_rows"] = [_flatten_invoice(i) for i in context["invoices"]]
         context["pdf_numeric_column_indexes"] = [4, 5, 6, 7]

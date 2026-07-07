@@ -56,11 +56,23 @@ class CrmUserProfile(models.Model):
 
 
 def get_destination_choices():
-    """Callable: loads destinations from DB when the field is rendered (e.g. add lead form). No server restart needed after adding in admin."""
-    choices = [('', 'Select Destination')]
+    """Destinations from CRM catalog and accounting catalog (merged by name)."""
+    choices = [("", "Select Destination")]
+    names: set[str] = set()
     try:
-        destinations = Destination.objects.all().order_by('name')
-        choices.extend([(d.name, d.name) for d in destinations])
+        from catalog.models import Destination as CatalogDestination
+
+        for dest in CatalogDestination.objects.filter(is_active=True).order_by("sort_order", "name"):
+            if dest.name not in names:
+                names.add(dest.name)
+                choices.append((dest.name, dest.name))
+    except Exception:
+        pass
+    try:
+        for dest in Destination.objects.all().order_by("name"):
+            if dest.name not in names:
+                names.add(dest.name)
+                choices.append((dest.name, dest.name))
     except Exception:
         pass
     return choices
@@ -132,7 +144,17 @@ class Lead(models.Model):
     type_of_service = models.CharField(max_length=50, choices=SERVICE_CHOICES, blank=True, default='')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, blank=True, default='onhold')
     status_changed_at = models.DateTimeField(null=True, blank=True)
-    destination = models.CharField(max_length=200, blank=True, choices=get_destination_choices)
+    destination = models.CharField(max_length=200, blank=True)
+    last_customer_message_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last inbound customer message time from the WhatsApp dashboard.",
+    )
+    last_agent_action_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last CRM agent action time from the WhatsApp dashboard.",
+    )
     pax = models.CharField(max_length=100, blank=True, default='')
     duration = models.CharField(max_length=200, blank=True, default='')
     travel_date_from = models.DateField(blank=True, null=True)

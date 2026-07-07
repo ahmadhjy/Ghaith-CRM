@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from display.api_utils import normalize_phone
 from display.constants import DEPARTMENT_ALIASES, LEAD_STATUS_API_VALUES
+from display.destinations import ensure_crm_destination
+from display.lead_errors import LeadSyncError
 from display.models import Department, Lead
 from display.services.lead_assignment import assign_user_for_department
 from display.services.lead_close_deal import apply_close_deal, resolve_close_outcome
@@ -17,7 +22,35 @@ from display.services.lead_qualification import (
 )
 
 
-from display.lead_errors import LeadSyncError
+def _parse_api_datetime(value) -> datetime | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        dt = parse_datetime(str(value).strip())
+    if not dt:
+        return None
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
+def _chat_label_from_payload(data: dict) -> str | None:
+    label = (data.get("chat_label") or "").strip()
+    if label:
+        return label
+    received = (data.get("whatsapp_received_on") or "").strip()
+    if received.lower() in {"alaa", "fouad"}:
+        return received
+    return None
+
+
+def _sync_summary_fields(lead: Lead, text: str) -> None:
+    cleaned = (text or "").strip()
+    lead.chat_summary = cleaned
+    lead.reason_of_travel = cleaned
+    lead.finalization_notes = cleaned
 
 
 def resolve_department(value: str | None) -> Department | None:
@@ -100,6 +133,12 @@ def serialize_lead(lead: Lead) -> dict:
         },
         "created_at": lead.created_at.isoformat() if lead.created_at else None,
         "last_modified": lead.last_modified.isoformat() if lead.last_modified else None,
+        "last_customer_message_at": (
+            lead.last_customer_message_at.isoformat() if lead.last_customer_message_at else None
+        ),
+        "last_agent_action_at": (
+            lead.last_agent_action_at.isoformat() if lead.last_agent_action_at else None
+        ),
     }
 
 
@@ -128,7 +167,16 @@ def _apply_lead_fields(lead: Lead, data: dict, *, is_create: bool) -> None:
         lead.whatsapp_received_on = (data.get("whatsapp_received_on") or "").strip()
 
     if data.get("destination") is not None:
-        lead.destination = (data.get("destination") or "").strip()
+        dest = (data.get("destination") or "").strip()
+        lead.destination = dest
+        if dest:
+            ensure_crm_destination(dest)
+
+    if data.get("last_customer_message_at") is not None:
+        lead.last_customer_message_at = _parse_api_datetime(data.get("last_customer_message_at"))
+
+    if data.get("last_agent_action_at") is not None:
+        lead.last_agent_action_at = _parse_api_datetime(data.get("last_agent_action_at"))
 
     if data.get("email") is not None:
         lead.email = (data.get("email") or None) or None
@@ -143,8 +191,9 @@ def _apply_lead_fields(lead: Lead, data: dict, *, is_create: bool) -> None:
     if chat_summary is None and data.get("what_happened") is not None:
         chat_summary = data.get("what_happened")
     if chat_summary is not None:
-        lead.chat_summary = (chat_summary or "").strip()
-        lead.reason_of_travel = lead.chat_summary
+        _sync_summary_fields(lead, chat_summary)
+    elif data.get("what_happened") is not None and resolve_close_outcome(data) != "lost":
+        _sync_summary_fields(lead, data.get("what_happened") or "")
 
     if data.get("notes") is not None:
         lead.assignment_notes = (data.get("notes") or "").strip()
@@ -159,10 +208,10 @@ def _apply_lead_fields(lead: Lead, data: dict, *, is_create: bool) -> None:
         lead.external_id = external_id
 
     if data.get("finalization_notes") is not None and resolve_close_outcome(data) != "lost":
-        lead.finalization_notes = (data.get("finalization_notes") or "").strip()
+        _sync_summary_fields(lead, data.get("finalization_notes") or "")
 
     if data.get("what_happened") is not None and resolve_close_outcome(data) != "lost":
-        lead.finalization_notes = (data.get("what_happened") or "").strip()
+        _sync_summary_fields(lead, data.get("what_happened") or "")
 
 
 def create_or_update_lead_from_dashboard(data: dict) -> tuple[Lead, bool]:
@@ -195,10 +244,15 @@ def create_or_update_lead_from_dashboard(data: dict) -> tuple[Lead, bool]:
 
     existing = _find_existing_lead(data, phone)
     explicit_username = (data.get("assigned_to") or "").strip() or None
+    chat_label = _chat_label_from_payload(data)
     is_create = existing is None
 
     if is_create:
-        assigned_to = assign_user_for_department(department, explicit_username=explicit_username)
+        assigned_to = assign_user_for_department(
+            department,
+            explicit_username=explicit_username,
+            chat_label=chat_label,
+        )
         if not assigned_to:
             raise LeadSyncError(
                 "No active CRM user available for assignment",
@@ -217,8 +271,12 @@ def create_or_update_lead_from_dashboard(data: dict) -> tuple[Lead, bool]:
     else:
         lead = existing
         lead.department = department
-        if explicit_username or data.get("reassign", False):
-            assigned_to = assign_user_for_department(department, explicit_username=explicit_username)
+        if explicit_username or data.get("reassign", False) or chat_label:
+            assigned_to = assign_user_for_department(
+                department,
+                explicit_username=explicit_username,
+                chat_label=chat_label,
+            )
             if assigned_to:
                 lead.assigned_to = assigned_to
 
@@ -242,6 +300,7 @@ def update_lead_from_dashboard(lead: Lead, data: dict) -> Lead:
             assigned_to = assign_user_for_department(
                 department,
                 explicit_username=(data.get("assigned_to") or "").strip() or None,
+                chat_label=_chat_label_from_payload(data),
             )
             if assigned_to:
                 lead.assigned_to = assigned_to

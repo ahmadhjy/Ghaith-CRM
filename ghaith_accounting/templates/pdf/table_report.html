@@ -4,7 +4,7 @@
 {% if pdf_account_name %}
 <div class="pdf-acct-card">
   <div class="pdf-acct-card__cell">
-    <span class="pdf-acct-ico">&#128100;</span>
+    <span class="pdf-acct-ico pdf-ico-user"></span>
     <span class="pdf-acct-text">
       <span class="pdf-acct-label">Account Name</span><br>
       <span class="pdf-acct-value">{{ pdf_account_name }}</span>
@@ -12,7 +12,7 @@
   </div>
   {% if pdf_account_id %}
   <div class="pdf-acct-card__cell">
-    <span class="pdf-acct-ico">&#128179;</span>
+    <span class="pdf-acct-ico pdf-ico-id"></span>
     <span class="pdf-acct-text">
       <span class="pdf-acct-label">Account ID</span><br>
       <span class="pdf-acct-value">{{ pdf_account_id }}</span>
@@ -27,7 +27,7 @@
   {% for card in pdf_stat_cards %}
   <div class="pdf-stat-card pdf-stat-card--{{ card.kind|default:'neutral' }}">
     <span class="pdf-stat-ico">
-      {% if card.kind == 'debit' %}&#8595;{% elif card.kind == 'credit' %}&#8593;{% elif card.kind == 'balance' %}&#128188;{% else %}&#9679;{% endif %}
+      {% if card.kind == 'debit' %}<span class="pdf-ico-arrow-down"></span>{% elif card.kind == 'credit' %}<span class="pdf-ico-arrow-up"></span>{% elif card.kind == 'balance' %}<span class="pdf-ico-balance"></span>{% else %}<span class="pdf-ico-dot"></span>{% endif %}
     </span>
     <span class="pdf-stat-text">
       <span class="pdf-stat-label">{{ card.label }}</span>
@@ -40,7 +40,7 @@
 
 {% if pdf_section_title %}
 <div class="pdf-section">
-  <div class="pdf-section__ico"><span>&#9776;</span></div>
+  <div class="pdf-section__ico"><span class="pdf-ico-menu"></span></div>
   <div class="pdf-section__text">
     <div class="pdf-section__title">{{ pdf_section_title }}</div>
     {% if pdf_section_subtitle %}<div class="pdf-section__subtitle">{{ pdf_section_subtitle }}</div>{% endif %}

@@ -39,11 +39,8 @@
             <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
             <td>{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
             <td class="invoice-list-service">{% if invoice.package_type %}{{ invoice.get_package_type_display }}{% else %}—{% endif %}</td>
-            <td class="num">
-                {{ invoice.grand_total }} {{ invoice.currency }}
-                {% if invoice.currency != "USD" %}<span class="muted block-sub">{{ invoice.grand_total_usd }} USD</span>{% endif %}
-            </td>
-            <td class="num">{{ invoice.total_line_cost|floatformat:2 }} {{ invoice.currency }}</td>
+            <td class="num">{{ invoice.grand_total_usd }} USD</td>
+            <td class="num">{{ invoice.total_line_cost_usd|floatformat:2 }} USD</td>
             <td class="num">{{ invoice.profit_amount|floatformat:2 }} USD</td>
             <td class="table-actions">
                 <a class="btn btn-sm" href="{% url 'sales:invoice_open' invoice.id %}">View</a>

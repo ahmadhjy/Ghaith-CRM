@@ -19,6 +19,9 @@
             </p>
             <div class="req-hero__footer">
                 <div class="req-hero__actions">
+                    {% if files %}
+                    <a href="{% url 'client_media_download_all' upload_link.token %}" class="req-btn-ghost"><i class="fas fa-file-archive"></i> Download All (ZIP)</a>
+                    {% endif %}
                     <a href="{% url 'client_media_upload' upload_link.token %}" target="_blank" rel="noopener noreferrer" class="req-btn-ghost">Client Page</a>
                     <a href="{% url 'client_media_uploads_list' %}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> All Uploads</a>
                 </div>

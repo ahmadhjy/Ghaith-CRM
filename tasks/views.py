@@ -1087,3 +1087,39 @@ def client_media_upload_detail(request, token):
         'upload_link': upload_link,
         'files': files,
     })
+
+
+@login_required(login_url="/login/")
+def client_media_download_all(request, token):
+    import io
+    import zipfile
+
+    from django.http import FileResponse
+
+    upload_link = get_object_or_404(ClientMediaUploadLink, token=token)
+    files = list(upload_link.files.all().order_by('uploaded_at'))
+    if not files:
+        return JsonResponse({'error': 'No files to download.'}, status=404)
+
+    buffer = io.BytesIO()
+    used_names: set[str] = set()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        for index, media in enumerate(files, start=1):
+            base_name = (media.original_name or media.file.name.split('/')[-1] or f'file-{index}').strip()
+            name = base_name
+            suffix = 1
+            while name in used_names:
+                if '.' in base_name:
+                    stem, ext = base_name.rsplit('.', 1)
+                    name = f'{stem}-{suffix}.{ext}'
+                else:
+                    name = f'{base_name}-{suffix}'
+                suffix += 1
+            used_names.add(name)
+            with media.file.open('rb') as handle:
+                archive.writestr(name, handle.read())
+
+    buffer.seek(0)
+    safe_client = ''.join(ch if ch.isalnum() or ch in '-_' else '_' for ch in upload_link.client_name)
+    filename = f'{safe_client or "client"}-media.zip'
+    return FileResponse(buffer, as_attachment=True, filename=filename, content_type='application/zip')

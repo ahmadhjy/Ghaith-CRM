@@ -11,9 +11,9 @@
         </div>
         <div class="pdf-brand-text-cell">
           <div class="pdf-brand-name">{{ company.name }}</div>
-          {% if company.address %}<div class="pdf-brand-line"><span class="ic">&#9679;</span>{{ company.address }}</div>{% endif %}
-          {% if company.phone %}<div class="pdf-brand-line"><span class="ic">&#9742;</span>{{ company.phone }}</div>{% endif %}
-          {% if company.email %}<div class="pdf-brand-line"><span class="ic">&#9993;</span>{{ company.email }}</div>{% endif %}
+          {% if company.address %}<div class="pdf-brand-line"><span class="ic pdf-ico-dot"></span>{{ company.address }}</div>{% endif %}
+          {% if company.phone %}<div class="pdf-brand-line"><span class="ic pdf-ico-phone"></span>{{ company.phone }}</div>{% endif %}
+          {% if company.email %}<div class="pdf-brand-line"><span class="ic pdf-ico-mail"></span>{{ company.email }}</div>{% endif %}
         </div>
       </div>
     </div>
@@ -21,7 +21,7 @@
       <div class="pdf-head__title">{{ pdf_report_title }}</div>
       {% if not pdf_hide_period %}{% if date_from or date_to %}
       <div class="pdf-head__period">
-        <span class="ic">&#128197;</span>
+        <span class="ic pdf-ico-date"></span>
         Period:
         {% if date_from %}{{ date_from|date:"d/m/Y" }}{% endif %}
         {% if date_from and date_to %} &ndash; {% endif %}
@@ -51,7 +51,7 @@
       </div>
     </div>
     <div class="pdf-foot__right">
-      <div class="pdf-foot__row"><span class="ic">&#128197;</span> Printed on: {{ pdf_generated_on|date:"d/m/Y" }}</div>
+      <div class="pdf-foot__row"><span class="ic pdf-ico-date"></span> Printed on: {{ pdf_generated_on|date:"d/m/Y" }}</div>
     </div>
   </div>
 </div>

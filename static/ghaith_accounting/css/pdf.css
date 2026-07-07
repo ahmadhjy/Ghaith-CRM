@@ -521,3 +521,41 @@ body.is-pdf a {
     color: inherit;
     text-decoration: none;
 }
+
+/* PDF-safe icons (no emoji fonts required) */
+.pdf-ico-dot::before,
+.pdf-ico-phone::before,
+.pdf-ico-mail::before,
+.pdf-ico-date::before,
+.pdf-ico-user::before,
+.pdf-ico-id::before,
+.pdf-ico-arrow-down::before,
+.pdf-ico-arrow-up::before,
+.pdf-ico-balance::before,
+.pdf-ico-menu::before {
+    display: inline-block;
+    font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.pdf-ico-dot::before { content: "•"; }
+.pdf-ico-phone::before { content: "☎"; font-size: 9pt; }
+.pdf-ico-mail::before { content: "@"; font-size: 9pt; }
+.pdf-ico-date::before { content: "◷"; font-size: 9pt; }
+.pdf-ico-user::before { content: "A"; font-size: 8pt; }
+.pdf-ico-id::before { content: "#"; font-size: 9pt; }
+.pdf-ico-arrow-down::before { content: "↓"; font-size: 12pt; }
+.pdf-ico-arrow-up::before { content: "↑"; font-size: 12pt; }
+.pdf-ico-balance::before { content: "$"; font-size: 10pt; }
+.pdf-ico-menu::before { content: "≡"; font-size: 11pt; }
+
+.pdf-acct-ico.pdf-ico-user,
+.pdf-acct-ico.pdf-ico-id,
+.pdf-stat-ico .pdf-ico-arrow-down,
+.pdf-stat-ico .pdf-ico-arrow-up,
+.pdf-stat-ico .pdf-ico-balance,
+.pdf-stat-ico .pdf-ico-dot,
+.pdf-section__ico .pdf-ico-menu {
+    font-size: 0;
+}

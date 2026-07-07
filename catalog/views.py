@@ -46,6 +46,9 @@ def destination_quick_create(request):
         return JsonResponse({"id": str(dest.id), "name": dest.name, "country": dest.country})
 
     dest = Destination.objects.create(name=name, country=country, is_active=True)
+    from display.destinations import ensure_crm_destination
+
+    ensure_crm_destination(dest.name)
     return JsonResponse({"id": str(dest.id), "name": dest.name, "country": dest.country})
 
 @login_required

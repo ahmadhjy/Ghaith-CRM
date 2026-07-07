@@ -211,3 +211,56 @@ class LeadApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "negotiation")
+
+    def test_honeymoon_chat_label_assigns_fouad(self):
+        honeymoon = Department.objects.get(code="honeymoon_far_east")
+        fouad = User.objects.create_user(username="fouad", password="pass12345")
+        alaa = User.objects.create_user(username="alaa", password="pass12345")
+        CrmUserProfile.objects.filter(user=fouad).update(
+            department=honeymoon,
+            receives_lead_assignments=True,
+        )
+        CrmUserProfile.objects.filter(user=alaa).update(
+            department=honeymoon,
+            receives_lead_assignments=True,
+        )
+        response = self.client.post(
+            "/api/leads/",
+            data=json.dumps(
+                {
+                    "external_id": "dash-hf-1",
+                    "name": "Honeymoon Lead",
+                    "phone": "+96170000020",
+                    "department": "honeymoon_far_east",
+                    "chat_label": "Fouad",
+                    "status": "onhold",
+                }
+            ),
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["assigned_to"]["username"], "fouad")
+
+    def test_honeymoon_unknown_label_defaults_to_alaa(self):
+        honeymoon = Department.objects.get(code="honeymoon_far_east")
+        alaa = User.objects.create_user(username="alaa2", password="pass12345")
+        CrmUserProfile.objects.filter(user=alaa).update(
+            department=honeymoon,
+            receives_lead_assignments=True,
+        )
+        response = self.client.post(
+            "/api/leads/",
+            data=json.dumps(
+                {
+                    "external_id": "dash-hf-2",
+                    "name": "Honeymoon Lead 2",
+                    "phone": "+96170000021",
+                    "department": "honeymoon_far_east",
+                    "chat_label": "unknown",
+                    "status": "onhold",
+                }
+            ),
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["assigned_to"]["username"], "alaa2")

@@ -441,3 +441,55 @@ class OpeningBalanceStatementTests(TestCase):
         opening = [r for r in rows if r.get("sort_id") == "opening"]
         self.assertEqual(opening, [])
 
+
+class ClientStatementInvoiceTotalOrderTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="soa2", password="test12345")
+        self.client_obj = Client.objects.create(client_code="C-TOT", name_en="Total Order Client")
+        self.employee = Employee.objects.create(name="Emp", role=Employee.EmployeeRole.ACCOUNTING)
+        self.service_type = ServiceType.objects.create(name="Hotel", code="HT2")
+        self.destination = Destination.objects.create(name="Maldives")
+        self.supplier = Supplier.objects.create(supplier_code="S-HT2", name="Hotel Sup", managing_number="+960000")
+
+    def test_invoice_total_follows_service_lines(self):
+        past = date.today() - timedelta(days=10)
+        future = date.today() + timedelta(days=5)
+        inv = SalesInvoice.objects.create(
+            invoice_no="TMP-TOT",
+            client=self.client_obj,
+            sales_employee=self.employee,
+            issue_date=past,
+            currency="USD",
+        )
+        SalesInvoiceLine.objects.create(
+            invoice=inv,
+            supplier=self.supplier,
+            service_type=self.service_type,
+            destination=self.destination,
+            line_employee=self.employee,
+            service_date=past,
+            qty=Decimal("1"),
+            sell_price=Decimal("100"),
+            cost_price=Decimal("60"),
+        )
+        SalesInvoiceLine.objects.create(
+            invoice=inv,
+            supplier=self.supplier,
+            service_type=self.service_type,
+            destination=self.destination,
+            line_employee=self.employee,
+            service_date=future,
+            qty=Decimal("1"),
+            sell_price=Decimal("200"),
+            cost_price=Decimal("120"),
+        )
+        inv.recalc_usd_amounts()
+        inv.post(self.user)
+
+        rows = build_client_statement_rows(self.client_obj)
+        invoice_rows = [r for r in rows if r.get("ref") == inv.invoice_no]
+        self.assertEqual(len(invoice_rows), 3)
+        self.assertEqual(invoice_rows[-1]["description"], "Total selling")
+        self.assertEqual(invoice_rows[-1]["sort_tier"], 1)
+        self.assertEqual(invoice_rows[-1]["date"], future)
+

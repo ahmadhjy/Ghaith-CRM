@@ -110,14 +110,17 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
                     "debit_display_na": True,
                     "sort_seq": inv.created_at,
                     "sort_id": str(line.id),
+                    "sort_tier": 0,
                     "is_pending": bool(line_date and line_date > today),
                 }
             )
 
+        line_dates = [line.effective_service_date() for line in visible_lines if line.effective_service_date()]
+        total_row_date = max(line_dates) if line_dates else inv.issue_date
         total_debit, total_na = _invoice_total_debit(inv)
         rows.append(
             {
-                "date": inv.issue_date,
+                "date": total_row_date,
                 "type": "Invoice",
                 "description": "Total selling",
                 "destination": "—",
@@ -128,7 +131,8 @@ def build_client_statement_rows(client, date_from=None, date_to=None):
                 "debit_display_na": total_na,
                 "sort_seq": inv.created_at,
                 "sort_id": f"total-{inv.id}",
-                "is_pending": bool(inv.issue_date and inv.issue_date > today),
+                "sort_tier": 1,
+                "is_pending": bool(total_row_date and total_row_date > today),
             }
         )
 

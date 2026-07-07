@@ -75,6 +75,7 @@ class LeadAdmin(admin.ModelAdmin):
     search_fields = ['name', 'destination', 'phone', 'external_id']
     list_display = ['__str__', 'status', 'department', 'destination', 'phone',
                     'whatsapp_received_on', 'assigned_to',
+                    'last_customer_message_at', 'last_agent_action_at',
                     'created_at', 'last_modified', 'is_overdue', 'takeover_added_at']
     list_filter = ['assigned_to__username', 'department', 'type_of_service',
                    'status', 'sold', 'lost', IsOverdueFilter, OnHoldNotTakeoverFilter, TakeoverFilter]
@@ -135,9 +136,19 @@ class CustomUserAdmin(UserAdmin):
         ('CRM roles', {'fields': ('is_sales', 'administration')}),
     )
 
+class DestinationAdmin(admin.ModelAdmin):
+    search_fields = ["name"]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        from display.destinations import ensure_crm_destination
+
+        ensure_crm_destination(obj.name)
+
+
 admin.site.register(Lead, LeadAdmin)
 admin.site.register(Department, DepartmentAdmin)
-admin.site.register(Destination)
+admin.site.register(Destination, DestinationAdmin)
 admin.site.register(DailyReport, DailyReportAdmin)
 admin.site.register(MonthlyTarget)
 admin.site.register(UserMonthlyTarget, UserMonthlyTargetAdmin)

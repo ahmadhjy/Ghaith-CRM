@@ -43,6 +43,7 @@ urlpatterns = [
     path('client-media/create/<int:pk>/', views.create_client_media_link, name='create_client_media_link'),
     path('client-media/', views.client_media_uploads_list, name='client_media_uploads_list'),
     path('client-media/<uuid:token>/manage/', views.client_media_upload_detail, name='client_media_upload_detail'),
+    path('client-media/<uuid:token>/download-all/', views.client_media_download_all, name='client_media_download_all'),
     path('client-media/<uuid:token>/upload/', views.client_media_upload_files, name='client_media_upload_files'),
     path('client-media/<uuid:token>/delete/<int:file_id>/', views.client_media_delete_file, name='client_media_delete_file'),
     path('client-media/<uuid:token>/submit/', views.client_media_submit, name='client_media_submit'),
@@ -54,4 +55,5 @@ urlpatterns = [
     path('other-hotels/', babylon_views.other_hotels_sheet, name='other_hotels_sheet'),
     path('other-hotels/pdf/', babylon_views.other_hotels_export_pdf, name='other_hotels_export_pdf'),
     path('other-hotels/xlsx/', babylon_views.other_hotels_export_xlsx, name='other_hotels_export_xlsx'),
+    path('other-hotels/service/<int:service_id>/update/', babylon_views.other_hotels_service_update, name='other_hotels_service_update'),
 ]

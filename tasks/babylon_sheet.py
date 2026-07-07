@@ -8,9 +8,10 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 from tasks.babylon_sync import is_babylon_supplier
-from tasks.constants import effective_service_net, get_service_choices
-from tasks.datetime_safety import filter_valid_due_times
+from tasks.constants import effective_service_net, get_service_choices, get_supplier_choices
+from tasks.datetime_safety import filter_valid_due_times, valid_datetime_bounds
 from tasks.models import BabylonHotelEntry, Service
+from tasks.service_defaults import effective_due_date_for_display
 
 OTHER_HOTELS_DESTINATION = 'Bali'
 OTHER_HOTELS_SERVICE = 'Hotel'
@@ -104,20 +105,25 @@ def other_hotels_queryset(params, *, now=None):
     now = now or timezone.now()
     service_type = (params.get('service_type') or '').strip()
     sort = (params.get('sort') or SORT_TRAVEL_ASC).strip()
+    no_supplier = (params.get('no_supplier') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
-    qs = filter_valid_due_times(
-        Service.objects.filter(
-            due_time__isnull=False,
-            is_checked=False,
-            service_name__iexact=OTHER_HOTELS_SERVICE,
-            leadtask__lead__destination__iexact=OTHER_HOTELS_DESTINATION,
-            leadtask__travel_date__isnull=False,
-            leadtask__travel_date__gte=now,
-        )
-        .exclude(supplier__iexact='BABYLON')
-        .exclude(leadtask__status='cancelled')
-        .select_related('leadtask', 'leadtask__lead')
-    )
+    qs = Service.objects.filter(
+        is_checked=False,
+        service_name__iexact=OTHER_HOTELS_SERVICE,
+        leadtask__lead__destination__iexact=OTHER_HOTELS_DESTINATION,
+        leadtask__travel_date__isnull=False,
+        leadtask__travel_date__gte=now,
+    ).exclude(
+        supplier__iexact='BABYLON'
+    ).exclude(
+        leadtask__status='cancelled'
+    ).select_related('leadtask', 'leadtask__lead')
+
+    if no_supplier:
+        qs = qs.filter(Q(supplier__isnull=True) | Q(supplier=''))
+
+    lo, hi = valid_datetime_bounds()
+    qs = qs.filter(Q(due_time__isnull=True) | Q(due_time__gte=lo, due_time__lte=hi))
 
     if service_type:
         qs = qs.filter(service_name__iexact=service_type)
@@ -176,8 +182,9 @@ def row_from_entry(entry: BabylonHotelEntry, *, portal: bool = False) -> dict:
 def row_from_service(service: Service) -> dict:
     leadtask = service.leadtask
     lead = leadtask.lead
-    due_date = service.due_time.date() if service.due_time else None
+    due_date = effective_due_date_for_display(service)
     entry_date = service.created_at.date() if service.created_at else None
+    supplier = (service.supplier or '').strip()
     return {
         'row_kind': 'service',
         'entry_id': None,
@@ -190,9 +197,12 @@ def row_from_service(service: Service) -> dict:
         'due_date': due_date,
         'travel_date': leadtask.travel_date if leadtask else None,
         'confirmation_number': '',
+        'supplier': supplier,
+        'supplier_label': supplier or 'Pending supplier',
+        'needs_supplier': not supplier,
         'is_checked': service.is_checked,
         'order_id': service.leadtask_id,
-        'is_incomplete': False,
+        'is_incomplete': not supplier,
     }
 
 
@@ -218,6 +228,8 @@ def other_hotels_applied_filters(params) -> list[str]:
         'Supplier: not BABYLON',
         'Unissued only',
     ]
+    if (params.get('no_supplier') or '').strip().lower() in {'1', 'true', 'yes', 'on'}:
+        filters.append('Pending supplier only')
     service_type = (params.get('service_type') or '').strip()
     if service_type:
         filters.append(f'Service filter: {service_type}')
@@ -227,8 +239,10 @@ def other_hotels_applied_filters(params) -> list[str]:
     return filters
 
 
-def babylon_export_table(rows, *, portal: bool, show_conf: bool = True, show_issued: bool = True) -> tuple[list[str], list[list]]:
+def babylon_export_table(rows, *, portal: bool, show_conf: bool = True, show_issued: bool = True, show_supplier: bool = False) -> tuple[list[str], list[list]]:
     headers = ['Date', 'Client Name', 'Service', 'Details', 'Price (Net)', 'Due', 'Travel date']
+    if show_supplier:
+        headers.append('Supplier')
     if show_issued:
         headers.append('Issued')
     if show_conf:
@@ -247,6 +261,8 @@ def babylon_export_table(rows, *, portal: bool, show_conf: bool = True, show_iss
             _fmt_date(row.get('due_date')),
             _fmt_travel_date(row.get('travel_date')),
         ]
+        if show_supplier:
+            line.append(row.get('supplier_label') or row.get('supplier') or '—')
         if show_issued:
             line.append('Yes' if row.get('is_checked') else 'No')
         if show_conf:
@@ -263,6 +279,8 @@ def sheet_filter_context(params, *, default_sort: str) -> dict:
         'years': available_entry_years(),
         'service_type': (params.get('service_type') or '').strip(),
         'sort': (params.get('sort') or default_sort).strip(),
+        'no_supplier': (params.get('no_supplier') or '').strip().lower() in {'1', 'true', 'yes', 'on'},
         'service_choices': get_service_choices(),
+        'supplier_choices': get_supplier_choices(),
         'sort_choices': SORT_CHOICES,
     }

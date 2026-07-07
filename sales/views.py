@@ -267,7 +267,7 @@ def invoice_pdf(request, invoice_id):
             "show_costs": show_costs,
             "pdf_report_title": pdf_title,
             "pdf_report_subtitle": " — ".join(subtitle_parts),
-            "pdf_currency": invoice.currency,
+            "pdf_currency": "USD",
             "pdf_account_range": f"Client: {client_name}",
         },
         export_filename(

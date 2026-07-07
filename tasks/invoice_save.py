@@ -5,6 +5,18 @@ from .calendar_sync import sync_payment_event, sync_service_event
 from .forms import LeadTaskForm, ServiceForm
 from .models import LeadTask, Payment, Service
 from .babylon_sync import sync_entry_from_service
+from .service_defaults import default_service_due_time
+
+
+def _parse_due_time(raw):
+    if not raw:
+        return None
+    from django.forms import DateTimeField
+    field = DateTimeField(input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%d'])
+    try:
+        return field.to_python(raw)
+    except Exception:
+        return None
 
 
 def _save_existing_services(request, leadtask, seen_ids):
@@ -13,14 +25,17 @@ def _save_existing_services(request, leadtask, seen_ids):
             service = Service.objects.get(pk=pk, leadtask=leadtask)
         except Service.DoesNotExist:
             continue
+        supplier = request.POST.get(f'service_{pk}_supplier', '')
+        due_raw = request.POST.get(f'service_{pk}_due_time') or None
+        due_time = default_service_due_time(leadtask, supplier, _parse_due_time(due_raw))
         form = ServiceForm({
             'service_name': request.POST.get(f'service_{pk}_service_name', ''),
-            'supplier': request.POST.get(f'service_{pk}_supplier', ''),
+            'supplier': supplier,
             'details': request.POST.get(f'service_{pk}_details', ''),
             'net': request.POST.get(f'service_{pk}_net', ''),
             'issue_price': request.POST.get(f'service_{pk}_issue_price', ''),
             'selling': request.POST.get(f'service_{pk}_selling', ''),
-            'due_time': request.POST.get(f'service_{pk}_due_time') or None,
+            'due_time': due_time,
             'voucher_id': request.POST.get(f'service_{pk}_voucher_id', ''),
             'is_checked': request.POST.get(f'service_{pk}_is_checked') == 'on',
             'send_to_client': request.POST.get(f'service_{pk}_send_to_client') == 'on',
@@ -44,14 +59,17 @@ def _save_new_services(request, leadtask):
     voucher_ids = request.POST.getlist('voucher_id[]')
     send_to_clients = request.POST.getlist('send_to_client[]')
     for i in range(len(names)):
+        supplier = suppliers[i] if i < len(suppliers) else ''
+        due_raw = due_times[i] if i < len(due_times) else None
+        due_time = default_service_due_time(leadtask, supplier, _parse_due_time(due_raw))
         form = ServiceForm({
             'service_name': names[i] if i < len(names) else '',
-            'supplier': suppliers[i] if i < len(suppliers) else '',
+            'supplier': supplier,
             'details': details[i] if i < len(details) else '',
             'net': nets[i] if i < len(nets) else '',
             'issue_price': issue_prices[i] if i < len(issue_prices) else '',
             'selling': sellings[i] if i < len(sellings) else '',
-            'due_time': due_times[i] if i < len(due_times) else None,
+            'due_time': due_time,
             'voucher_id': voucher_ids[i] if i < len(voucher_ids) else '',
             'send_to_client': (send_to_clients[i] if i < len(send_to_clients) else '') == 'on',
         })
