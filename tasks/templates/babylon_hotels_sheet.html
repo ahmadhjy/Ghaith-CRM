@@ -159,7 +159,15 @@
                             <span class="cell-display">{% if row.travel_date %}{{ row.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
                         </td>
                         {% if show_supplier %}
-                        <td data-field="supplier" data-editable="{% if row.row_kind == 'service' and 'supplier' in editable_fields %}1{% else %}0{% endif %}" class="col-supplier{% if row.needs_supplier %} is-pending-supplier{% endif %}">
+                        <td data-field="supplier" data-editable="{% if row.row_kind == 'service' and not portal_mode and 'supplier' in editable_fields %}1{% else %}0{% endif %}" class="col-supplier{% if row.needs_supplier %} is-pending-supplier{% endif %}">
+                            {% if row.row_kind == 'service' and portal_mode %}
+                            <div class="babylon-supplier-cell">
+                                <span class="cell-display">{{ row.supplier_label|default:"—" }}</span>
+                                {% if row.needs_supplier %}
+                                <button type="button" class="babylon-btn babylon-btn--primary babylon-takeover-btn" data-service-id="{{ row.service_id }}">Takeover</button>
+                                {% endif %}
+                            </div>
+                            {% else %}
                             <span class="cell-display">{{ row.supplier_label|default:"—" }}</span>
                             {% if row.row_kind == 'service' and 'supplier' in editable_fields %}
                             <select class="cell-input cell-input--select" hidden>
@@ -168,6 +176,7 @@
                                 <option value="{{ value }}" {% if row.supplier == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
+                            {% endif %}
                             {% endif %}
                         </td>
                         {% endif %}
@@ -331,6 +340,37 @@
                 saveCell(input.closest('td'));
             });
         }
+    });
+
+    document.querySelectorAll('.babylon-takeover-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var serviceId = btn.getAttribute('data-service-id');
+            if (!serviceId || btn.disabled) return;
+            if (!window.confirm('Assign this hotel service to BABYLON?')) return;
+            btn.disabled = true;
+            fetch('/tasks/other-hotels/service/' + serviceId + '/takeover/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({}),
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                if (!res.ok) {
+                    alert(res.data.error || 'Takeover failed');
+                    btn.disabled = false;
+                    return;
+                }
+                var row = btn.closest('tr');
+                if (row) row.remove();
+            })
+            .catch(function() {
+                alert('Network error');
+                btn.disabled = false;
+            });
+        });
     });
 })();
 </script>

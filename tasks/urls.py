@@ -56,4 +56,5 @@ urlpatterns = [
     path('other-hotels/pdf/', babylon_views.other_hotels_export_pdf, name='other_hotels_export_pdf'),
     path('other-hotels/xlsx/', babylon_views.other_hotels_export_xlsx, name='other_hotels_export_xlsx'),
     path('other-hotels/service/<int:service_id>/update/', babylon_views.other_hotels_service_update, name='other_hotels_service_update'),
+    path('other-hotels/service/<int:service_id>/takeover/', babylon_views.other_hotels_babylon_takeover, name='other_hotels_babylon_takeover'),
 ]

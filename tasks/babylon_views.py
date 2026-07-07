@@ -37,7 +37,8 @@ EDITABLE_STAFF = {
     'price', 'due_date', 'confirmation_number',
 }
 EDITABLE_PORTAL = {'details', 'price', 'due_date', 'confirmation_number'}
-EDITABLE_OTHER_HOTELS = {'supplier'}
+EDITABLE_OTHER_HOTELS_STAFF = {'supplier'}
+BABYLON_SUPPLIER_NAME = 'BABYLON'
 
 
 def _portal_passcode() -> str:
@@ -272,7 +273,7 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
             title='Other Hotels — Bali',
             subtitle='Upcoming Bali hotel bookings from other suppliers.',
             portal_mode=True,
-            editable_fields=EDITABLE_OTHER_HOTELS,
+            editable_fields=set(),
             filter_ctx=_other_hotels_filter_ctx(request),
             show_conf=False,
             show_issued=False,
@@ -288,7 +289,7 @@ def _other_hotels_sheet_context(request, *, portal_mode: bool):
         title='Other Hotels — Bali',
         subtitle='Hotel services for upcoming Bali travel from suppliers other than BABYLON.',
         portal_mode=False,
-        editable_fields=EDITABLE_OTHER_HOTELS,
+        editable_fields=EDITABLE_OTHER_HOTELS_STAFF,
         filter_ctx=_other_hotels_filter_ctx(request),
         show_conf=False,
         show_issued=False,
@@ -430,9 +431,8 @@ def babylon_entry_update(request, entry_id: int):
 
 @require_http_methods(['PATCH', 'POST'])
 def other_hotels_service_update(request, service_id: int):
-    portal = _is_portal_authenticated(request)
-    staff = request.user.is_authenticated
-    if not portal and not staff:
+    """Staff only: assign any supplier on Other Hotels service rows."""
+    if not request.user.is_authenticated:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
 
     service = get_object_or_404(Service.objects.select_related('leadtask', 'leadtask__lead'), pk=service_id)
@@ -446,7 +446,7 @@ def other_hotels_service_update(request, service_id: int):
         payload = request.POST.dict()
 
     field = (payload.get('field') or '').strip()
-    if field not in EDITABLE_OTHER_HOTELS:
+    if field not in EDITABLE_OTHER_HOTELS_STAFF:
         return JsonResponse({'error': f'Field "{field}" cannot be edited here.'}, status=400)
 
     if field == 'supplier':
@@ -457,3 +457,22 @@ def other_hotels_service_update(request, service_id: int):
 
     row = row_from_service(service)
     return JsonResponse({'ok': True, 'service': row})
+
+
+@require_POST
+def other_hotels_babylon_takeover(request, service_id: int):
+    """Babylon portal: assign supplier BABYLON and move row to the Babylon sheet."""
+    portal = _is_portal_authenticated(request)
+    if not portal:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    service = get_object_or_404(Service.objects.select_related('leadtask', 'leadtask__lead'), pk=service_id)
+    if (service.supplier or '').strip().upper() == BABYLON_SUPPLIER_NAME:
+        return JsonResponse({'error': 'Already assigned to BABYLON.'}, status=400)
+
+    service.supplier = BABYLON_SUPPLIER_NAME
+    service.save(update_fields=['supplier'])
+    from tasks.babylon_sync import sync_entry_from_service
+    sync_entry_from_service(service)
+
+    return JsonResponse({'ok': True, 'supplier': BABYLON_SUPPLIER_NAME, 'removed_from_other_hotels': True})

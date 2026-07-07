@@ -246,6 +246,67 @@ class BabylonHotelTests(TestCase):
         self.assertNotContains(response, 'Issued Bali stay')
         self.assertContains(response, 'Open Bali stay')
 
+    def test_portal_other_hotels_shows_takeover_not_supplier_dropdown(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        pending = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='',
+            details='Pending Bali hotel',
+            net='280',
+            due_time=timezone.now() + timedelta(days=2),
+        )
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.get('/babylon/other-hotels/')
+        self.assertContains(response, 'Takeover')
+        self.assertContains(response, 'Pending supplier')
+        self.assertNotContains(response, 'cell-input--select')
+
+    def test_portal_takeover_assigns_babylon(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        pending = Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='',
+            details='Takeover Bali hotel',
+            net='280',
+            due_time=timezone.now() + timedelta(days=2),
+        )
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.post(
+            f'/tasks/other-hotels/service/{pending.pk}/takeover/',
+            data='{}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        pending.refresh_from_db()
+        self.assertEqual(pending.supplier.upper(), 'BABYLON')
+        self.assertEqual(other_hotels_queryset({}).filter(pk=pending.pk).count(), 0)
+
+    def test_staff_other_hotels_has_supplier_dropdown(self):
+        self.lead.destination = OTHER_HOTELS_DESTINATION
+        self.lead.save(update_fields=['destination'])
+        self.leadtask.travel_date = timezone.now() + timedelta(days=14)
+        self.leadtask.save(update_fields=['travel_date'])
+        Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Hotel',
+            supplier='',
+            details='Staff assign hotel',
+            net='280',
+            due_time=timezone.now() + timedelta(days=2),
+        )
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/other-hotels/')
+        self.assertContains(response, 'cell-input--select')
+        self.assertNotContains(response, 'class="babylon-btn babylon-btn--primary babylon-takeover-btn"')
+
     @override_settings(BABYLON_PORTAL_PASSCODE='')
     def test_default_passcode_when_setting_empty(self):
         response = self.client.post('/babylon/', {'passcode': 'Babylon-Ghaith-2026'})

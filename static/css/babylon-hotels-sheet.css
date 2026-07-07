@@ -298,6 +298,24 @@
   text-decoration: none;
 }
 
+.babylon-supplier-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.babylon-takeover-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.babylon-sheet td.is-pending-supplier .cell-display {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .babylon-empty {
   text-align: center;
   padding: 48px 20px !important;
