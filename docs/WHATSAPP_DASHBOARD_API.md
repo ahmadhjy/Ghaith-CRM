@@ -25,7 +25,20 @@ The CRM reads this from the `EXTERNAL_API_KEY` environment variable on the serve
 
 ## Departments
 
-Each lead must be routed to a **department**. The CRM auto-assigns the lead to an active sales user in that department (user with the fewest open leads).
+Each lead must be routed to a **department**. The CRM auto-assigns the lead to an active sales user in that department (user with the fewest open leads), unless a more specific rule applies (see **Assignment behaviour** below).
+
+### Honeymoon & Far East — Alaa / Fouad routing
+
+Both agents share the same department (`honeymoon_far_east`) and may share the same WhatsApp business line. Send **`chat_label`** on create/update so the CRM assigns the correct agent:
+
+| `chat_label` (case-insensitive) | Assigned CRM user |
+|--------------------------------|-------------------|
+| `Fouad` | User `fouad` (must be in Honeymoon & Far East department) |
+| `Alaa`, missing, or any other value | User `alaa` (fallback) |
+
+**Fallback:** If `chat_label` is omitted but `whatsapp_received_on` is exactly `Alaa` or `Fouad` (any case), that value is used as the label.
+
+**Admin setup:** In Django Admin → **Users** → CRM profile, set **both** Alaa and Fouad to department **Honeymoon & Far East Department** and enable **Receives lead assignments**.
 
 ### Department codes
 
@@ -106,10 +119,14 @@ GET /api/leads/stages/
 | Name | `name` | Required on create |
 | Phone number | `phone` | E.164 format recommended, e.g. `+96171234567` |
 | Country code + mobile | `country_code` + `mobile_number` | Legacy format; CRM stores combined `phone` |
-| WhatsApp number received on | `whatsapp_received_on` | Business line that received the message |
+| WhatsApp number received on | `whatsapp_received_on` | Business line that received the message (phone number or line identifier) |
+| Chat label | `chat_label` | **Honeymoon & Far East only:** `Alaa` or `Fouad` for agent routing (see above) |
 | Department | `department` | Code or name; required on create |
-| Destination requested | `destination` | Free text or known destination name |
-| Chat summary | `chat_summary` | AI summary; also stored in CRM “what happened” (`reason_of_travel`) |
+| Destination requested | `destination` | Free text or known destination name; auto-added to CRM destination list |
+| Chat summary | `chat_summary` | AI summary; kept in sync with `finalization_notes` and `reason_of_travel` |
+| What happened (legacy) | `what_happened` | Alias for summary on sync; updates `chat_summary` unless closing as lost |
+| Last customer message at | `last_customer_message_at` | ISO 8601 datetime of last inbound customer message |
+| Last agent action at | `last_agent_action_at` | ISO 8601 datetime of last agent action in the chat |
 | Current lead stage | `status` | One of the stage values above |
 | Dashboard lead ID | `external_id` | **Recommended** for idempotent sync |
 | Channel | `channel` | Defaults to `Whatsapp` |
@@ -139,9 +156,26 @@ Creates a new lead, or updates an existing one when:
   "department": "turkey",
   "destination": "Antalya",
   "chat_summary": "Customer asked about a 7-night honeymoon package in July for 2 adults.",
+  "last_customer_message_at": "2026-07-02T10:12:00+03:00",
+  "last_agent_action_at": "2026-07-02T10:15:00+03:00",
   "status": "onhold",
   "channel": "Whatsapp",
   "email": "sara@example.com"
+}
+```
+
+**Honeymoon & Far East example** (assign to Fouad):
+
+```json
+{
+  "external_id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "Nour Khalil",
+  "phone": "+96170999888",
+  "department": "honeymoon_far_east",
+  "chat_label": "Fouad",
+  "destination": "Maldives",
+  "chat_summary": "Honeymoon inquiry for 2 adults in September.",
+  "status": "onhold"
 }
 ```
 
@@ -175,9 +209,13 @@ Creates a new lead, or updates an existing one when:
     "full_name": "Rayan"
   },
   "created_at": "2026-07-02T10:15:00+00:00",
-  "last_modified": "2026-07-02T10:15:00+00:00"
+  "last_modified": "2026-07-02T10:15:00+00:00",
+  "last_customer_message_at": "2026-07-02T10:12:00+03:00",
+  "last_agent_action_at": "2026-07-02T10:15:00+03:00"
 }
 ```
+
+Datetime fields use ISO 8601 (e.g. `2026-07-02T10:15:00+03:00` or `2026-07-02T10:15:00Z`). Omit or send `null` to leave unchanged on update.
 
 ### Response `200 OK` (updated existing lead)
 
@@ -186,11 +224,17 @@ Same JSON shape as above.
 ### Assignment behaviour
 
 1. CRM resolves the department.
-2. CRM selects an **active** user in that department with **Receives lead assignments** enabled.
-3. Among eligible users, the one with the **fewest open leads** is chosen.
+2. If department is **`honeymoon_far_east`**, CRM reads **`chat_label`** (`Alaa` / `Fouad`, case-insensitive). Missing or unknown labels assign **Alaa**. See **Honeymoon & Far East** section above.
+3. Otherwise, CRM selects an **active** user in that department with **Receives lead assignments** enabled (fewest open leads wins).
 4. Optional override: `"assigned_to": "username"` (must belong to the department).
 
+On department change, the lead is reassigned using the same rules (`reassign: true` by default on `PATCH`). Send `chat_label` again when reassigning Honeymoon & Far East leads.
+
 New API leads are created with `takeover=true` so they appear in the CRM takeover queue for the assigned agent.
+
+### Chat summary sync
+
+`chat_summary`, `what_happened` (on sync), and CRM **What Happened** (`finalization_notes`) are kept aligned on API updates — send the latest AI summary via `chat_summary` during the conversation. When closing as **lost**, `what_happened` / `why` still sets finalization notes only for that close action.
 
 ---
 
@@ -362,7 +406,7 @@ GET /api/leads/search/?external_id=550e8400-e29b-41d4-a716-446655440000
 | GET | `/api/contacts/search/?phone=` | Alias for lead search |
 | GET | `/api/contacts/by-phone/?phone=` | Single lead by exact phone |
 | POST | `/api/contacts/{id}/follow-up/` | Set follow-up date |
-| GET | `/api/destinations/` | CRM destination catalog |
+| GET | `/api/destinations/` | CRM destination catalog (merged from CRM + accounting lists) |
 | POST | `/api/crm/notifications/` | Supervisor notification record |
 
 Legacy create body used `first_name`, `last_name`, `mobile_number`, `what_happened` — still accepted.
@@ -397,7 +441,8 @@ Legacy create body used `first_name`, `last_name`, `mobile_number`, `what_happen
 
 ## Recommended integration flow
 
-1. **New WhatsApp conversation** → `POST /api/leads/` with `external_id`, contact details, department, `whatsapp_received_on`, and `chat_summary`.
+1. **New WhatsApp conversation** → `POST /api/leads/` with `external_id`, contact details, department, `whatsapp_received_on`, `chat_summary`, and activity timestamps (`last_customer_message_at`, `last_agent_action_at`) when available.
+2. **Honeymoon & Far East** → include `chat_label`: `Alaa` or `Fouad`.
 2. **Store CRM `id`** from the response in the dashboard database.
 3. **Agent qualifies** → `POST /api/leads/{id}/qualify/` with fields + `qualification_action`.
 4. **During negotiation** → `PATCH /api/leads/{id}/` with updated `chat_summary` / destination.
@@ -418,7 +463,7 @@ Legacy create body used `first_name`, `last_name`, `mobile_number`, `what_happen
    export DJANGO_SETTINGS_MODULE=ghaithleads.settings
    BACKUP_MEDIA=no bash deploy/deploy.sh
    ```
-   Migration `0012` automatically creates all 5 departments and a CRM profile for every existing user.
+   Migration `0012` automatically creates all 5 departments and a CRM profile for every existing user. Migration `0013` adds `last_customer_message_at` and `last_agent_action_at` on leads.
 3. In Django Admin (one-time, after deploy):
    - Confirm departments exist under **Display → Departments** (seeded by migration).
    - For each sales user: **Users** → user → **CRM profile** → pick **Department** and check **Receives lead assignments**.
