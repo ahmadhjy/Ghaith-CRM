@@ -45,6 +45,10 @@
     </header>
 
     <form method="get" class="babylon-filters" id="babylonFilters">
+        <div class="babylon-filter-field babylon-filter-field--search">
+            <label for="q">Search</label>
+            <input type="search" name="q" id="q" value="{{ q }}" placeholder="Client, service, details, price, order…" class="babylon-filter-search">
+        </div>
         {% if sheet_kind == 'babylon' %}
         <div class="babylon-filter-field">
             <label for="year">Year</label>

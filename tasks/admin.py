@@ -23,6 +23,7 @@ class ServiceTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "is_active")
     search_fields = ("name",)
     list_filter = ("is_active",)
+    ordering = ("name",)
 
 
 @admin.register(Service)

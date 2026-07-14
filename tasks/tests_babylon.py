@@ -111,7 +111,7 @@ class BabylonHotelTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Alindra Villa')
         self.assertNotContains(response, 'Visa processing')
-        self.assertContains(response, 'value="Hotel" selected')
+        self.assertEqual(response.context['service_type'], 'Hotel')
 
         response_all = self.client.get('/babylon/sheet/', {'service_type': ''})
         self.assertContains(response_all, 'Visa processing')
@@ -145,7 +145,34 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Hotel')
         self.assertContains(response, 'Travel date')
         self.assertContains(response, 'Other Hotels')
+        self.assertEqual(response.context['service_type'], 'Hotel')
+        self.assertContains(response, 'name="q"')
         self.assertNotContains(response, 'selling')
+
+    def test_staff_sheet_defaults_to_hotel_service_type(self):
+        Service.objects.create(
+            leadtask=self.leadtask,
+            service_name='Visa',
+            supplier='BABYLON',
+            details='Visa processing',
+            net='50',
+        )
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Alindra Villa')
+        self.assertNotContains(response, 'Visa processing')
+        self.assertEqual(response.context['service_type'], 'Hotel')
+
+        response_all = self.client.get('/tasks/babylon-hotels/', {'service_type': ''})
+        self.assertContains(response_all, 'Visa processing')
+
+    def test_babylon_search_filters_client_and_details(self):
+        self.client.login(username='sales1', password='pass')
+        response = self.client.get('/tasks/babylon-hotels/', {'service_type': 'Hotel', 'q': 'Alindra'})
+        self.assertContains(response, 'Sara Haddad')
+        response = self.client.get('/tasks/babylon-hotels/', {'service_type': 'Hotel', 'q': 'NoMatchXYZ'})
+        self.assertNotContains(response, 'Sara Haddad')
 
     @patch('accounting_bridge.signals._master_sync_enabled', return_value=False)
     def test_babylon_sheet_excludes_issued_services(self, _mock_sync):

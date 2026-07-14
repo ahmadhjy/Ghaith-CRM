@@ -67,8 +67,8 @@ def _order_babylon_entries(qs, sort: str):
     return qs.order_by('-entry_date', '-created_at')
 
 
-def babylon_portal_query_params(params):
-    """Portal sheet defaults to Hotel; explicit empty service_type means All."""
+def babylon_sheet_query_params(params):
+    """Staff and portal Babylon sheets default to Hotel; explicit empty service_type means All."""
     if hasattr(params, 'copy'):
         q = params.copy()
     else:
@@ -76,6 +76,49 @@ def babylon_portal_query_params(params):
     if 'service_type' not in q:
         q['service_type'] = BABYLON_PORTAL_DEFAULT_SERVICE
     return q
+
+
+# Backwards-compatible alias
+babylon_portal_query_params = babylon_sheet_query_params
+
+
+def _search_term(params) -> str:
+    return (params.get('q') or params.get('search') or '').strip()
+
+
+def _apply_babylon_search(qs, q: str):
+    if not q:
+        return qs
+    filters = (
+        Q(client_name__icontains=q)
+        | Q(service_type__icontains=q)
+        | Q(details__icontains=q)
+        | Q(price__icontains=q)
+        | Q(confirmation_number__icontains=q)
+        | Q(service__service_name__icontains=q)
+        | Q(service__leadtask__lead__name__icontains=q)
+        | Q(service__supplier__icontains=q)
+    )
+    if q.isdigit():
+        filters = filters | Q(service__leadtask_id=int(q)) | Q(service_id=int(q)) | Q(pk=int(q))
+    return qs.filter(filters)
+
+
+def _apply_other_hotels_search(qs, q: str):
+    if not q:
+        return qs
+    filters = (
+        Q(leadtask__lead__name__icontains=q)
+        | Q(service_name__icontains=q)
+        | Q(details__icontains=q)
+        | Q(net__icontains=q)
+        | Q(issue_price__icontains=q)
+        | Q(supplier__icontains=q)
+        | Q(voucher_id__icontains=q)
+    )
+    if q.isdigit():
+        filters = filters | Q(leadtask_id=int(q)) | Q(pk=int(q))
+    return qs.filter(filters)
 
 
 def babylon_entries_queryset(params):
@@ -98,6 +141,7 @@ def babylon_entries_queryset(params):
             | Q(service_type='', service__service_name__iexact=service_type)
         )
 
+    qs = _apply_babylon_search(qs, _search_term(params))
     return _order_babylon_entries(qs, sort)
 
 
@@ -128,6 +172,7 @@ def other_hotels_queryset(params, *, now=None):
     if service_type:
         qs = qs.filter(service_name__iexact=service_type)
 
+    qs = _apply_other_hotels_search(qs, _search_term(params))
     return _order_services_by_sort(qs, sort)
 
 
@@ -214,6 +259,11 @@ def babylon_applied_filters(params) -> list[str]:
     service_type = (params.get('service_type') or '').strip()
     if service_type:
         filters.append(f'Service: {service_type}')
+    else:
+        filters.append('Service: All')
+    q = _search_term(params)
+    if q:
+        filters.append(f'Search: {q}')
     sort = (params.get('sort') or SORT_DUE_DESC).strip()
     sort_labels = dict(SORT_CHOICES)
     filters.append(f'Sort: {sort_labels.get(sort, sort)}')
@@ -233,6 +283,9 @@ def other_hotels_applied_filters(params) -> list[str]:
     service_type = (params.get('service_type') or '').strip()
     if service_type:
         filters.append(f'Service filter: {service_type}')
+    q = _search_term(params)
+    if q:
+        filters.append(f'Search: {q}')
     sort = (params.get('sort') or SORT_TRAVEL_ASC).strip()
     sort_labels = dict(SORT_CHOICES)
     filters.append(f'Sort: {sort_labels.get(sort, sort)}')
@@ -279,6 +332,7 @@ def sheet_filter_context(params, *, default_sort: str) -> dict:
         'years': available_entry_years(),
         'service_type': (params.get('service_type') or '').strip(),
         'sort': (params.get('sort') or default_sort).strip(),
+        'q': _search_term(params),
         'no_supplier': (params.get('no_supplier') or '').strip().lower() in {'1', 'true', 'yes', 'on'},
         'service_choices': get_service_choices(),
         'supplier_choices': get_supplier_choices(),

@@ -209,6 +209,21 @@
   gap: 4px;
 }
 
+.babylon-filter-field--search {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 380px;
+}
+
+.babylon-filter-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: .95rem;
+  background: #fff;
+}
+
 .babylon-filter-field label {
   font-size: .72rem;
   font-weight: 700;

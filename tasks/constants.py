@@ -39,6 +39,7 @@ DEFAULT_SERVICE_NAMES = [
     "Transfers & Tours",
     "Crusie",
     "Translation",
+    "Civil Marriage",
 ]
 
 
