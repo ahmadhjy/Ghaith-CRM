@@ -57,19 +57,25 @@ def _merge_choice_names(defaults, extra_names):
 
 
 def get_supplier_choices():
-    """Built-in suppliers plus any extra active rows from Django admin."""
-    extras = []
+    """Supplier choices from admin-managed Supplier model (unchanged behavior).
+
+    Active Supplier rows from Django admin populate the dropdown.
+    One-off / historical values on a service stay as the existing note outside
+    the list — they are not auto-merged into the choices.
+    """
     try:
         from .models import Supplier
 
-        extras = list(
+        names = list(
             Supplier.objects.filter(is_active=True)
             .order_by("name")
             .values_list("name", flat=True)
         )
+        if names:
+            return [(n, n) for n in names]
     except Exception:
         pass
-    return [(n, n) for n in _merge_choice_names(DEFAULT_SUPPLIER_NAMES, extras)]
+    return [(n, n) for n in DEFAULT_SUPPLIER_NAMES]
 
 
 def get_service_choices():
