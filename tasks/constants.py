@@ -43,38 +43,53 @@ DEFAULT_SERVICE_NAMES = [
 ]
 
 
+def _merge_choice_names(defaults, extra_names):
+    """Keep predefined order, then append any extras from admin."""
+    ordered = list(defaults)
+    seen = {n.casefold() for n in ordered}
+    for name in extra_names:
+        key = (name or "").strip()
+        if not key or key.casefold() in seen:
+            continue
+        ordered.append(key)
+        seen.add(key.casefold())
+    return ordered
+
+
 def get_supplier_choices():
-    """Supplier choices from admin-managed Supplier model."""
+    """Built-in suppliers plus any extra active rows from Django admin."""
+    extras = []
     try:
         from .models import Supplier
 
-        names = list(
+        extras = list(
             Supplier.objects.filter(is_active=True)
             .order_by("name")
             .values_list("name", flat=True)
         )
-        if names:
-            return [(n, n) for n in names]
     except Exception:
         pass
-    return [(n, n) for n in DEFAULT_SUPPLIER_NAMES]
+    return [(n, n) for n in _merge_choice_names(DEFAULT_SUPPLIER_NAMES, extras)]
 
 
 def get_service_choices():
-    """Service type choices from admin-managed ServiceType model."""
+    """Built-in service types plus any extra active rows from Django admin.
+
+    The predefined list always shows (Ticket, Hotel, …, Civil Marriage).
+    Add more under Admin → Service types; they appear after the defaults.
+    """
+    extras = []
     try:
         from .models import ServiceType
 
-        names = list(
+        extras = list(
             ServiceType.objects.filter(is_active=True)
             .order_by("name")
             .values_list("name", flat=True)
         )
-        if names:
-            return [(n, n) for n in names]
     except Exception:
         pass
-    return [(n, n) for n in DEFAULT_SERVICE_NAMES]
+    return [(n, n) for n in _merge_choice_names(DEFAULT_SERVICE_NAMES, extras)]
 
 
 def effective_service_net(service):
