@@ -115,6 +115,21 @@ def sync_supplier(name: str) -> Supplier | None:
     )
 
 
+def _link_crm_service_type(crm_type: CrmServiceType, acc_type: ServiceType) -> ServiceType:
+    """Attach CRM ↔ catalog link; reuse existing catalog row when name already exists."""
+    existing = getattr(crm_type, 'accounting_link', None)
+    if existing:
+        return existing.acc_service_type
+    # Catalog row may already exist from earlier invoices; only create if missing.
+    if CrmServiceTypeLink.objects.filter(acc_service_type=acc_type).exists():
+        return acc_type
+    CrmServiceTypeLink.objects.get_or_create(
+        crm_service_type=crm_type,
+        defaults={'acc_service_type': acc_type},
+    )
+    return acc_type
+
+
 def sync_service_type(name: str) -> ServiceType | None:
     name = (name or '').strip()
     if not name:
@@ -124,13 +139,14 @@ def sync_service_type(name: str) -> ServiceType | None:
         link = getattr(crm_type, 'accounting_link', None)
         if link:
             return link.acc_service_type
-        acc_type = ServiceType.objects.create(
-            name=crm_type.name,
-            code=_service_type_code(crm_type.name),
-            is_active=True,
-        )
-        CrmServiceTypeLink.objects.create(crm_service_type=crm_type, acc_service_type=acc_type)
-        return acc_type
+        acc_type = ServiceType.objects.filter(name__iexact=crm_type.name).first()
+        if not acc_type:
+            acc_type = ServiceType.objects.create(
+                name=crm_type.name,
+                code=_service_type_code(crm_type.name),
+                is_active=True,
+            )
+        return _link_crm_service_type(crm_type, acc_type)
     acc_type = ServiceType.objects.filter(name__iexact=name).first()
     if acc_type:
         return acc_type

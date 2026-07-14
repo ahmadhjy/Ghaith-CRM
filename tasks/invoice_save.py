@@ -164,7 +164,18 @@ def save_invoice_from_post(request, leadtask):
 
 
 def sync_accounting_after_crm_invoice_save(leadtask):
-    """Push CRM order totals (including lead.selling_price) to linked accounting invoice."""
+    """Push CRM order totals (including lead.selling_price) to linked accounting invoice.
+
+    Never raises — CRM invoice save must succeed even if accounting sync fails.
+    """
+    import logging
+
     from accounting_bridge.services.invoices import sync_crm_leadtask_to_accounting
 
-    sync_crm_leadtask_to_accounting(leadtask)
+    try:
+        sync_crm_leadtask_to_accounting(leadtask)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            'Accounting sync after CRM invoice save failed (leadtask=%s)',
+            getattr(leadtask, 'pk', None),
+        )

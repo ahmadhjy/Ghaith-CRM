@@ -189,3 +189,21 @@ class CrmInvoiceSyncTests(TestCase):
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.selling_price, '725')
         self.assertEqual(self.invoice.grand_total, Decimal('725.00'))
+
+
+class SyncServiceTypeReuseTests(TestCase):
+    def test_reuses_existing_catalog_name_when_crm_type_has_no_link(self):
+        """CRM seed can create ServiceType rows that already exist in catalog."""
+        from accounting_bridge.services.master_data import sync_service_type
+        from catalog.models import ServiceType as AccServiceType
+        from tasks.models import ServiceType as CrmServiceType
+
+        existing = AccServiceType.objects.create(name='Transfer', code='TRANSFER', is_active=True)
+        crm_type, _ = CrmServiceType.objects.get_or_create(name='Transfer', defaults={'is_active': True})
+        # Simulate post-seed state: CRM row exists, catalog row exists, no link yet
+        from accounting_bridge.models import CrmServiceTypeLink
+        CrmServiceTypeLink.objects.filter(crm_service_type=crm_type).delete()
+
+        result = sync_service_type('Transfer')
+        self.assertEqual(result.pk, existing.pk)
+        self.assertEqual(AccServiceType.objects.filter(name='Transfer').count(), 1)
