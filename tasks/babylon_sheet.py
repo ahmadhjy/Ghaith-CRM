@@ -38,12 +38,52 @@ def _parse_year(raw) -> int:
 
 
 def available_entry_years():
-    dates = BabylonHotelEntry.objects.dates('entry_date', 'year', order='DESC')
-    years = [d.year for d in dates]
+    """Years from entry date, due date, and travel date so older orders with later dues appear."""
+    years = set()
+    for field in ('entry_date', 'due_date'):
+        years.update(
+            d.year for d in BabylonHotelEntry.objects.dates(field, 'year', order='DESC')
+        )
+    years.update(
+        d.year
+        for d in Service.objects.filter(
+            supplier__iexact='BABYLON',
+            leadtask__travel_date__isnull=False,
+        ).dates('leadtask__travel_date', 'year', order='DESC')
+    )
     current = datetime.now().year
-    if current not in years:
-        years.insert(0, current)
-    return years or [current]
+    years.add(current)
+    return sorted(years, reverse=True) or [current]
+
+
+def _year_match_q(year: int) -> Q:
+    """Match operational year: when the row was created, is due, or travel happens."""
+    return (
+        Q(entry_date__year=year)
+        | Q(due_date__year=year)
+        | Q(service__leadtask__travel_date__year=year)
+        | Q(service__due_time__year=year)
+    )
+
+
+def ensure_babylon_entries_for_sheet(year: int) -> None:
+    """Create any missing sheet rows for unissued BABYLON services in the selected year."""
+    from tasks.babylon_sync import sync_entry_from_service
+
+    services = (
+        Service.objects.filter(supplier__iexact='BABYLON', is_checked=False)
+        .filter(
+            Q(created_at__year=year)
+            | Q(due_time__year=year)
+            | Q(leadtask__travel_date__year=year)
+            | Q(babylon_hotel_entry__entry_date__year=year)
+            | Q(babylon_hotel_entry__due_date__year=year)
+        )
+        .filter(babylon_hotel_entry__isnull=True)
+        .select_related('leadtask', 'leadtask__lead')
+    )
+    for service in services.iterator():
+        sync_entry_from_service(service)
 
 
 def _order_babylon_entries(qs, sort: str):
@@ -126,12 +166,14 @@ def babylon_entries_queryset(params):
     service_type = (params.get('service_type') or '').strip()
     sort = (params.get('sort') or SORT_DUE_DESC).strip()
 
+    ensure_babylon_entries_for_sheet(year)
+
     qs = BabylonHotelEntry.objects.select_related(
         'service',
         'service__leadtask',
         'service__leadtask__lead',
     ).filter(
-        entry_date__year=year,
+        _year_match_q(year),
         service__is_checked=False,
     )
 

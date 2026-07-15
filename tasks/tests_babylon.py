@@ -1,7 +1,7 @@
 """Tests for Babylon hotel spreadsheet sync and portal."""
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from unittest.mock import patch
 
@@ -173,6 +173,32 @@ class BabylonHotelTests(TestCase):
         self.assertContains(response, 'Sara Haddad')
         response = self.client.get('/tasks/babylon-hotels/', {'service_type': 'Hotel', 'q': 'NoMatchXYZ'})
         self.assertNotContains(response, 'Sara Haddad')
+
+    def test_year_filter_includes_due_date_year_not_only_entry_date(self):
+        """Older invoices (early entry_date) with a later due must show in the due's year."""
+        entry = BabylonHotelEntry.objects.get(service=self.service)
+        entry.entry_date = date(2025, 3, 1)
+        entry.due_date = date(2026, 7, 17)
+        entry.details = 'AKHYANA VILLAGE'
+        entry.save(update_fields=['entry_date', 'due_date', 'details'])
+        self.service.details = 'AKHYANA VILLAGE'
+        self.service.due_time = timezone.make_aware(datetime(2026, 7, 17, 0, 0))
+        self.service.save(update_fields=['details', 'due_time'])
+
+        qs_2026 = babylon_entries_queryset({'year': '2026', 'service_type': 'Hotel', 'q': 'AKHYANA'})
+        self.assertEqual(qs_2026.filter(service=self.service).count(), 1)
+        qs_2025 = babylon_entries_queryset({'year': '2025', 'service_type': 'Hotel', 'q': 'AKHYANA'})
+        self.assertEqual(qs_2025.filter(service=self.service).count(), 1)
+
+    def test_sheet_heals_missing_babylon_entry_for_year(self):
+        BabylonHotelEntry.objects.filter(service=self.service).delete()
+        self.service.due_time = timezone.make_aware(datetime(2026, 7, 17, 0, 0))
+        self.service.save(update_fields=['due_time'])
+        # Saving recreates the entry via signal; remove again to simulate a missing row.
+        BabylonHotelEntry.objects.filter(service=self.service).delete()
+        qs = babylon_entries_queryset({'year': '2026', 'service_type': 'Hotel'})
+        self.assertTrue(BabylonHotelEntry.objects.filter(service=self.service).exists())
+        self.assertEqual(qs.filter(service=self.service).count(), 1)
 
     @patch('accounting_bridge.signals._master_sync_enabled', return_value=False)
     def test_babylon_sheet_excludes_issued_services(self, _mock_sync):
