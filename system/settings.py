@@ -25,6 +25,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/login/'
 # NOTE: they say here that this is unsuitable for production
 
 # Quick-start development settings - unsuitable for production

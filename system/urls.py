@@ -15,6 +15,7 @@ urlpatterns = [
     path('babylon/other-hotels/', babylon_views.babylon_portal_other_hotels, name='babylon_portal_other_hotels'),
     path('babylon/other-hotels/pdf/', babylon_views.babylon_portal_other_hotels_export_pdf, name='babylon_portal_other_hotels_export_pdf'),
     path('babylon/other-hotels/xlsx/', babylon_views.babylon_portal_other_hotels_export_xlsx, name='babylon_portal_other_hotels_export_xlsx'),
+    path('babylon/service/<int:service_id>/mark-issued/', babylon_views.babylon_portal_mark_issued, name='babylon_portal_mark_issued'),
     path('babylon/logout/', babylon_views.babylon_portal_logout, name='babylon_portal_logout'),
     path('', include('display.urls')),
     path('tasks/', include('tasks.urls')),

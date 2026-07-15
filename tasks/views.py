@@ -415,7 +415,7 @@ def mark_service_processed(request, pk):
     return redirect('supplier_payments_list')
 
 
-@login_required
+@login_required(login_url='/login/')
 @require_POST
 def service_mark_done(request, pk):
     """Toggle service paid status and sync linked calendar event. Redirect to next or supplier list."""

@@ -225,6 +225,30 @@ class BabylonHotelTests(TestCase):
         response = self.client.get('/tasks/babylon-hotels/')
         self.assertNotContains(response, 'Sara Haddad')
 
+    @patch('accounting_bridge.signals._master_sync_enabled', return_value=False)
+    def test_portal_mark_issued_works_without_staff_login(self, _mock_sync):
+        self.client.post('/babylon/', {'passcode': 'test-babylon-pass'})
+        response = self.client.post(
+            f'/babylon/service/{self.service.pk}/mark-issued/?next=/babylon/sheet/',
+            {'is_checked': 'on'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/babylon/sheet/')
+        self.service.refresh_from_db()
+        self.assertTrue(self.service.is_checked)
+        response = self.client.get('/babylon/sheet/')
+        self.assertNotContains(response, 'Sara Haddad')
+
+    def test_portal_mark_issued_requires_passcode(self):
+        response = self.client.post(
+            f'/babylon/service/{self.service.pk}/mark-issued/',
+            {'is_checked': 'on'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/babylon/', response.url)
+        self.service.refresh_from_db()
+        self.assertFalse(self.service.is_checked)
+
     def test_service_type_filter_on_staff_sheet(self):
         self.client.login(username='sales1', password='pass')
         response = self.client.get('/tasks/babylon-hotels/', {'service_type': 'Visa'})

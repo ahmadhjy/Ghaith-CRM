@@ -188,6 +188,14 @@
                         <td class="col-issued">
                             {% if portal_mode and row.row_kind == 'service' %}
                             <span class="cell-display">{% if row.is_checked %}Yes{% else %}No{% endif %}</span>
+                            {% elif portal_mode %}
+                            <form method="post" action="{% url 'babylon_portal_mark_issued' row.service_id %}?next={{ request.get_full_path|urlencode }}" class="babylon-issued-form">
+                                {% csrf_token %}
+                                <label class="babylon-toggle">
+                                    <input type="checkbox" name="is_checked" value="on" onchange="this.form.submit();" {% if row.is_checked %}checked{% endif %}>
+                                    <span class="babylon-toggle__slider"></span>
+                                </label>
+                            </form>
                             {% else %}
                             <form method="post" action="{% url 'service_mark_done' row.service_id %}?next={{ request.get_full_path|urlencode }}" class="babylon-issued-form">
                                 {% csrf_token %}

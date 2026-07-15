@@ -263,6 +263,31 @@ def babylon_portal_logout(request):
     return redirect('babylon_portal_login')
 
 
+def _apply_service_issued_flag(service: Service, is_checked: bool) -> None:
+    service.is_checked = is_checked
+    service.save(update_fields=['is_checked'])
+    try:
+        event = service.calendar_event
+        event.done = is_checked
+        event.save(update_fields=['done'])
+    except Exception:
+        pass
+
+
+@babylon_portal_required
+@require_POST
+def babylon_portal_mark_issued(request, service_id: int):
+    """Portal passcode users can toggle Issued without CRM staff login."""
+    service = get_object_or_404(
+        Service.objects.select_related('leadtask'),
+        pk=service_id,
+        supplier__iexact=BABYLON_SUPPLIER_NAME,
+    )
+    _apply_service_issued_flag(service, request.POST.get('is_checked') == 'on')
+    next_url = request.GET.get('next') or '/babylon/sheet/'
+    return redirect(next_url)
+
+
 def _other_hotels_sheet_context(request, *, portal_mode: bool):
     from django.utils import timezone
 
