@@ -130,7 +130,7 @@ class CrmInvoiceSyncTests(TestCase):
         self.assertTrue(line.send_to_client)
         self.assertTrue(line.crm_issued)
 
-    def test_crm_refresh_preserves_accounting_issued_flag(self):
+    def test_crm_refresh_clears_accounting_issued_when_unchecked_in_crm(self):
         service = self.leadtask.service_set.get(service_name='Hotel')
         line = SalesInvoiceLine.objects.get(invoice=self.invoice, crm_service=service)
         line.crm_issued = True
@@ -138,8 +138,11 @@ class CrmInvoiceSyncTests(TestCase):
         service.selling = '888'
         service.is_checked = False
         service.save()
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        service.refresh_from_db()
         line.refresh_from_db()
-        self.assertTrue(line.crm_issued)
+        self.assertFalse(service.is_checked)
+        self.assertFalse(line.crm_issued)
         self.assertEqual(line.sell_price, Decimal('888'))
 
     def test_service_delete_removes_accounting_line(self):
