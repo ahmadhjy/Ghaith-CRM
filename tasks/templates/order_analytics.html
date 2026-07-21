@@ -35,14 +35,14 @@
     </form>
 
     <section class="stats-kpis">
-        <article class="stats-kpi"><span>Sold invoices</span><strong>{{ sold_invoice_count }}</strong><small>Sold in selected period</small></article>
-        <article class="stats-kpi stats-kpi--blue"><span>Total revenue</span><strong>${{ revenue|floatformat:2 }}</strong><small>Invoice selling totals</small></article>
-        <article class="stats-kpi"><span>Booking-net cost</span><strong>${{ booking_purchase|floatformat:2 }}</strong><small>Original service net</small></article>
-        <article class="stats-kpi stats-kpi--profit"><span>Booking-net profit</span><strong>${{ booking_profit|floatformat:2 }}</strong><small>Revenue − original net</small></article>
-        <article class="stats-kpi"><span>Actual purchase</span><strong>${{ actual_purchase|floatformat:2 }}</strong><small>Issue price first, net fallback</small></article>
-        <article class="stats-kpi stats-kpi--profit"><span>Profit after issue</span><strong>${{ post_issue_profit|floatformat:2 }}</strong><small>Revenue − actual purchase</small></article>
-        <article class="stats-kpi stats-kpi--teal"><span>Supplier payable</span><strong>${{ supplier_payable|floatformat:2 }}</strong><small>{{ supplier_payable_count }} issued, unpaid services due in period</small></article>
-        <article class="stats-kpi stats-kpi--blue"><span>Client receivable</span><strong>${{ client_receivable|floatformat:2 }}</strong><small>{{ client_receivable_count }} unpaid client payments due in period</small></article>
+        <article class="stats-kpi"><span>Invoices sold</span><strong>{{ sold_invoice_count }}</strong><small>Sold in selected period</small></article>
+        <article class="stats-kpi stats-kpi--blue"><span>Total sales</span><strong>${{ revenue|floatformat:2 }}</strong><small>What we sold to clients (invoice totals)</small></article>
+        <article class="stats-kpi"><span>Cost when booked</span><strong>${{ booking_purchase|floatformat:2 }}</strong><small>Supplier prices at booking time (original net)</small></article>
+        <article class="stats-kpi stats-kpi--profit"><span>Expected profit</span><strong>${{ booking_profit|floatformat:2 }}</strong><small>Sales minus booking cost</small></article>
+        <article class="stats-kpi"><span>Cost after issuing</span><strong>${{ actual_purchase|floatformat:2 }}</strong><small>What we actually paid (issue price when set)</small></article>
+        <article class="stats-kpi stats-kpi--profit"><span>Final profit</span><strong>${{ post_issue_profit|floatformat:2 }}</strong><small>Sales minus actual cost</small></article>
+        <article class="stats-kpi stats-kpi--teal"><span>We owe suppliers</span><strong>${{ supplier_payable|floatformat:2 }}</strong><small>{{ supplier_payable_count }} issued, unpaid services due in period</small></article>
+        <article class="stats-kpi stats-kpi--blue"><span>Clients owe us</span><strong>${{ client_receivable|floatformat:2 }}</strong><small>{{ client_receivable_count }} unpaid client payments due in period</small></article>
     </section>
 
     {{ chart_data|json_script:"order-chart-data" }}
@@ -53,9 +53,10 @@
 
     <section class="section stats-table-card">
         <h2>Supplier breakdown</h2>
+        <p style="margin:4px 0 10px;color:#64748b;font-size:.85rem"><i class="fas fa-hand-pointer"></i> Double-click a supplier row to open its invoices for this period.</p>
         <div class="req-table-wrap"><table class="req-table">
             <thead><tr><th>Supplier</th><th>Lines</th><th>Original net</th><th>Issued cost</th></tr></thead>
-            <tbody>{% for row in supplier_rows %}<tr><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
+            <tbody>{% for row in supplier_rows %}<tr class="supplier-drill-row" style="cursor:pointer" title="Double-click to see these invoices" ondblclick="window.location.href='{% url 'current_lead_tasks' %}?status=all&supplier={{ row.link_value|urlencode }}&sold_from={{ date_from }}&sold_to={{ date_to }}'"><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
         </table></div>
     </section>
 

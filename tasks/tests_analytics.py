@@ -90,6 +90,77 @@ class OrderAnalyticsTests(TestCase):
         self.client.login(username="Accounting", password="pass")
         self.assertEqual(self.client.get("/tasks/orders/analytics/").status_code, 200)
 
+    def test_default_period_is_current_month(self):
+        ctx = build_order_analytics_context({})
+        today = timezone.localdate()
+        self.assertEqual(ctx["date_from"], today.replace(day=1).isoformat())
+        self.assertTrue(ctx["date_to"].startswith(today.strftime("%Y-%m")))
+
+    def test_supplier_rows_expose_drilldown_link_value(self):
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Transfer",
+            supplier="",
+            net="100",
+        )
+        ctx = build_order_analytics_context({
+            "date_from": "2026-07-15",
+            "date_to": "2026-07-31",
+        })
+        by_name = {row["name"]: row for row in ctx["supplier_rows"]}
+        self.assertEqual(by_name["YARDS"]["link_value"], "YARDS")
+        self.assertEqual(by_name["No supplier"]["link_value"], "none")
+
+    def test_orders_list_supplier_and_sold_date_drilldown(self):
+        other_lead = Lead.objects.create(
+            name="Other client",
+            phone="70999999",
+            assigned_to=self.sales,
+        )
+        other_order = LeadTask.objects.create(
+            lead=other_lead,
+            assigned_to=self.sales,
+            status="progress",
+        )
+        Service.objects.create(
+            leadtask=other_order,
+            service_name="Visa",
+            supplier="",
+            net="50",
+        )
+        LeadTask.objects.filter(pk=other_order.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 7, 19))
+        )
+
+        self.client.login(username="Accounting", password="pass")
+        base = "/tasks/leads/current/"
+
+        by_supplier = self.client.get(base, {
+            "status": "all",
+            "supplier": "YARDS",
+            "sold_from": "2026-07-15",
+            "sold_to": "2026-07-31",
+        })
+        ids = [task.pk for task in by_supplier.context["data"]]
+        self.assertEqual(ids, [self.order.pk])
+
+        no_supplier = self.client.get(base, {
+            "status": "all",
+            "supplier": "none",
+            "sold_from": "2026-07-15",
+            "sold_to": "2026-07-31",
+        })
+        ids = [task.pk for task in no_supplier.context["data"]]
+        self.assertEqual(ids, [other_order.pk])
+
+        out_of_range = self.client.get(base, {
+            "status": "all",
+            "supplier": "YARDS",
+            "sold_from": "2026-08-01",
+            "sold_to": "2026-08-31",
+        })
+        self.assertEqual(len(out_of_range.context["data"]), 0)
+
     def test_paid_supplier_service_is_removed_from_payable_total(self):
         service = self.order.service_set.get()
         self.client.login(username="Accounting", password="pass")

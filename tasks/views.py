@@ -652,6 +652,13 @@ def order_analytics(request):
     )
 
 
+def _parse_filter_date(value):
+    try:
+        return datetime.strptime((value or '').strip(), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return None
+
+
 @login_required(login_url="/login/")
 def current_leadtasks(request):
     status_choices = LeadTask.STATUS_CHOICES
@@ -659,6 +666,9 @@ def current_leadtasks(request):
     search_query = request.GET.get('search', '')
     travel_date_only = request.GET.get('travel_date_only', '') == 'on'
     assigned_to_me = request.GET.get('assigned_to_me', '') == 'on'
+    supplier_filter = request.GET.get('supplier', '').strip()
+    sold_from = _parse_filter_date(request.GET.get('sold_from'))
+    sold_to = _parse_filter_date(request.GET.get('sold_to'))
 
     if request.user.is_staff and not assigned_to_me:
         lead_tasks = LeadTask.objects.all()
@@ -672,6 +682,19 @@ def current_leadtasks(request):
 
     if travel_date_only:
         lead_tasks = lead_tasks.filter(travel_date__isnull=False)
+
+    # Drill-down filters from Order Analytics (supplier + sold-date period).
+    if supplier_filter:
+        if supplier_filter.lower() == 'none':
+            lead_tasks = lead_tasks.filter(service__supplier='').distinct()
+        else:
+            lead_tasks = lead_tasks.filter(
+                service__supplier__iexact=supplier_filter
+            ).distinct()
+    if sold_from:
+        lead_tasks = lead_tasks.filter(created_at__date__gte=sold_from)
+    if sold_to:
+        lead_tasks = lead_tasks.filter(created_at__date__lte=sold_to)
 
     if search_query:
         lead_tasks = lead_tasks.filter(
@@ -704,6 +727,9 @@ def current_leadtasks(request):
         'travel_date_only': travel_date_only,
         'assigned_to_me': assigned_to_me,
         'is_staff': request.user.is_staff,
+        'supplier_filter': supplier_filter,
+        'sold_from': sold_from,
+        'sold_to': sold_to,
     })
 
 @login_required(login_url="/login/")

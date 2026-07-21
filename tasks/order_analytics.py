@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
+import calendar
 from collections import defaultdict
-from datetime import date, datetime, time
+from datetime import datetime, time
 
 from django.utils import timezone
 
 from tasks.constants import get_service_choices, get_supplier_choices, parse_money
 from tasks.models import LeadTask, Payment, Service
-
-
-DEFAULT_ANALYTICS_START = date(2026, 7, 15)
 
 
 def _date(value, fallback):
@@ -22,8 +20,12 @@ def _date(value, fallback):
 
 
 def _range(params):
-    start = _date(params.get("date_from"), DEFAULT_ANALYTICS_START)
-    end = _date(params.get("date_to"), timezone.localdate())
+    # Default period: the current calendar month.
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    month_end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    start = _date(params.get("date_from"), month_start)
+    end = _date(params.get("date_to"), month_end)
     if start > end:
         start, end = end, start
     return (
@@ -112,6 +114,8 @@ def build_order_analytics_context(params):
     supplier_rows = [
         {
             "name": name,
+            # Query value for drill-down links; "none" targets blank suppliers.
+            "link_value": name if name != "No supplier" else "none",
             **values,
         }
         for name, values in supplier_totals.items()
@@ -138,7 +142,7 @@ def build_order_analytics_context(params):
         "supplier_rows": supplier_rows,
         "order_rows": order_rows[:200],
         "chart_data": {
-            "financial_labels": ["Revenue", "Booking cost", "Actual purchase"],
+            "financial_labels": ["Total sales", "Cost when booked", "Cost after issuing"],
             "financial_values": [revenue, booking_purchase, actual_purchase],
             "supplier_labels": [row["name"] for row in supplier_rows[:10]],
             "supplier_booking_costs": [

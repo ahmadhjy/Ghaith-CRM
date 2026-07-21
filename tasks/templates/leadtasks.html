@@ -25,9 +25,29 @@
         {% endfor %}
     </div>
 
+    {% if supplier_filter or sold_from or sold_to %}
+    <div class="req-card" style="padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+            <i class="fas fa-filter" style="color:var(--req-accent,#0f4c81)"></i>
+            Showing orders
+            {% if supplier_filter %}
+                {% if supplier_filter == 'none' %}with <strong>no supplier</strong> on a service line{% else %}with supplier <strong>{{ supplier_filter }}</strong>{% endif %}
+            {% endif %}
+            {% if sold_from or sold_to %}
+                sold {% if sold_from %}from <strong>{{ sold_from|date:"M d, Y" }}</strong>{% endif %}
+                {% if sold_to %}to <strong>{{ sold_to|date:"M d, Y" }}</strong>{% endif %}
+            {% endif %}
+        </div>
+        <a href="{% url 'current_lead_tasks' %}" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-times"></i> Clear</a>
+    </div>
+    {% endif %}
+
     <div class="req-card">
         <div class="req-filters">
             <form method="GET" action="{% url 'current_lead_tasks' %}">
+                {% if supplier_filter %}<input type="hidden" name="supplier" value="{{ supplier_filter }}">{% endif %}
+                {% if sold_from %}<input type="hidden" name="sold_from" value="{{ sold_from|date:'Y-m-d' }}">{% endif %}
+                {% if sold_to %}<input type="hidden" name="sold_to" value="{{ sold_to|date:'Y-m-d' }}">{% endif %}
                 <div class="req-filter-group">
                     <span class="req-filter-label">Status</span>
                     <select id="status" name="status" class="req-select">
