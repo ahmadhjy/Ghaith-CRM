@@ -775,7 +775,14 @@ def get_numeric_profit(self):
 
 @login_required(login_url="/login/")
 def stats_dashboard(request):
+    from display.permissions import user_can_view_management_dashboards
     from display.stats_service import build_stats_dashboard_context
+
+    if not user_can_view_management_dashboards(request.user):
+        return HttpResponse(
+            "Access restricted. This dashboard is available only to authorized users.",
+            status=403,
+        )
 
     return render(
         request,

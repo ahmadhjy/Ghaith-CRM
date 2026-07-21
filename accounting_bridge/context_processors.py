@@ -1,4 +1,5 @@
 from accounting_bridge.permissions import user_is_accountant
+from display.permissions import user_can_view_management_dashboards
 
 
 def app_shell(request):
@@ -7,5 +8,8 @@ def app_shell(request):
     return {
         'app_zone': zone,
         'user_is_accountant': user_is_accountant(request.user),
+        'user_can_view_management_dashboards': user_can_view_management_dashboards(
+            request.user
+        ),
         'accounting_root': '/accounting/',
     }

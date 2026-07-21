@@ -11,7 +11,9 @@ from tasks.order_analytics import build_order_analytics_context
 
 class OrderAnalyticsTests(TestCase):
     def setUp(self):
-        self.admin = User.objects.create_user("admin", password="pass", is_staff=True)
+        self.admin = User.objects.create_user(
+            "Accounting", password="pass", is_staff=True
+        )
         self.sales = User.objects.create_user("sales", password="pass")
         self.lead = Lead.objects.create(
             name="Sold client",
@@ -77,15 +79,15 @@ class OrderAnalyticsTests(TestCase):
         })
         self.assertEqual(no_match["sold_invoice_count"], 0)
 
-    def test_orders_analytics_is_admin_only(self):
+    def test_orders_analytics_is_restricted_to_named_users(self):
         self.client.login(username="sales", password="pass")
         self.assertEqual(self.client.get("/tasks/orders/analytics/").status_code, 403)
-        self.client.login(username="admin", password="pass")
+        self.client.login(username="Accounting", password="pass")
         self.assertEqual(self.client.get("/tasks/orders/analytics/").status_code, 200)
 
     def test_paid_supplier_service_is_removed_from_payable_total(self):
         service = self.order.service_set.get()
-        self.client.login(username="admin", password="pass")
+        self.client.login(username="Accounting", password="pass")
         response = self.client.post(
             f"/tasks/services/mark_processed/{service.pk}/",
             {"processed": "on"},

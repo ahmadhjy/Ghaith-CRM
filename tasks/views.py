@@ -635,9 +635,14 @@ def generate_client_pdf(request, pk):
 
 @login_required(login_url="/login/")
 def order_analytics(request):
-    """Admin-only financial and payment analytics for CRM orders."""
-    if not (request.user.is_staff or request.user.is_superuser):
-        return HttpResponse("Admins only.", status=403)
+    """Restricted financial and payment analytics for CRM orders."""
+    from display.permissions import user_can_view_management_dashboards
+
+    if not user_can_view_management_dashboards(request.user):
+        return HttpResponse(
+            "Access restricted. This dashboard is available only to authorized users.",
+            status=403,
+        )
     from .order_analytics import build_order_analytics_context
 
     return render(

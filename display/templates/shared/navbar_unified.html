@@ -29,9 +29,11 @@
 
   <nav class="app-nav__menu" aria-label="Main">
     <div class="app-nav__section-label">Main</div>
+    {% if user_can_view_management_dashboards %}
     <a class="app-nav__item" href="{% url 'stats_dashboard' %}">
       <i class="fas fa-chart-line"></i><span>Ghaith Dashboard</span>
     </a>
+    {% endif %}
     <a class="app-nav__item" href="{% url 'calendar' %}">
       <i class="fas fa-home"></i><span>User Dashboard</span>
     </a>
@@ -64,7 +66,7 @@
       <a href="{% url 'travellers_list' %}">Travellers</a>
       <a href="{% url 'supplier_payments_list' %}">Purchases</a>
       <a href="{% url 'client_payments_list' %}">Client Payments</a>
-      {% if user.is_staff %}
+      {% if user_can_view_management_dashboards %}
       <a href="{% url 'order_analytics' %}">Order Analytics</a>
       {% endif %}
     </details>

@@ -10,15 +10,16 @@ Apply changes:
 Also delete source user accounts after reassignment:
   python manage.py merge_users_to --to Sara --from Willy OLD ... --execute --delete-sources
 """
+from io import StringIO
+
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Q
 
-from dashboard.models import Event
-from display.models import DailyReport, Lead, Offer, UserMonthlyTarget
-from notifications.models import ChatMessage, PushSubscription, UserNotification
-from tasks.models import ClientMediaUploadLink, LeadTask, Task
+from accounts_core.models import UserProfile
+from display.models import CrmUserProfile, UserMonthlyTarget
+from notifications.models import UserNotification
 
 
 DEFAULT_SOURCE_USERNAMES = [
@@ -110,13 +111,6 @@ class Command(BaseCommand):
         for label, count in counts.items():
             self.stdout.write(f'  {label}: {count}')
 
-        chat_count = ChatMessage.objects.filter(
-            Q(sender_id__in=source_ids) | Q(recipient_id__in=source_ids)
-        ).count()
-        push_count = PushSubscription.objects.filter(user_id__in=source_ids).count()
-        self.stdout.write(f'  chat messages (will be deleted): {chat_count}')
-        self.stdout.write(f'  push subscriptions (will be deleted): {push_count}')
-
         if not execute:
             self.stdout.write(self.style.WARNING('\nDry run only. Re-run with --execute to apply.'))
             return
@@ -127,12 +121,8 @@ class Command(BaseCommand):
             for label, count in updated.items():
                 self.stdout.write(f'  {label}: {count}')
 
-            deleted_chat, _ = ChatMessage.objects.filter(
-                Q(sender_id__in=source_ids) | Q(recipient_id__in=source_ids)
-            ).delete()
-            deleted_push, _ = PushSubscription.objects.filter(user_id__in=source_ids).delete()
-            self.stdout.write(f'  deleted chat messages: {deleted_chat}')
-            self.stdout.write(f'  deleted push subscriptions: {deleted_push}')
+            self._merge_profile_flags(target, sources)
+            self._merge_accounting_employees(target, sources, deactivate_only=not delete_sources)
 
             if delete_sources:
                 for user in sources:
@@ -148,62 +138,131 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\nDone.'))
 
     def _count_reassignments(self, source_ids: list[int]) -> dict[str, int]:
-        return {
-            'leads (assigned_to)': Lead.objects.filter(assigned_to_id__in=source_ids).count(),
-            'lead tasks (assigned_to)': LeadTask.objects.filter(assigned_to_id__in=source_ids).count(),
-            'tasks (assigned_to)': Task.objects.filter(assigned_to_id__in=source_ids).count(),
-            'offers (assigned_to)': Offer.objects.filter(assigned_to_id__in=source_ids).count(),
-            'offers (created_by)': Offer.objects.filter(created_by_id__in=source_ids).count(),
-            'daily reports': DailyReport.objects.filter(user_id__in=source_ids).count(),
-            'monthly targets': UserMonthlyTarget.objects.filter(user_id__in=source_ids).count(),
-            'calendar events': Event.objects.filter(user_id__in=source_ids).count(),
-            'media upload links (created_by)': ClientMediaUploadLink.objects.filter(
-                created_by_id__in=source_ids
-            ).count(),
-            'notifications (recipient)': UserNotification.objects.filter(
-                recipient_id__in=source_ids
-            ).count(),
-        }
+        counts = {}
+        for relation in User._meta.related_objects:
+            if not (relation.one_to_many or relation.one_to_one):
+                continue
+            model = relation.related_model
+            field = relation.field
+            label = f'{model._meta.label} ({field.name})'
+            counts[label] = model.objects.filter(
+                **{f'{field.name}_id__in': source_ids}
+            ).count()
+        return counts
 
     def _reassign_all(self, target: User, source_ids: list[int]) -> dict[str, int]:
         result: dict[str, int] = {}
 
-        result['leads (assigned_to)'] = Lead.objects.filter(
-            assigned_to_id__in=source_ids
-        ).update(assigned_to=target)
+        special_models = {
+            UserNotification,
+            UserMonthlyTarget,
+        }
+        for relation in User._meta.related_objects:
+            model = relation.related_model
+            field = relation.field
+            if model in special_models:
+                continue
+            label = f'{model._meta.label} ({field.name})'
+            if relation.one_to_many:
+                result[label] = model.objects.filter(
+                    **{f'{field.name}_id__in': source_ids}
+                ).update(**{f'{field.name}_id': target.pk})
+            elif relation.one_to_one:
+                result[label] = self._move_one_to_one(
+                    model, field.name, target, source_ids
+                )
 
-        result['lead tasks (assigned_to)'] = LeadTask.objects.filter(
-            assigned_to_id__in=source_ids
-        ).update(assigned_to=target)
-
-        result['tasks (assigned_to)'] = Task.objects.filter(
-            assigned_to_id__in=source_ids
-        ).update(assigned_to=target)
-
-        result['offers (assigned_to)'] = Offer.objects.filter(
-            assigned_to_id__in=source_ids
-        ).update(assigned_to=target)
-
-        result['offers (created_by)'] = Offer.objects.filter(
-            created_by_id__in=source_ids
-        ).update(created_by=target)
-
-        result['daily reports'] = DailyReport.objects.filter(
-            user_id__in=source_ids
-        ).update(user=target)
-
-        result['calendar events'] = Event.objects.filter(
-            user_id__in=source_ids
-        ).update(user=target)
-
-        result['media upload links (created_by)'] = ClientMediaUploadLink.objects.filter(
-            created_by_id__in=source_ids
-        ).update(created_by=target)
-
-        result['notifications (recipient)'] = self._reassign_notifications(target, source_ids)
-        result['monthly targets'] = self._merge_monthly_targets(target, source_ids)
+        result['notifications.UserNotification (recipient)'] = (
+            self._reassign_notifications(target, source_ids)
+        )
+        result['display.UserMonthlyTarget (user)'] = (
+            self._merge_monthly_targets(target, source_ids)
+        )
 
         return result
+
+    def _move_one_to_one(self, model, field_name, target, source_ids) -> int:
+        """Move a one-to-one row when possible without replacing Sara's row."""
+        source_rows = model.objects.filter(
+            **{f'{field_name}_id__in': source_ids}
+        )
+        moved = 0
+        for row in source_rows:
+            if model.objects.filter(**{f'{field_name}_id': target.pk}).exists():
+                if model._meta.label == 'accounts_core.Employee':
+                    # Keep Mona's employee/payroll history, detached and inactive.
+                    row.user = None
+                    row.is_active = False
+                    row.save(update_fields=['user', 'is_active'])
+                else:
+                    # Sara's own profile/link remains authoritative.
+                    row.delete()
+                continue
+            setattr(row, f'{field_name}_id', target.pk)
+            row.save(update_fields=[field_name])
+            moved += 1
+        return moved
+
+    def _merge_profile_flags(self, target: User, sources: list[User]) -> None:
+        """Copy useful CRM/accounting flags onto Sara without moving 1:1 rows."""
+        target_crm, _ = CrmUserProfile.objects.get_or_create(user=target)
+        target_profile, _ = UserProfile.objects.get_or_create(user=target)
+        changed_crm = []
+        changed_profile = []
+
+        for source in sources:
+            source_crm = getattr(source, 'crm_profile', None)
+            if source_crm:
+                if not target_crm.department_id and source_crm.department_id:
+                    target_crm.department = source_crm.department
+                    changed_crm.append('department')
+                if source_crm.receives_lead_assignments and not target_crm.receives_lead_assignments:
+                    target_crm.receives_lead_assignments = True
+                    changed_crm.append('receives_lead_assignments')
+
+            source_profile = getattr(source, 'profile', None)
+            if source_profile:
+                if source_profile.is_main_accountant and not target_profile.is_main_accountant:
+                    target_profile.is_main_accountant = True
+                    changed_profile.append('is_main_accountant')
+                if source_profile.is_accountant and not target_profile.is_accountant:
+                    target_profile.is_accountant = True
+                    changed_profile.append('is_accountant')
+
+            if source.is_sales and not target.is_sales:
+                target.is_sales = True
+                target.save(update_fields=['is_sales'])
+            if getattr(source, 'administration', False) and not getattr(target, 'administration', False):
+                target.administration = True
+                target.save(update_fields=['administration'])
+
+        if changed_crm:
+            target_crm.save(update_fields=list(dict.fromkeys(changed_crm)))
+        if changed_profile:
+            target_profile.save(update_fields=list(dict.fromkeys(changed_profile)))
+
+    def _merge_accounting_employees(
+        self, target: User, sources: list[User], *, deactivate_only: bool
+    ) -> None:
+        """Move invoice/payroll employee ownership after user FK reassignment."""
+        for source in sources:
+            args = [
+                'merge_employees',
+                '--to',
+                target.username,
+                '--from',
+                source.username,
+            ]
+            if deactivate_only:
+                args.append('--deactivate-only')
+            try:
+                call_command(*args, stdout=StringIO())
+            except CommandError as exc:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'  skipped employee merge for {source.username}: {exc}'
+                    )
+                )
 
     def _reassign_notifications(self, target: User, source_ids: list[int]) -> int:
         moved = 0
@@ -236,8 +295,8 @@ class Command(BaseCommand):
         for row in UserMonthlyTarget.objects.filter(user_id__in=source_ids):
             existing = UserMonthlyTarget.objects.filter(user=target, month=row.month).first()
             if existing:
-                existing.target_profit += row.target_profit
-                existing.save(update_fields=['target_profit'])
+                # Sara's own target remains authoritative; combining targets
+                # would incorrectly double the dashboard target.
                 row.delete()
             else:
                 row.user = target
