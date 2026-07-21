@@ -14,9 +14,11 @@ from tasks.constants import parse_money
 from tasks.models import LeadTask
 
 
-def parse_date_range(params, *, default_days=30):
+def parse_date_range(params):
+    # Default to the current month so the target KPI matches a single
+    # monthly target instead of summing every month the range touches.
     today = timezone.localdate()
-    default_start = today - timedelta(days=default_days - 1)
+    default_start = today.replace(day=1)
 
     def clean(name, fallback):
         try:
