@@ -37,11 +37,10 @@ def modified_leads_q(start_dt, end_dt):
     return Q(last_modified__range=(start_dt, end_dt))
 
 
-def modified_orders_q(start_dt, end_dt):
-    return (
-        Q(updated_at__range=(start_dt, end_dt))
-        | Q(lead__last_modified__range=(start_dt, end_dt))
-    )
+def sold_orders_q(start_dt, end_dt):
+    # The LeadTask is auto-created the moment a lead is marked sold,
+    # so created_at is the sold date.
+    return Q(created_at__range=(start_dt, end_dt))
 
 
 def order_financials(order):
@@ -86,7 +85,7 @@ def build_stats_dashboard_context(request):
 
     leads = Lead.objects.filter(modified_leads_q(start_dt, end_dt))
     orders = LeadTask.objects.filter(
-        modified_orders_q(start_dt, end_dt),
+        sold_orders_q(start_dt, end_dt),
         lead__sold=True,
     ).select_related("lead", "assigned_to").prefetch_related("service_set").distinct()
 
@@ -115,7 +114,7 @@ def build_stats_dashboard_context(request):
         bucket["profit"] += values["booking_profit"]
         bucket["revenue"] += values["revenue"]
         bucket["sales"] += 1
-        stamp = order.updated_at or order.lead.last_modified
+        stamp = order.created_at
         day = timezone.localtime(stamp).date() if stamp else start
         daily_profit[day] += values["booking_profit"]
         daily_revenue[day] += values["revenue"]

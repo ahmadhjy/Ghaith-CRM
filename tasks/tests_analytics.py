@@ -45,7 +45,7 @@ class OrderAnalyticsTests(TestCase):
             is_checked=False,
         )
         LeadTask.objects.filter(pk=self.order.pk).update(
-            updated_at=timezone.make_aware(datetime(2026, 7, 18))
+            created_at=timezone.make_aware(datetime(2026, 7, 18))
         )
 
     def test_profit_definitions_and_payment_totals(self):

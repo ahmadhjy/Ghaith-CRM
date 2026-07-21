@@ -35,9 +35,9 @@ class StatsDashboardTests(TestCase):
         Service.objects.create(leadtask=order, service_name="Hotel", net=net)
         lead.sold = True
         lead.save(update_fields=["sold", "last_modified"])
+        # created_at is the sold date (invoice created when lead marked sold)
         stamp = timezone.make_aware(datetime(2026, 7, 18, 12))
-        LeadTask.objects.filter(pk=order.pk).update(updated_at=stamp)
-        Lead.objects.filter(pk=lead.pk).update(last_modified=stamp)
+        LeadTask.objects.filter(pk=order.pk).update(created_at=stamp)
         return lead
 
     def _request(self, user):

@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime, time
 
-from django.db.models import Q
 from django.utils import timezone
 
 from tasks.constants import get_service_choices, get_supplier_choices, parse_money
@@ -45,9 +44,10 @@ def build_order_analytics_context(params):
     supplier = (params.get("supplier") or "").strip()
     service_type = (params.get("service") or "").strip()
 
+    # LeadTask.created_at is the sold date: the invoice is auto-created
+    # the moment a lead is marked sold.
     orders = LeadTask.objects.filter(
-        Q(updated_at__range=(start_dt, end_dt))
-        | Q(lead__last_modified__range=(start_dt, end_dt)),
+        created_at__range=(start_dt, end_dt),
         lead__sold=True,
     ).select_related("lead", "assigned_to").prefetch_related("service_set").distinct()
     if supplier:
@@ -119,10 +119,7 @@ def build_order_analytics_context(params):
         for name, values in supplier_totals.items()
     ]
     supplier_rows.sort(key=lambda row: row["actual"], reverse=True)
-    order_rows.sort(
-        key=lambda row: row["order"].updated_at or row["order"].lead.last_modified,
-        reverse=True,
-    )
+    order_rows.sort(key=lambda row: row["order"].created_at, reverse=True)
     return {
         "date_from": start.isoformat(),
         "date_to": end.isoformat(),

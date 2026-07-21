@@ -21,11 +21,11 @@
 
     <form method="get" class="stats-filter-bar">
         <div class="req-field">
-            <label for="date_from">Modified from</label>
+            <label for="date_from">Sold from</label>
             <input type="date" id="date_from" name="date_from" value="{{ date_from }}">
         </div>
         <div class="req-field">
-            <label for="date_to">Modified to</label>
+            <label for="date_to">Sold to</label>
             <input type="date" id="date_to" name="date_to" value="{{ date_to }}">
         </div>
         <button class="req-btn req-btn--primary" type="submit"><i class="fas fa-filter"></i> Apply period</button>
@@ -50,7 +50,7 @@
     {{ chart_data|json_script:"stats-chart-data" }}
     <section class="stats-chart-grid">
         <article class="stats-chart-card stats-chart-card--wide">
-            <div><h2>Profit and revenue trend</h2><p>Sold invoices by modified date</p></div>
+            <div><h2>Profit and revenue trend</h2><p>Sold invoices by sold date</p></div>
             <canvas id="profitTrend"></canvas>
         </article>
         <article class="stats-chart-card">
