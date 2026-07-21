@@ -14,7 +14,7 @@ from .forms import EventForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task, LeadTask, Payment, Service
-from tasks.constants import get_supplier_choices, get_service_choices
+from tasks.constants import get_supplier_choices, get_service_choices, parse_money
 from tasks.datetime_safety import purchases_services_queryset
 from tasks.purchases_filters import (
     SORT_CHOICES as PURCHASES_SORT_CHOICES,
@@ -261,11 +261,18 @@ def supplier_payments_list(request):
 
     services = apply_purchases_filters(services, request.GET, now=now)
     services = order_purchases(services, sort)
+    filtered_services = list(services)
+    filtered_total = sum(
+        parse_money(service.issue_price or service.net)
+        for service in filtered_services
+    )
 
     supplier_choices = get_supplier_choices()
     service_choices = get_service_choices()
     return render(request, 'supplier_payments_list.html', {
-        'services': services,
+        'services': filtered_services,
+        'filtered_count': len(filtered_services),
+        'filtered_total': filtered_total,
         'due_from': due_from,
         'due_to': due_to,
         'travel_from': travel_from,
@@ -424,6 +431,7 @@ def client_payments_list(request):
     """Client payments schedule. Default: unissued + refunds (including overdue)."""
     now = timezone.now()
     payments, ctx = _filter_client_payments(_client_payments_queryset(request.user), request.GET, now)
+    payment_totals = payments.aggregate(total=Sum('amount'), count=Count('pk'))
 
     refund_stats = None
     if ctx['refund_filter']:
@@ -437,6 +445,8 @@ def client_payments_list(request):
 
     return render(request, 'client_payments_list.html', {
         'payments': payments,
+        'filtered_count': payment_totals['count'] or 0,
+        'filtered_total': payment_totals['total'] or 0,
         'refund_stats': refund_stats,
         'today': now.date(),
         'now': now,

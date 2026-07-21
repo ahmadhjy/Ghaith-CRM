@@ -48,14 +48,14 @@
     {{ chart_data|json_script:"order-chart-data" }}
     <section class="stats-chart-grid" style="margin-top:16px">
         <article class="stats-chart-card"><div><h2>Financial comparison</h2><p>Revenue vs both cost definitions</p></div><canvas id="financeChart"></canvas></article>
-        <article class="stats-chart-card"><div><h2>Supplier activity</h2><p>Service selling and actual purchase</p></div><canvas id="supplierChart"></canvas></article>
+        <article class="stats-chart-card"><div><h2>Supplier activity</h2><p>Original net compared with issued cost</p></div><canvas id="supplierChart"></canvas></article>
     </section>
 
     <section class="section stats-table-card">
         <h2>Supplier breakdown</h2>
         <div class="req-table-wrap"><table class="req-table">
-            <thead><tr><th>Supplier</th><th>Lines</th><th>Service selling</th><th>Original net</th><th>Actual purchase</th><th>Line profit after issue</th></tr></thead>
-            <tbody>{% for row in supplier_rows %}<tr><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.service_sales|floatformat:2 }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td><td>${{ row.profit|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">No supplier data in this period.</td></tr>{% endfor %}</tbody>
+            <thead><tr><th>Supplier</th><th>Lines</th><th>Original net</th><th>Issued cost</th></tr></thead>
+            <tbody>{% for row in supplier_rows %}<tr><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
         </table></div>
     </section>
 
@@ -81,7 +81,7 @@
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.16)'}},x:{grid:{display:false}}}}
     });
     new Chart(document.getElementById('supplierChart'), {
-        type:'bar', data:{labels:d.supplier_labels,datasets:[{label:'Service selling',data:d.supplier_sales,backgroundColor:'#93c5fd',borderRadius:7},{label:'Actual purchase',data:d.supplier_costs,backgroundColor:'#0f766e',borderRadius:7}]},
+        type:'bar', data:{labels:d.supplier_labels,datasets:[{label:'Original net',data:d.supplier_booking_costs,backgroundColor:'#93c5fd',borderRadius:7},{label:'Issued cost',data:d.supplier_actual_costs,backgroundColor:'#0f766e',borderRadius:7}]},
         options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.16)'}},y:{grid:{display:false}}}}
     });
 })();

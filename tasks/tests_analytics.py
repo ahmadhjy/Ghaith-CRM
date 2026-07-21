@@ -63,6 +63,11 @@ class OrderAnalyticsTests(TestCase):
         self.assertEqual(ctx["post_issue_profit"], 350)
         self.assertEqual(ctx["supplier_payable"], 650)
         self.assertEqual(ctx["client_receivable"], 700)
+        supplier = ctx["supplier_rows"][0]
+        self.assertEqual(supplier["count"], 1)
+        self.assertEqual(supplier["booking"], 600)
+        self.assertEqual(supplier["actual"], 650)
+        self.assertNotIn("profit", supplier)
 
     def test_service_and_supplier_filters_use_admin_values(self):
         ctx = build_order_analytics_context({

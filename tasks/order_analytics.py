@@ -59,7 +59,7 @@ def build_order_analytics_context(params):
     revenue = booking_purchase = actual_purchase = 0.0
     order_rows = []
     supplier_totals = defaultdict(
-        lambda: {"booking": 0.0, "actual": 0.0, "service_sales": 0.0, "count": 0}
+        lambda: {"booking": 0.0, "actual": 0.0, "count": 0}
     )
     for order in orders:
         services = list(order.service_set.all())
@@ -86,7 +86,6 @@ def build_order_analytics_context(params):
             bucket = supplier_totals[key]
             bucket["booking"] += _money(line)
             bucket["actual"] += _money(line, issued=True)
-            bucket["service_sales"] += parse_money(line.selling)
             bucket["count"] += 1
 
     payable_services = Service.objects.filter(
@@ -114,7 +113,6 @@ def build_order_analytics_context(params):
         {
             "name": name,
             **values,
-            "profit": values["service_sales"] - values["actual"],
         }
         for name, values in supplier_totals.items()
     ]
@@ -143,7 +141,11 @@ def build_order_analytics_context(params):
             "financial_labels": ["Revenue", "Booking cost", "Actual purchase"],
             "financial_values": [revenue, booking_purchase, actual_purchase],
             "supplier_labels": [row["name"] for row in supplier_rows[:10]],
-            "supplier_costs": [row["actual"] for row in supplier_rows[:10]],
-            "supplier_sales": [row["service_sales"] for row in supplier_rows[:10]],
+            "supplier_booking_costs": [
+                row["booking"] for row in supplier_rows[:10]
+            ],
+            "supplier_actual_costs": [
+                row["actual"] for row in supplier_rows[:10]
+            ],
         },
     }

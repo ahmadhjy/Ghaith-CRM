@@ -106,6 +106,16 @@
         </form>
     </div>
 
+    <div class="filtered-table-total" aria-label="Filtered purchases total">
+        <div>
+            <span class="filtered-table-total__label">Displayed purchases</span>
+            <strong>{{ filtered_count }} line{{ filtered_count|pluralize }}</strong>
+        </div>
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">Filtered total</span>
+            <strong>${{ filtered_total|floatformat:2 }}</strong>
+        </div>
+    </div>
     <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
         <table class="list-table list-table--supplier">
             <thead>

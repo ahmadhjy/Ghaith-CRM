@@ -206,6 +206,16 @@
 
 
 
+    <div class="filtered-table-total" aria-label="Filtered client payments total">
+        <div>
+            <span class="filtered-table-total__label">Displayed {% if refund_filter %}refunds{% else %}payments{% endif %}</span>
+            <strong>{{ filtered_count }} row{{ filtered_count|pluralize }}</strong>
+        </div>
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">Filtered total</span>
+            <strong>${{ filtered_total|floatformat:2 }}</strong>
+        </div>
+    </div>
     <div class="table-wrapper table-wrapper--responsive table-wrapper--client-payments">
 
         <table class="list-table list-table--client {% if refund_filter %}list-table--refunds{% endif %}">
