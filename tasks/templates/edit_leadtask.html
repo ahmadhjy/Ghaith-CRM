@@ -43,7 +43,7 @@
                     {% endif %}
                     <a href="{% url 'lead_task_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-pdf"></i> Internal PDF</a>
                     <a href="{% url 'lead_task_client_pdf' pk=leadid %}" class="inv-btn-ghost"><i class="fas fa-file-export"></i> Client PDF</a>
-                    <a href="{% url 'current_lead_tasks' %}" class="inv-btn-ghost"><i class="fas fa-arrow-left"></i> All Orders</a>
+                    <a href="{% url 'current_lead_tasks' %}" class="inv-btn-ghost" id="invoice-back-link"><i class="fas fa-arrow-left"></i> All Orders</a>
                 </div>
             </div>
         </div>
@@ -311,11 +311,10 @@
                         <p class="inv-card__subtitle">Client payment schedule</p>
                     </div>
                 </div>
-                <a href="{% url 'add_payment' pk=leadid %}" class="inv-btn inv-btn--primary inv-btn--sm"><i class="fas fa-plus"></i> Add Payment</a>
+                <button type="button" class="inv-btn inv-btn--primary inv-btn--sm" id="btnAddPayment"><i class="fas fa-plus"></i> Add Payment</button>
             </div>
             <div class="inv-card__body" style="padding-top:0">
-                {% if lead_task_payments %}
-                <table class="payment-table">
+                <table class="payment-table" id="invoicePaymentsTable" {% if not lead_task_payments %}hidden{% endif %}>
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -324,7 +323,7 @@
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="invoicePaymentsBody">
                     {% for payment in lead_task_payments %}
                     <tr class="{{ payment.is_checked|yesno:'checked,' }}">
                         <td>{{ payment.date|date:"M d, Y" }}</td>
@@ -345,14 +344,12 @@
                     {% endfor %}
                     </tbody>
                 </table>
-                {% else %}
-                <div class="inv-empty">
+                <div class="inv-empty" id="invoicePaymentsEmpty" {% if lead_task_payments %}hidden{% endif %}>
                     <i class="fas fa-wallet"></i>
                     No payments recorded yet.
                     <br><br>
-                    <a href="{% url 'add_payment' pk=leadid %}" class="inv-btn inv-btn--primary inv-btn--sm">Add First Payment</a>
+                    <button type="button" class="inv-btn inv-btn--primary inv-btn--sm" id="btnAddFirstPayment">Add First Payment</button>
                 </div>
-                {% endif %}
             </div>
         </section>
 
@@ -493,6 +490,28 @@
     </div>
 </div>
 
+<!-- Add payment without leaving the invoice -->
+<div id="paymentModal" class="service-edit-modal" aria-hidden="true" style="display:none">
+    <div class="service-edit-modal__overlay" data-close-payment-modal></div>
+    <div class="service-edit-modal__box">
+        <h3 class="service-edit-modal__title"><i class="fas fa-credit-card"></i> Add Payment</h3>
+        <form id="paymentCreateForm" action="{% url 'add_payment' pk=leadid %}">
+            {% csrf_token %}
+            <div class="service-edit-modal__fields">
+                <label for="paymentAmount">Amount</label>
+                <input id="paymentAmount" name="amount" type="number" min="0" step="1" class="form-control" required>
+                <label for="paymentDate">Date</label>
+                <input id="paymentDate" name="date" type="date" class="form-control" required>
+                <p id="paymentCreateError" class="inv-flash inv-flash--error" hidden></p>
+            </div>
+            <div class="service-edit-modal__actions">
+                <button type="submit" class="btn btn--primary"><i class="fas fa-plus"></i> Add Payment</button>
+                <button type="button" class="btn btn--secondary" data-close-payment-modal>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Edit service modals -->
 {% for service in services %}
 <div id="modal-service-{{ service.pk }}" class="service-edit-modal" aria-hidden="true" style="display:none">
@@ -573,6 +592,19 @@
     </div>
 </div>
 
+<div id="leaveModal" class="service-edit-modal" aria-hidden="true" role="dialog" aria-labelledby="leaveModalTitle" style="display:none">
+    <div class="service-edit-modal__overlay" id="leaveModalOverlay"></div>
+    <div class="service-edit-modal__box">
+        <h3 class="service-edit-modal__title" id="leaveModalTitle"><i class="fas fa-exclamation-triangle"></i> Unsaved changes</h3>
+        <p style="margin:0 0 1rem;color:var(--inv-muted);">You have unsaved invoice changes. What would you like to do?</p>
+        <div class="service-edit-modal__actions">
+            <button type="button" class="inv-btn inv-btn--outline" id="leaveModalCancel">Stay on page</button>
+            <button type="button" class="inv-btn inv-btn--danger" id="leaveModalDiscard">Leave without saving</button>
+            <button type="button" class="inv-btn inv-btn--primary" id="leaveModalSave"><i class="fas fa-save"></i> Save and continue</button>
+        </div>
+    </div>
+</div>
+
 <script src="{% static 'JS/passengers-field.js' %}"></script>
 <script>
 /* ── Customer collapse ── */
@@ -648,12 +680,147 @@ function addRow() {
 }
 
 var initialStatus = document.getElementById('id_status') ? document.getElementById('id_status').value : '';
-document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+var invoiceForm = document.getElementById('invoiceForm');
+var invoiceDirty = false;
+var allowNavigation = false;
+var pendingNavigationUrl = null;
+var pendingFormSubmit = null;
+
+function markInvoiceDirty() { invoiceDirty = true; }
+invoiceForm.addEventListener('input', markInvoiceDirty);
+invoiceForm.addEventListener('change', markInvoiceDirty);
+
+function openLeaveModal(url, formToSubmit) {
+    pendingNavigationUrl = url || null;
+    pendingFormSubmit = formToSubmit || null;
+    var modal = document.getElementById('leaveModal');
+    modal.style.display = 'flex';
+    modal.classList.add('service-edit-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLeaveModal() {
+    pendingNavigationUrl = null;
+    pendingFormSubmit = null;
+    var modal = document.getElementById('leaveModal');
+    modal.style.display = 'none';
+    modal.classList.remove('service-edit-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function tryNavigateAway(url, formToSubmit) {
+    if (allowNavigation || !invoiceDirty) {
+        if (formToSubmit) {
+            allowNavigation = true;
+            invoiceDirty = false;
+            formToSubmit.submit();
+        } else if (url) {
+            window.location.href = url;
+        }
+        return;
+    }
+    openLeaveModal(url, formToSubmit);
+}
+
+function setLeaveAfterSave(url) {
+    var inp = document.getElementById('id_leave_after_save');
+    if (!inp) {
+        inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'leave_after_save';
+        inp.id = 'id_leave_after_save';
+        invoiceForm.appendChild(inp);
+    }
+    inp.value = url || '';
+}
+
+function submitInvoiceForm() {
+    allowNavigation = true;
+    invoiceDirty = false;
+    if (invoiceForm.requestSubmit) {
+        invoiceForm.requestSubmit();
+    } else {
+        invoiceForm.submit();
+    }
+}
+
+document.getElementById('leaveModalCancel').addEventListener('click', closeLeaveModal);
+document.getElementById('leaveModalDiscard').addEventListener('click', function() {
+    var url = pendingNavigationUrl;
+    var form = pendingFormSubmit;
+    allowNavigation = true;
+    invoiceDirty = false;
+    closeLeaveModal();
+    if (form) {
+        form.submit();
+    } else if (url) {
+        window.location.href = url;
+    }
+});
+document.getElementById('leaveModalSave').addEventListener('click', function() {
+    var url = pendingNavigationUrl;
+    var form = pendingFormSubmit;
+    closeLeaveModal();
+    if (form) {
+        setLeaveAfterSave(window.location.pathname + window.location.search + '#section-attachments');
+        submitInvoiceForm();
+        return;
+    }
+    setLeaveAfterSave(url);
+    submitInvoiceForm();
+});
+document.getElementById('leaveModalOverlay').addEventListener('click', closeLeaveModal);
+
+var backLink = document.getElementById('invoice-back-link');
+if (backLink) {
+    backLink.addEventListener('click', function(ev) {
+        if (allowNavigation || !invoiceDirty) return;
+        ev.preventDefault();
+        tryNavigateAway(ev.currentTarget.href);
+    });
+}
+
+document.addEventListener('click', function(ev) {
+    if (allowNavigation || !invoiceDirty) return;
+    var link = ev.target.closest('a[href]');
+    if (!link || link.target === '_blank' || link.id === 'invoice-back-link') return;
+    if (link.closest('.service-edit-modal') || link.closest('#paymentModal') || link.closest('#refundModal') || link.closest('#leaveModal')) return;
+    var href = link.getAttribute('href');
+    if (!href || href === '#' || href.indexOf('javascript:') === 0 || href.charAt(0) === '#') return;
+    try {
+        var dest = new URL(link.href, window.location.href);
+        if (dest.origin !== window.location.origin) return;
+        if (dest.pathname === window.location.pathname && dest.search === window.location.search) return;
+    } catch (err) { return; }
+    ev.preventDefault();
+    tryNavigateAway(link.href);
+}, true);
+
+document.querySelectorAll('.attach-upload-form, .inv-hero__action-form').forEach(function(form) {
+    form.addEventListener('submit', function(ev) {
+        if (allowNavigation || !invoiceDirty) return;
+        ev.preventDefault();
+        tryNavigateAway(null, form);
+    });
+});
+
+window.addEventListener('beforeunload', function(e) {
+    if (!invoiceDirty || allowNavigation) return;
+    e.preventDefault();
+    e.returnValue = '';
+});
+
+invoiceForm.addEventListener('submit', function(e) {
     var status = document.getElementById('id_status').value;
     if (status === 'cancelled' && initialStatus !== 'cancelled' && !document.getElementById('refund_amount_hidden').value) {
         e.preventDefault();
         openRefundModal();
         return false;
+    }
+    if (!allowNavigation) {
+        invoiceDirty = false;
     }
 });
 
@@ -682,6 +849,7 @@ function confirmRefundAndSave() {
     document.getElementById('refund_amount_hidden').value = document.getElementById('refund_amount').value;
     document.getElementById('refund_date_hidden').value = document.getElementById('refund_date').value;
     closeRefundModal();
+    invoiceDirty = false;
     document.getElementById('invoiceForm').submit();
 }
 
@@ -816,6 +984,135 @@ document.querySelectorAll('.service-edit-modal__overlay, .btn-close-service-moda
     el.addEventListener('click', function() {
         var modalId = this.getAttribute('data-close-modal');
         if (modalId) closeServiceModal(modalId);
+    });
+});
+
+/* Save service edits in place so unsaved invoice fields are not lost. */
+document.querySelectorAll('.service-edit-modal__form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var modal = form.closest('.service-edit-modal');
+        var sid = modal.id.replace('modal-service-', '');
+        var submit = form.querySelector('[type="submit"]');
+        submit.disabled = true;
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new FormData(form)
+        })
+        .then(function(r) {
+            return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+        })
+        .then(function(res) {
+            if (!res.ok || res.data.status !== 'success') {
+                throw new Error('Could not save this service. Check the fields and try again.');
+            }
+            var s = res.data.service;
+            var row = document.querySelector('.service-view-row[data-service-id="' + sid + '"]');
+            var fields = {
+                service_name: s.service_name,
+                details: s.details,
+                net: s.net,
+                issue_price: s.issue_price,
+                selling: s.selling,
+                due_time: s.due_time,
+                voucher_id: s.voucher_id,
+                is_checked: s.is_checked ? 'on' : '',
+                send_to_client: s.send_to_client ? 'on' : ''
+            };
+            Object.keys(fields).forEach(function(name) {
+                var hidden = document.querySelector(
+                    'input[name="service_' + sid + '_' + name + '"][data-service-inputs="view"]'
+                );
+                if (hidden) hidden.value = fields[name] || '';
+            });
+            var supplier = document.querySelector(
+                'select[name="service_' + sid + '_supplier"][data-service-inputs="view"]'
+            );
+            if (supplier) {
+                appendSupplierToSelects(s.supplier);
+                supplier.value = s.supplier;
+            }
+            if (row) {
+                row.querySelector('.service-name strong').textContent = s.service_name || '—';
+                row.querySelector('.service-details-truncate').textContent = s.details || '—';
+                row.querySelector('.service-net').textContent = s.net || '—';
+                row.querySelector('.service-issue-price').textContent = s.issue_price || '—';
+                row.querySelector('.service-selling').textContent = s.selling || '—';
+                row.querySelector('.service-due-time').textContent = s.due_time || '—';
+                row.querySelector('.service-voucher').textContent = s.voucher_id || '—';
+                var sent = row.querySelector('.service-send-to-client-cb');
+                var issued = row.querySelector('.service-is-checked-cb');
+                if (sent) sent.checked = s.send_to_client;
+                if (issued) issued.checked = s.is_checked;
+                row.classList.toggle('checked', s.is_checked);
+            }
+            closeServiceModal(modal.id);
+            recalcProfit();
+        })
+        .catch(function(err) { window.alert(err.message); })
+        .finally(function() { submit.disabled = false; });
+    });
+});
+
+/* Add payments in a modal without navigating away from unsaved invoice work. */
+var paymentModal = document.getElementById('paymentModal');
+function openPaymentModal() {
+    paymentModal.style.display = 'flex';
+    paymentModal.classList.add('service-edit-modal--open');
+    paymentModal.setAttribute('aria-hidden', 'false');
+    document.getElementById('paymentAmount').focus();
+}
+function closePaymentModal() {
+    paymentModal.style.display = 'none';
+    paymentModal.classList.remove('service-edit-modal--open');
+    paymentModal.setAttribute('aria-hidden', 'true');
+}
+['btnAddPayment', 'btnAddFirstPayment'].forEach(function(id) {
+    var button = document.getElementById(id);
+    if (button) button.addEventListener('click', openPaymentModal);
+});
+document.querySelectorAll('[data-close-payment-modal]').forEach(function(el) {
+    el.addEventListener('click', closePaymentModal);
+});
+document.getElementById('paymentCreateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var form = this;
+    var error = document.getElementById('paymentCreateError');
+    error.hidden = true;
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new FormData(form)
+    })
+    .then(function(r) {
+        return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+    })
+    .then(function(res) {
+        if (!res.ok || res.data.status !== 'success') throw new Error('Could not add payment.');
+        var p = res.data.payment;
+        var row = document.createElement('tr');
+        row.innerHTML =
+            '<td>' + p.date + '</td>' +
+            '<td class="payment-amount">$' + p.amount + '</td>' +
+            '<td><span class="inv-toggle"><input type="checkbox" disabled>' +
+            '<span class="inv-toggle__slider"></span></span></td>' +
+            '<td><span class="inv-flash inv-flash--success">Added</span></td>';
+        document.getElementById('invoicePaymentsBody').appendChild(row);
+        document.getElementById('invoicePaymentsTable').hidden = false;
+        document.getElementById('invoicePaymentsEmpty').hidden = true;
+        form.reset();
+        closePaymentModal();
+    })
+    .catch(function(err) {
+        error.textContent = err.message;
+        error.hidden = false;
     });
 });
 

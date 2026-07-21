@@ -58,6 +58,7 @@ class LeadTask(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     passport_expiry_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.lead.name

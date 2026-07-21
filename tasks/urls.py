@@ -21,6 +21,7 @@ urlpatterns = [
     path('services/update/<int:pk>/', views.update_service, name='update_service'),
     path('payments/delete/<int:pk>/', views.delete_payment, name='delete_payment'),
     path('payments/update/<int:pk>/', views.update_payment, name='update_payment'),
+    path('orders/analytics/', views.order_analytics, name='order_analytics'),
     path('leads/current/', views.current_leadtasks, name='current_lead_tasks'),
     path('leads/done/', views.done_leadtasks, name='doneLeadTask'),
     path('leads/edit/<int:pk>/', views.edit_lead_task, name='edit_lead_tasks'),

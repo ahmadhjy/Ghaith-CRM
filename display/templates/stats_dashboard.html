@@ -2,157 +2,127 @@
 <html lang="en">
 <head>
     {% include 'shared/app_head.html' %}
-    <title>Ghaith Dashboard</title>
+    {% load static %}
+    <title>Performance Dashboard — Ghaith CRM</title>
+    <link rel="stylesheet" href="{% static 'css/stats_dashboard.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="has-unified-nav req-page">
 {% include 'navbar.html' %}
-<div class="req-wrap">
+<div class="req-wrap stats-modern">
     <header class="req-hero">
         <div class="req-hero__bg"></div>
         <div class="req-hero__content">
             <div class="req-hero__eyebrow">Analytics</div>
-            <h1 class="req-hero__title">Ghaith Dashboard</h1>
-            <p class="req-hero__sub">Team performance, targets &amp; travel insights.</p>
+            <h1 class="req-hero__title">{% if can_view_team %}Team{% else %}My{% endif %} Performance</h1>
+            <p class="req-hero__sub">Sold-invoice profit, targets and lead activity for {{ period_label }}.</p>
         </div>
     </header>
 
-    <div class="section">
-        <h3 class="section-title">Ghaith Leads: All Time Overview</h3>
-        <canvas id="leadsCountChart"></canvas>
-    </div>
-
-    <div class="section">
-        <h3 class="section-title">Travel Performance — {{ current_year }}</h3>
-        <canvas id="generalStatsChart"></canvas>
-    </div>
-
-    <div class="section dash-target-section">
-        <div class="dash-target-header">
-            <h3 class="section-title">Monthly Target — {{ selected_month }}</h3>
-            <form method="get" action="{% url 'stats_dashboard' %}" class="dash-target-filters">
-                <label class="dash-target-filters__label" for="month">Month</label>
-                <select name="month" id="month" class="dash-target-filters__select">
-                    {% for month in month_list %}
-                    <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="req-btn req-btn--primary req-btn--sm">Apply</button>
-            </form>
+    <form method="get" class="stats-filter-bar">
+        <div class="req-field">
+            <label for="date_from">Modified from</label>
+            <input type="date" id="date_from" name="date_from" value="{{ date_from }}">
         </div>
-
-        <div class="dash-target-stats">
-            <div class="dash-target-stat">
-                <span class="dash-target-stat__label">Achieved profit</span>
-                <span class="dash-target-stat__value">${{ achieved_profit|floatformat:0 }}</span>
-            </div>
-            <div class="dash-target-stat">
-                <span class="dash-target-stat__label">Monthly target</span>
-                <span class="dash-target-stat__value">${{ monthly_target|floatformat:0 }}</span>
-            </div>
-            <div class="dash-target-stat dash-target-stat--accent">
-                <span class="dash-target-stat__label">Progress</span>
-                <span class="dash-target-stat__value">{{ progress_percentage|floatformat:1 }}%</span>
-            </div>
+        <div class="req-field">
+            <label for="date_to">Modified to</label>
+            <input type="date" id="date_to" name="date_to" value="{{ date_to }}">
         </div>
+        <button class="req-btn req-btn--primary" type="submit"><i class="fas fa-filter"></i> Apply period</button>
+    </form>
 
-        <div class="dash-target-progress" role="group" aria-label="Monthly target progress">
-            <div class="dash-target-progress__track">
-                <div class="dash-target-progress__fill" style="width: {{ progress_display }}%;" aria-hidden="true"></div>
-            </div>
-            <p class="dash-target-progress__meta">
-                {% if monthly_target %}
-                <strong>{{ progress_percentage|floatformat:1 }}%</strong> of ${{ monthly_target|floatformat:0 }} target
-                {% if progress_percentage >= 100 %}<span class="dash-target-progress__badge">Target reached</span>{% endif %}
-                {% else %}
-                No monthly target set for {{ selected_month }}.
-                {% endif %}
-            </p>
+    <section class="stats-kpis">
+        <article class="stats-kpi"><span>Modified leads</span><strong>{{ modified_leads }}</strong><small>Within selected period</small></article>
+        <article class="stats-kpi stats-kpi--teal"><span>Sold invoices</span><strong>{{ sold_orders }}</strong><small>Assigned invoices marked sold</small></article>
+        <article class="stats-kpi stats-kpi--blue"><span>Invoice revenue</span><strong>${{ period_revenue|floatformat:2 }}</strong><small>Lead invoice selling totals</small></article>
+        <article class="stats-kpi stats-kpi--profit"><span>Booking-net profit</span><strong>${{ achieved_profit|floatformat:2 }}</strong><small>Selling − service net</small></article>
+    </section>
+
+    <section class="stats-target-card">
+        <div>
+            <span class="stats-target-card__eyebrow">{% if can_view_team %}Team{% else %}Personal{% endif %} target</span>
+            <h2>${{ achieved_profit|floatformat:0 }} <small>of ${{ monthly_target|floatformat:0 }}</small></h2>
         </div>
-    </div>
+        <strong>{{ progress_percentage|floatformat:1 }}%</strong>
+        <div class="stats-target-track"><i style="width:{{ progress_display }}%"></i></div>
+    </section>
 
-    <div class="section">
-        <h3 class="section-title">Employee Stats — {{ selected_month }}</h3>
+    {{ chart_data|json_script:"stats-chart-data" }}
+    <section class="stats-chart-grid">
+        <article class="stats-chart-card stats-chart-card--wide">
+            <div><h2>Profit and revenue trend</h2><p>Sold invoices by modified date</p></div>
+            <canvas id="profitTrend"></canvas>
+        </article>
+        <article class="stats-chart-card">
+            <div><h2>Lead outcomes</h2><p>Selected period</p></div>
+            <canvas id="leadOutcomes"></canvas>
+        </article>
+        <article class="stats-chart-card{% if not can_view_team %} stats-chart-card--wide{% endif %}">
+            <div><h2>{% if can_view_team %}Employee profit vs target{% else %}My profit vs target{% endif %}</h2><p>Invoice assignment drives ownership</p></div>
+            <canvas id="employeePerformance"></canvas>
+        </article>
+        <article class="stats-chart-card">
+            <div><h2>Top destinations</h2><p>Modified leads</p></div>
+            <canvas id="destinations"></canvas>
+        </article>
+    </section>
+
+    <section class="section stats-table-card">
+        <h2>{% if can_view_team %}Employee{% else %}My{% endif %} breakdown</h2>
         <div class="req-table-wrap">
-            <table class="req-table table table-striped">
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Sold / Modified</th>
-                        <th>% Team Sales</th>
-                        <th>Leads Taken</th>
-                        <th>Target</th>
-                        <th>Sent Offers</th>
-                        <th>Sold Offers</th>
-                    </tr>
-                </thead>
+            <table class="req-table">
+                <thead><tr><th>Employee</th><th>Modified leads</th><th>Sold invoices</th><th>Revenue</th><th>Profit</th><th>Target</th><th>Progress</th><th>Offers sent / sold</th></tr></thead>
                 <tbody>
-                    {% for stat in employee_stats|dictsortreversed:"percentage_of_total_team_sales" %}
-                    <tr>
-                        <td data-label="Employee">{{ stat.employee }}{% if forloop.first %} <i class="fas fa-crown" style="color:#d97706"></i>{% endif %}</td>
-                        <td data-label="Sold / Modified">{{ stat.percentage_sold_over_modified|floatformat:2 }}%</td>
-                        <td data-label="% Team">{{ stat.percentage_of_total_team_sales|floatformat:2 }}%</td>
-                        <td data-label="Taken">{{ stat.overtaken_leads }}</td>
-                        <td data-label="Target">{% if stat.user_progress_percentage == 'NA' %}NA{% else %}{{ stat.user_progress_percentage|floatformat:2 }}%{% endif %}</td>
-                        <td data-label="Sent">{{ stat.sent_offers }}</td>
-                        <td data-label="Sold">{{ stat.sold_offers }}</td>
-                    </tr>
-                    {% endfor %}
+                {% for stat in employee_stats %}
+                <tr>
+                    <td>{{ stat.employee.get_full_name|default:stat.employee.username }}</td>
+                    <td>{{ stat.modified_leads }}</td>
+                    <td>{{ stat.sales }}</td>
+                    <td>${{ stat.revenue|floatformat:2 }}</td>
+                    <td>${{ stat.profit|floatformat:2 }}</td>
+                    <td>${{ stat.target|floatformat:0 }}</td>
+                    <td>{{ stat.target_progress|floatformat:1 }}%</td>
+                    <td>{{ stat.sent_offers }} / {{ stat.sold_offers }}</td>
+                </tr>
+                {% empty %}<tr><td colspan="8">No employee activity in this period.</td></tr>{% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
-
-    <div class="section">
-        <h3 class="section-title">Top Destinations — {{ selected_month }}</h3>
-        <div class="req-table-wrap">
-            <table class="req-table table">
-                <thead>
-                    <tr><th>Destination</th><th>Requests</th><th>Conversion</th></tr>
-                </thead>
-                <tbody>
-                    {% for destination in top_destinations %}
-                    <tr>
-                        <td data-label="Destination">{{ destination.destination }}</td>
-                        <td data-label="Requests">{{ destination.destination_count }}</td>
-                        <td data-label="Conversion">{{ destination.conversion_rate|floatformat:2 }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+    </section>
 </div>
-
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    new Chart(document.getElementById('leadsCountChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ status_labels|safe }},
-            datasets: [{
-                label: 'Leads Count',
-                data: {{ status_counts|safe }},
-                backgroundColor: 'rgba(15, 76, 129, 0.5)',
-                borderColor: 'rgba(15, 76, 129, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+(function () {
+    const data = JSON.parse(document.getElementById('stats-chart-data').textContent);
+    Chart.defaults.color = '#526579';
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    const grid = { color: 'rgba(148,163,184,.16)' };
+    new Chart(document.getElementById('profitTrend'), {
+        type: 'line',
+        data: { labels: data.trend_labels, datasets: [
+            { label: 'Revenue', data: data.revenue, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .38 },
+            { label: 'Profit', data: data.profit, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.10)', fill: true, tension: .38 }
+        ]},
+        options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, scales:{x:{grid},y:{grid,beginAtZero:true}} }
     });
-    new Chart(document.getElementById('generalStatsChart'), {
-        type: 'bar',
-        data: {
-            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-            datasets: [
-                { label: 'Sold over Modified', data: {{ sold_over_modified|safe }}, backgroundColor: 'rgba(13,148,136,0.4)', borderColor: '#0d9488', borderWidth: 1 },
-                { label: 'Sold over Negotiation', data: {{ sold_over_negotiation|safe }}, backgroundColor: 'rgba(124,58,237,0.4)', borderColor: '#7c3aed', borderWidth: 1 },
-                { label: 'Unqualified over Modified', data: {{ unqualified_over_modified|safe }}, backgroundColor: 'rgba(220,38,38,0.3)', borderColor: '#dc2626', borderWidth: 1 }
-            ]
-        },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    new Chart(document.getElementById('leadOutcomes'), {
+        type: 'doughnut',
+        data: { labels:data.status_labels, datasets:[{data:data.status_values, backgroundColor:['#10b981','#f43f5e','#f59e0b','#3b82f6'], borderWidth:0}] },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom'}} }
     });
-});
+    new Chart(document.getElementById('employeePerformance'), {
+        type: 'bar',
+        data: { labels:data.employee_labels, datasets:[
+            {label:'Profit',data:data.employee_profit,backgroundColor:'#0f766e',borderRadius:8},
+            {label:'Target',data:data.employee_target,backgroundColor:'#bfdbfe',borderRadius:8}
+        ]},
+        options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', scales:{x:{grid,beginAtZero:true},y:{grid:{display:false}}} }
+    });
+    new Chart(document.getElementById('destinations'), {
+        type: 'polarArea',
+        data: { labels:data.destination_labels, datasets:[{data:data.destination_values,backgroundColor:['#2563ebaa','#0d9488aa','#7c3aedaa','#ea580caa','#0891b2aa','#db2777aa','#65a30daa','#475569aa'],borderWidth:0}] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{r:{ticks:{display:false},grid}} }
+    });
+})();
 </script>
 </body>
 </html>

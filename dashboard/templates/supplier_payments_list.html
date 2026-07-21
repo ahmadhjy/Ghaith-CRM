@@ -118,6 +118,7 @@
                     <th>Due date</th>
                     <th>Order</th>
                     <th class="list-table__th-mark-paid">Issue</th>
+                    <th class="list-table__th-mark-paid">Paid</th>
                 </tr>
             </thead>
             <tbody>
@@ -148,10 +149,23 @@
                             </label>
                         </form>
                     </td>
+                    <td data-label="Paid" class="list-table__td-mark-paid">
+                        {% if service.is_checked %}
+                        <form method="post" action="{% url 'mark_service_processed' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
+                            {% csrf_token %}
+                            <label class="inv-toggle">
+                                <input type="checkbox" name="processed" value="on" onchange="this.form.submit();" {% if service.processed %}checked{% endif %}>
+                                <span class="inv-toggle__slider"></span>
+                            </label>
+                        </form>
+                        {% else %}
+                        <span title="Issue the service before marking it paid">—</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="list-table__empty">No purchases found.</td>
+                    <td colspan="9" class="list-table__empty">No purchases found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

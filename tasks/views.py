@@ -13,6 +13,7 @@ from .forms import (
 )
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseRedirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.forms import inlineformset_factory, formset_factory
 from django.utils.dateparse import parse_datetime
 from django.db.models import Q
@@ -196,6 +197,25 @@ def update_service(request, pk):
         if form.is_valid():
             saved = form.save()
             sync_service_event(saved)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'success',
+                    'service': {
+                        'id': saved.pk,
+                        'service_name': saved.service_name,
+                        'supplier': saved.supplier,
+                        'details': saved.details,
+                        'net': saved.net,
+                        'issue_price': saved.issue_price,
+                        'selling': saved.selling,
+                        'due_time': saved.due_time.strftime('%Y-%m-%dT%H:%M') if saved.due_time else '',
+                        'voucher_id': saved.voucher_id,
+                        'is_checked': saved.is_checked,
+                        'send_to_client': saved.send_to_client,
+                    },
+                })
+        elif request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
         # Always redirect back; checkbox can be toggled via AJAX elsewhere
         return redirect('edit_lead_tasks', pk=leadtask_id)
     # GET: show edit form (handled by inline edit on page)
@@ -407,8 +427,10 @@ def purchased_services(request):
 @require_POST
 def mark_service_processed(request, pk):
     service = get_object_or_404(Service, pk=pk)
-    service.processed = True
-    service.save()
+    service.processed = (
+        service.is_checked and request.POST.get('processed') == 'on'
+    )
+    service.save(update_fields=['processed'])
     next_url = request.GET.get('next')
     if next_url:
         return redirect(next_url)
@@ -418,10 +440,12 @@ def mark_service_processed(request, pk):
 @login_required(login_url='/login/')
 @require_POST
 def service_mark_done(request, pk):
-    """Toggle service paid status and sync linked calendar event. Redirect to next or supplier list."""
+    """Toggle issued status and sync the linked calendar event."""
     service = get_object_or_404(Service, pk=pk)
     service.is_checked = request.POST.get('is_checked') == 'on'
-    service.save()
+    if not service.is_checked:
+        service.processed = False
+    service.save(update_fields=['is_checked', 'processed'])
     try:
         event = service.calendar_event
         event.done = service.is_checked
@@ -432,6 +456,17 @@ def service_mark_done(request, pk):
     if next_url:
         return redirect(next_url)
     return redirect('supplier_payments_list')
+
+
+def _redirect_after_leadtask_save(request, pk):
+    dest = (request.POST.get("leave_after_save") or "").strip()
+    if dest and url_has_allowed_host_and_scheme(
+        dest,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(dest)
+    return redirect('edit_lead_tasks', pk)
 
 
 @login_required(login_url="/login/")
@@ -446,7 +481,7 @@ def edit_lead_task(request, pk):
         if updated:
             from .invoice_save import sync_accounting_after_crm_invoice_save
             sync_accounting_after_crm_invoice_save(updated)
-            return redirect('edit_lead_tasks', pk)
+            return _redirect_after_leadtask_save(request, pk)
     else:
         form = LeadTaskForm(instance=instance)
 
@@ -599,6 +634,20 @@ def generate_client_pdf(request, pk):
 
 
 @login_required(login_url="/login/")
+def order_analytics(request):
+    """Admin-only financial and payment analytics for CRM orders."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Admins only.", status=403)
+    from .order_analytics import build_order_analytics_context
+
+    return render(
+        request,
+        "order_analytics.html",
+        build_order_analytics_context(request.GET),
+    )
+
+
+@login_required(login_url="/login/")
 def current_leadtasks(request):
     status_choices = LeadTask.STATUS_CHOICES
     selected_status = request.GET.get('status', 'default')
@@ -669,7 +718,19 @@ def add_payment(request, pk):
             payment.leadtask = leadtask
             payment.save()
             sync_payment_event(payment)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'success',
+                    'payment': {
+                        'id': payment.pk,
+                        'amount': payment.amount,
+                        'date': payment.date.strftime('%Y-%m-%d'),
+                        'is_checked': payment.is_checked,
+                    },
+                })
             return redirect("edit_lead_tasks", pk=pk)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
     else:
         form = PaymentForm()
     return render(request, 'add_payment.html', {'form': form})

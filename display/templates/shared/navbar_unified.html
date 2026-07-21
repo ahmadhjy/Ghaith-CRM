@@ -64,6 +64,9 @@
       <a href="{% url 'travellers_list' %}">Travellers</a>
       <a href="{% url 'supplier_payments_list' %}">Purchases</a>
       <a href="{% url 'client_payments_list' %}">Client Payments</a>
+      {% if user.is_staff %}
+      <a href="{% url 'order_analytics' %}">Order Analytics</a>
+      {% endif %}
     </details>
 
     <div class="app-nav__section-label">Tools</div>
