@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ supplier_name }} · Services{% endblock %}
+
+{% block hero %}
+<header class="req-hero">
+    <div class="req-hero__bg"></div>
+    <div class="req-hero__content">
+        <div class="req-hero__eyebrow">Order Analytics · Supplier</div>
+        <h1 class="req-hero__title">{{ supplier_name }}</h1>
+        <p class="req-hero__sub">
+            Service details
+            {% if sold_from or sold_to %}
+            for invoices sold
+            {% if sold_from %}from <strong>{{ sold_from }}</strong>{% endif %}
+            {% if sold_to %}to <strong>{{ sold_to }}</strong>{% endif %}
+            {% endif %}
+        </p>
+        <div class="req-hero__footer">
+            <div class="req-hero__actions">
+                <a href="{% url 'order_analytics' %}?date_from={{ sold_from }}&date_to={{ sold_to }}" class="req-btn-ghost"><i class="fas fa-arrow-left"></i> Back to analytics</a>
+                <a href="{% url 'current_lead_tasks' %}?status=all&supplier={{ supplier_key|urlencode }}{% if sold_from %}&sold_from={{ sold_from }}{% endif %}{% if sold_to %}&sold_to={{ sold_to }}{% endif %}" class="req-btn-ghost"><i class="fas fa-file-invoice"></i> View invoices</a>
+            </div>
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/stats_dashboard.css' %}">
+<div class="list-page list-page--supplier">
+
+    <section class="stats-kpis" style="margin-bottom:16px">
+        <article class="stats-kpi"><span>Services shown</span><strong>{{ filtered_count }}</strong><small>After current filters</small></article>
+        <article class="stats-kpi stats-kpi--blue"><span>Filtered total</span><strong>${{ filtered_total|floatformat:2 }}</strong><small>Issue price when set, else net</small></article>
+        <article class="stats-kpi stats-kpi--teal"><span>Paid to supplier</span><strong>${{ payment_stats.paid_amount|floatformat:2 }}</strong><small>{{ payment_stats.paid_count }} issued &amp; paid</small></article>
+        <article class="stats-kpi stats-kpi--profit"><span>Outstanding to pay</span><strong>${{ payment_stats.outstanding_amount|floatformat:2 }}</strong><small>{{ payment_stats.outstanding_count }} issued &amp; unpaid</small></article>
+    </section>
+
+    <section class="section stats-table-card" style="margin-bottom:16px">
+        <h2>By service type</h2>
+        <p style="margin:0 0 12px;color:#64748b;font-size:.85rem">Upcoming = not issued yet. Issued = purchased from supplier.</p>
+        <div class="req-table-wrap">
+            <table class="req-table">
+                <thead>
+                    <tr>
+                        <th>Service type</th>
+                        <th>Total</th>
+                        <th>Upcoming</th>
+                        <th>Issued</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in service_type_stats %}
+                    <tr>
+                        <td>{{ row.name }}</td>
+                        <td>{{ row.total }}</td>
+                        <td>{{ row.upcoming }}</td>
+                        <td>{{ row.issued }}</td>
+                        <td>${{ row.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No services match these filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="list-page__filters purchases-filters">
+        <form method="GET" action="{% url 'supplier_services_detail' %}" class="purchases-filters__form">
+            <input type="hidden" name="supplier" value="{{ supplier_key }}">
+            {% if sold_from %}<input type="hidden" name="sold_from" value="{{ sold_from }}">{% endif %}
+            {% if sold_to %}<input type="hidden" name="sold_to" value="{{ sold_to }}">{% endif %}
+
+            {% if issued_count or overdue_count or base_payment_stats.outstanding_count or base_payment_stats.paid_count %}
+            <div class="purchases-filters__shortcuts">
+                <span class="purchases-filters__shortcuts-label">Quick filters</span>
+                <div class="purchases-filters__shortcuts-pills">
+                    {% if issued_count %}
+                    <a href="?supplier={{ supplier_key|urlencode }}&sold_from={{ sold_from }}&sold_to={{ sold_to }}&issued=issued{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--success btn--filter-pill {% if issued_filter == 'issued' %}is-active{% endif %}">{{ issued_count }} Issued</a>
+                    {% endif %}
+                    {% if overdue_count %}
+                    <a href="?supplier={{ supplier_key|urlencode }}&sold_from={{ sold_from }}&sold_to={{ sold_to }}&overdue=on{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--danger btn--filter-pill {% if overdue_filter %}is-active{% endif %}">{{ overdue_count }} Overdue{{ overdue_count|pluralize }}</a>
+                    {% endif %}
+                    {% if base_payment_stats.outstanding_count %}
+                    <a href="?supplier={{ supplier_key|urlencode }}&sold_from={{ sold_from }}&sold_to={{ sold_to }}&paid_status=outstanding{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--warning btn--filter-pill {% if paid_filter == 'outstanding' %}is-active{% endif %}">{{ base_payment_stats.outstanding_count }} Outstanding</a>
+                    {% endif %}
+                    {% if base_payment_stats.paid_count %}
+                    <a href="?supplier={{ supplier_key|urlencode }}&sold_from={{ sold_from }}&sold_to={{ sold_to }}&paid_status=paid{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--filter-pill {% if paid_filter == 'paid' %}is-active{% endif %}">{{ base_payment_stats.paid_count }} Paid</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="purchases-filters__panel">
+                <div class="purchases-filters__grid">
+                    <div class="purchases-filters__field">
+                        <label for="due_from">Due from</label>
+                        <input type="date" name="due_from" id="due_from" value="{{ due_from }}" class="purchases-filters__input">
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="due_to">Due to</label>
+                        <input type="date" name="due_to" id="due_to" value="{{ due_to }}" class="purchases-filters__input">
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="travel_from">Travel from</label>
+                        <input type="date" name="travel_from" id="travel_from" value="{{ travel_from }}" class="purchases-filters__input">
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="travel_to">Travel to</label>
+                        <input type="date" name="travel_to" id="travel_to" value="{{ travel_to }}" class="purchases-filters__input">
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="issued">Issued</label>
+                        <select name="issued" id="issued" class="purchases-filters__select">
+                            <option value="">All</option>
+                            <option value="issued" {% if issued_filter == 'issued' %}selected{% endif %}>Issued only</option>
+                            <option value="unissued" {% if issued_filter == 'unissued' %}selected{% endif %}>Unissued only</option>
+                        </select>
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="paid_status">Paid status</label>
+                        <select name="paid_status" id="paid_status" class="purchases-filters__select">
+                            <option value="">All</option>
+                            <option value="outstanding" {% if paid_filter == 'outstanding' %}selected{% endif %}>Outstanding (issued, unpaid)</option>
+                            <option value="paid" {% if paid_filter == 'paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+                    <div class="purchases-filters__field">
+                        <label for="sort">Sort by</label>
+                        <select name="sort" id="sort" class="purchases-filters__select">
+                            {% for value, label in sort_choices %}
+                            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="purchases-filters__field purchases-filters__field--wide">
+                        <label for="service">Service type</label>
+                        <select name="service" id="service" class="purchases-filters__select">
+                            <option value="">All services</option>
+                            {% for value, label in service_filter_options %}
+                            <option value="{{ value }}" {% if service_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="purchases-filters__toolbar">
+                    <label class="purchases-filters__option">
+                        <input type="checkbox" name="show_cancelled" {% if show_cancelled %}checked{% endif %}>
+                        <span>Show cancelled orders</span>
+                    </label>
+                    <div class="purchases-filters__actions">
+                        <button type="submit" class="req-btn req-btn--primary req-btn--sm"><i class="fas fa-filter"></i> Apply filters</button>
+                        <a href="{% url 'supplier_services_detail' %}?{{ reset_query }}" class="req-btn req-btn--ghost-dark req-btn--sm">Reset filters</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="filtered-table-total" aria-label="Filtered supplier services total">
+        <div>
+            <span class="filtered-table-total__label">Displayed services</span>
+            <strong>{{ filtered_count }} service{{ filtered_count|pluralize }}</strong>
+        </div>
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">Filtered total</span>
+            <strong>${{ filtered_total|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
+        <table class="list-table list-table--supplier">
+            <thead>
+                <tr>
+                    <th>Supplier</th>
+                    <th>Service</th>
+                    <th>Lead name</th>
+                    <th>Travel date</th>
+                    <th>Amount</th>
+                    <th>Due date</th>
+                    <th>Order</th>
+                    <th class="list-table__th-mark-paid">Issue</th>
+                    <th class="list-table__th-mark-paid">Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for service in services %}
+                <tr class="list-table__row {% if service.is_checked %}list-table__row--done{% elif service.due_time and service.due_time < now %}list-table__row--overdue{% endif %}">
+                    <td data-label="Supplier">{{ service.supplier|default:"—" }}</td>
+                    <td data-label="Service">{{ service.service_name|default:"—" }}</td>
+                    <td data-label="Lead name">{{ service.leadtask.lead.name }}</td>
+                    <td data-label="Travel date">
+                        {% if service.leadtask.travel_date %}{{ service.leadtask.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}
+                    </td>
+                    <td data-label="Amount">{{ service.issue_price|default:service.net|default:"—" }}</td>
+                    <td data-label="Due date">
+                        {% if service.due_time %}{{ service.due_time|date:"Y-m-d" }}{% else %}—{% endif %}
+                        {% if not service.is_checked and service.due_time and service.due_time < now %}
+                        <span class="list-table__overdue-badge">Overdue</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Order">
+                        <a href="{% url 'edit_lead_tasks' service.leadtask_id %}" class="list-table__link">#{{ service.leadtask_id }}</a>
+                    </td>
+                    <td data-label="Issue" class="list-table__td-mark-paid">
+                        <form method="post" action="{% url 'service_mark_done' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
+                            {% csrf_token %}
+                            <label class="inv-toggle">
+                                <input type="checkbox" name="is_checked" value="on" onchange="this.form.submit();" {% if service.is_checked %}checked{% endif %}>
+                                <span class="inv-toggle__slider"></span>
+                            </label>
+                        </form>
+                    </td>
+                    <td data-label="Paid" class="list-table__td-mark-paid">
+                        {% if service.is_checked %}
+                        <form method="post" action="{% url 'mark_service_processed' service.pk %}?next={{ request.get_full_path|urlencode }}" class="list-table__inline-form">
+                            {% csrf_token %}
+                            <label class="inv-toggle">
+                                <input type="checkbox" name="processed" value="on" onchange="this.form.submit();" {% if service.processed %}checked{% endif %}>
+                                <span class="inv-toggle__slider"></span>
+                            </label>
+                        </form>
+                        {% else %}
+                        <span title="Issue the service before marking it paid">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="list-table__empty">No services found for this supplier with the current filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

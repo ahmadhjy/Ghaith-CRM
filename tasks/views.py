@@ -652,6 +652,25 @@ def order_analytics(request):
     )
 
 
+@login_required(login_url="/login/")
+def supplier_services_detail(request):
+    """Supplier services drill-down from Order Analytics (same access gate)."""
+    from display.permissions import user_can_view_management_dashboards
+
+    if not user_can_view_management_dashboards(request.user):
+        return HttpResponse(
+            "Access restricted. This dashboard is available only to authorized users.",
+            status=403,
+        )
+    from .supplier_services import build_supplier_services_context
+
+    return render(
+        request,
+        "supplier_services_detail.html",
+        build_supplier_services_context(request.GET, user=request.user),
+    )
+
+
 def _parse_filter_date(value):
     try:
         return datetime.strptime((value or '').strip(), '%Y-%m-%d').date()

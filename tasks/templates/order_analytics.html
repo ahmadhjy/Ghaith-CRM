@@ -53,10 +53,10 @@
 
     <section class="section stats-table-card">
         <h2>Supplier breakdown</h2>
-        <p style="margin:4px 0 10px;color:#64748b;font-size:.85rem"><i class="fas fa-hand-pointer"></i> Double-click a supplier row to open its invoices for this period.</p>
+        <p style="margin:4px 0 10px;color:#64748b;font-size:.85rem"><i class="fas fa-hand-pointer"></i> Double-click a supplier to choose View invoices or View services.</p>
         <div class="req-table-wrap"><table class="req-table">
-            <thead><tr><th>Supplier</th><th>Lines</th><th>Original net</th><th>Issued cost</th></tr></thead>
-            <tbody>{% for row in supplier_rows %}<tr class="supplier-drill-row" style="cursor:pointer" title="Double-click to see these invoices" ondblclick="window.location.href='{% url 'current_lead_tasks' %}?status=all&supplier={{ row.link_value|urlencode }}&sold_from={{ date_from }}&sold_to={{ date_to }}'"><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
+            <thead><tr><th>Supplier</th><th>Services</th><th>Original net</th><th>Issued cost</th></tr></thead>
+            <tbody>{% for row in supplier_rows %}<tr class="supplier-drill-row" style="cursor:pointer" title="Double-click for options" data-supplier="{{ row.link_value }}" data-name="{{ row.name }}" ondblclick="openSupplierChoice(this)"><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
         </table></div>
     </section>
 
@@ -73,6 +73,21 @@
         </table></div>
     </section>
 </div>
+
+<div id="supplierChoiceModal" class="supplier-choice-modal" aria-hidden="true" style="display:none">
+    <div class="supplier-choice-modal__overlay" onclick="closeSupplierChoice()"></div>
+    <div class="supplier-choice-modal__box" role="dialog" aria-labelledby="supplierChoiceTitle">
+        <h3 id="supplierChoiceTitle">Open supplier</h3>
+        <p id="supplierChoiceName" class="supplier-choice-modal__name"></p>
+        <p class="supplier-choice-modal__hint">Choose what you want to open for the selected sold period.</p>
+        <div class="supplier-choice-modal__actions">
+            <a id="supplierChoiceInvoices" class="req-btn req-btn--primary" href="#"><i class="fas fa-file-invoice"></i> View invoices</a>
+            <a id="supplierChoiceServices" class="req-btn req-btn--outline" href="#"><i class="fas fa-concierge-bell"></i> View services</a>
+            <button type="button" class="req-btn req-btn--ghost-dark" onclick="closeSupplierChoice()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     const d = JSON.parse(document.getElementById('order-chart-data').textContent);
@@ -86,6 +101,58 @@
         options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.16)'}},y:{grid:{display:false}}}}
     });
 })();
+
+var ANALYTICS_SOLD_FROM = "{{ date_from }}";
+var ANALYTICS_SOLD_TO = "{{ date_to }}";
+var ORDERS_URL = "{% url 'current_lead_tasks' %}";
+var SERVICES_URL = "{% url 'supplier_services_detail' %}";
+
+function openSupplierChoice(row) {
+    var supplier = row.getAttribute('data-supplier') || 'none';
+    var name = row.getAttribute('data-name') || supplier;
+    var qs = 'supplier=' + encodeURIComponent(supplier)
+        + '&sold_from=' + encodeURIComponent(ANALYTICS_SOLD_FROM)
+        + '&sold_to=' + encodeURIComponent(ANALYTICS_SOLD_TO);
+    document.getElementById('supplierChoiceName').textContent = name;
+    document.getElementById('supplierChoiceInvoices').href = ORDERS_URL + '?status=all&' + qs;
+    document.getElementById('supplierChoiceServices').href = SERVICES_URL + '?' + qs;
+    var modal = document.getElementById('supplierChoiceModal');
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSupplierChoice() {
+    var modal = document.getElementById('supplierChoiceModal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSupplierChoice();
+});
 </script>
+<style>
+.supplier-choice-modal {
+    position: fixed; inset: 0; z-index: 1200; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+}
+.supplier-choice-modal__overlay {
+    position: absolute; inset: 0; background: rgba(15, 23, 42, .45);
+}
+.supplier-choice-modal__box {
+    position: relative; width: min(420px, 100%);
+    background: #fff; border-radius: 18px; padding: 24px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
+}
+.supplier-choice-modal__box h3 { margin: 0 0 6px; color: #17324d; }
+.supplier-choice-modal__name { margin: 0 0 8px; font-weight: 700; color: #0f4c81; font-size: 1.1rem; }
+.supplier-choice-modal__hint { margin: 0 0 18px; color: #64748b; font-size: .9rem; }
+.supplier-choice-modal__actions {
+    display: flex; flex-direction: column; gap: 10px;
+}
+.supplier-choice-modal__actions .req-btn { justify-content: center; }
+</style>
 </body>
 </html>

@@ -176,3 +176,61 @@ class OrderAnalyticsTests(TestCase):
             "date_to": "2026-07-31",
         })
         self.assertEqual(ctx["supplier_payable"], 0)
+
+    def test_supplier_services_page_stats_and_filters(self):
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Visa",
+            supplier="YARDS",
+            net="100",
+            is_checked=False,
+            due_time=timezone.make_aware(datetime(2026, 7, 25)),
+        )
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Hotel",
+            supplier="YARDS",
+            net="200",
+            issue_price="220",
+            is_checked=True,
+            processed=True,
+            due_time=timezone.make_aware(datetime(2026, 7, 22)),
+        )
+        self.client.login(username="Accounting", password="pass")
+        response = self.client.get("/tasks/orders/supplier-services/", {
+            "supplier": "YARDS",
+            "sold_from": "2026-07-15",
+            "sold_to": "2026-07-31",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["filtered_count"], 3)
+        self.assertEqual(response.context["supplier_name"], "YARDS")
+        by_type = {row["name"]: row for row in response.context["service_type_stats"]}
+        self.assertEqual(by_type["Hotel"]["total"], 2)
+        self.assertEqual(by_type["Hotel"]["issued"], 2)
+        self.assertEqual(by_type["Visa"]["total"], 1)
+        self.assertEqual(by_type["Visa"]["upcoming"], 1)
+        self.assertEqual(response.context["payment_stats"]["paid_count"], 1)
+        self.assertEqual(response.context["payment_stats"]["outstanding_count"], 1)
+        self.assertEqual(response.context["payment_stats"]["outstanding_amount"], 650)
+
+        hotels_only = self.client.get("/tasks/orders/supplier-services/", {
+            "supplier": "YARDS",
+            "sold_from": "2026-07-15",
+            "sold_to": "2026-07-31",
+            "service": "Hotel",
+        })
+        self.assertEqual(hotels_only.context["filtered_count"], 2)
+        self.assertEqual(len(hotels_only.context["service_type_stats"]), 1)
+
+    def test_supplier_services_page_is_restricted(self):
+        self.client.login(username="sales", password="pass")
+        self.assertEqual(
+            self.client.get("/tasks/orders/supplier-services/", {"supplier": "YARDS"}).status_code,
+            403,
+        )
+        self.client.login(username="Accounting", password="pass")
+        self.assertEqual(
+            self.client.get("/tasks/orders/supplier-services/", {"supplier": "YARDS"}).status_code,
+            200,
+        )
