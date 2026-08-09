@@ -1035,7 +1035,31 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   }
   body.has-unified-nav .inv-section-nav a { white-space: nowrap; flex-shrink: 0; }
 
-  /* Stack tables as cards */
+  /* Stack tables as cards — must leave table layout or only the first cell shows */
+  body.has-unified-nav .req-table-wrap,
+  body.has-unified-nav .table-responsive,
+  body.has-unified-nav .table-wrapper--responsive {
+    overflow: visible;
+    border: none;
+    background: transparent;
+  }
+
+  body.has-unified-nav .data-table,
+  body.has-unified-nav .req-table,
+  body.has-unified-nav .table,
+  body.has-unified-nav .list-table,
+  body.has-unified-nav .payment-table,
+  body.has-unified-nav .attach-table,
+  body.has-unified-nav .data-table tbody,
+  body.has-unified-nav .req-table tbody,
+  body.has-unified-nav .table tbody,
+  body.has-unified-nav .list-table tbody,
+  body.has-unified-nav .payment-table tbody,
+  body.has-unified-nav .attach-table tbody {
+    display: block;
+    width: 100%;
+  }
+
   body.has-unified-nav .data-table thead,
   body.has-unified-nav .req-table thead,
   body.has-unified-nav .table thead,
@@ -1051,12 +1075,14 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   body.has-unified-nav .list-table tbody tr,
   body.has-unified-nav .payment-table tbody tr {
     display: block;
+    width: 100%;
+    box-sizing: border-box;
     margin-bottom: 12px;
     border: 1px solid var(--req-border);
     border-radius: var(--req-radius-sm);
     background: var(--req-surface);
     box-shadow: var(--req-shadow);
-    overflow: hidden;
+    overflow: visible;
   }
 
   body.has-unified-nav .data-table tbody td,
@@ -1065,12 +1091,17 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   body.has-unified-nav .list-table tbody td,
   body.has-unified-nav .payment-table tbody td {
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
     padding: 10px 14px;
     border-bottom: 1px solid var(--req-border);
+    border-left: none !important;
     text-align: right;
+    white-space: normal;
+    word-break: break-word;
   }
 
   body.has-unified-nav .data-table tbody td:last-child,
@@ -1082,7 +1113,7 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
 
   body.has-unified-nav .data-table tbody td::before,
   body.has-unified-nav .req-table tbody td::before,
-  body.has-unified-nav .table tbody tbody td::before,
+  body.has-unified-nav .table tbody td::before,
   body.has-unified-nav .list-table tbody td::before,
   body.has-unified-nav .payment-table tbody td::before {
     content: attr(data-label);
@@ -1097,7 +1128,86 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
 
   body.has-unified-nav .data-table tbody td[data-label=""]::before,
   body.has-unified-nav .req-table tbody td:not([data-label])::before,
-  body.has-unified-nav .table tbody td:not([data-label])::before {
+  body.has-unified-nav .table tbody td:not([data-label])::before,
+  body.has-unified-nav .list-table tbody td:not([data-label])::before,
+  body.has-unified-nav .payment-table tbody td:not([data-label])::before {
+    content: none;
+  }
+
+  /* Keep status color bar on the card, not each cell */
+  body.has-unified-nav .req-table tbody tr.processing,
+  body.has-unified-nav .req-table tbody tr.negotiation,
+  body.has-unified-nav .req-table tbody tr.onhold,
+  body.has-unified-nav .req-table tbody tr.progress,
+  body.has-unified-nav .req-table tbody tr.done,
+  body.has-unified-nav .req-table tbody tr.cancelled,
+  body.has-unified-nav .req-table tbody tr.followup,
+  body.has-unified-nav .req-table tbody tr.finalized {
+    border-left-width: 4px;
+    border-left-style: solid;
+  }
+  body.has-unified-nav .req-table tbody tr.processing { border-left-color: #2563eb; }
+  body.has-unified-nav .req-table tbody tr.negotiation { border-left-color: #7c3aed; }
+  body.has-unified-nav .req-table tbody tr.onhold { border-left-color: #d97706; }
+  body.has-unified-nav .req-table tbody tr.progress { border-left-color: #16a34a; }
+  body.has-unified-nav .req-table tbody tr.done { border-left-color: #16a34a; }
+  body.has-unified-nav .req-table tbody tr.cancelled { border-left-color: #dc2626; }
+  body.has-unified-nav .req-table tbody tr.followup { border-left-color: #db2777; }
+  body.has-unified-nav .req-table tbody tr.finalized { border-left-color: #0891b2; }
+
+  body.has-unified-nav .req-table tbody td[data-label="Edit"] .req-btn,
+  body.has-unified-nav .data-table tbody td[data-label="Edit"] .req-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Purchases / client payments stay as scrollable tables on mobile */
+  body.has-unified-nav .table-wrapper--client-payments.table-wrapper--responsive,
+  body.has-unified-nav .table-wrapper--supplier-payments.table-wrapper--responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--req-border);
+    border-radius: var(--req-radius-sm);
+    background: var(--req-surface);
+  }
+
+  body.has-unified-nav .table-wrapper--client-payments .list-table,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table,
+  body.has-unified-nav .table-wrapper--client-payments .list-table tbody,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table tbody {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  body.has-unified-nav .table-wrapper--client-payments .list-table thead,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table thead {
+    display: table-header-group;
+  }
+
+  body.has-unified-nav .table-wrapper--client-payments .list-table tbody tr,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table tbody tr {
+    display: table-row;
+    margin-bottom: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  body.has-unified-nav .table-wrapper--client-payments .list-table tbody td,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table tbody td {
+    display: table-cell;
+    width: auto;
+    border-bottom: 1px solid var(--req-border);
+    border-left: none;
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  body.has-unified-nav .table-wrapper--client-payments .list-table tbody td::before,
+  body.has-unified-nav .table-wrapper--supplier-payments .list-table tbody td::before {
     content: none;
   }
 
