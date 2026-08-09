@@ -89,7 +89,7 @@
                 </thead>
                 <tbody>
                     {% for lead_task in data %}
-                    <tr class="{{ lead_task.status }}" data-href="{% url 'edit_lead_tasks' lead_task.pk %}" style="cursor:pointer" onclick="if(!event.target.closest('a,button,input,label')) window.location=this.dataset.href">
+                    <tr class="req-row--{{ lead_task.status }} {{ lead_task.status }}" data-href="{% url 'edit_lead_tasks' lead_task.pk %}" style="cursor:pointer" onclick="if(!event.target.closest('a,button,input,label')) window.location=this.dataset.href">
                         <td data-label="ID">#{{ lead_task.pk }}</td>
                         <td data-label="Lead">
                             <strong>{{ lead_task.lead.name }}</strong>

@@ -630,11 +630,20 @@ body.has-unified-nav .section canvas {
   height: auto !important;
 }
 
-body.has-unified-nav .progress {
+/* Progress bars only — never table rows with status class "progress" */
+body.has-unified-nav div.progress,
+body.has-unified-nav .progress-track {
   height: 28px;
   border-radius: 999px;
   background: var(--req-surface-2);
   overflow: hidden;
+}
+
+body.has-unified-nav tr.progress,
+body.has-unified-nav tr.req-row--progress {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 body.has-unified-nav .progress-bar {
@@ -1139,17 +1148,21 @@ body.edit-invoice-page { padding: 0 20px 48px 276px !important; }
   body.has-unified-nav .req-table tbody tr.negotiation,
   body.has-unified-nav .req-table tbody tr.onhold,
   body.has-unified-nav .req-table tbody tr.progress,
+  body.has-unified-nav .req-table tbody tr.req-row--progress,
   body.has-unified-nav .req-table tbody tr.done,
   body.has-unified-nav .req-table tbody tr.cancelled,
   body.has-unified-nav .req-table tbody tr.followup,
   body.has-unified-nav .req-table tbody tr.finalized {
     border-left-width: 4px;
     border-left-style: solid;
+    height: auto;
+    overflow: visible;
   }
   body.has-unified-nav .req-table tbody tr.processing { border-left-color: #2563eb; }
   body.has-unified-nav .req-table tbody tr.negotiation { border-left-color: #7c3aed; }
   body.has-unified-nav .req-table tbody tr.onhold { border-left-color: #d97706; }
-  body.has-unified-nav .req-table tbody tr.progress { border-left-color: #16a34a; }
+  body.has-unified-nav .req-table tbody tr.progress,
+  body.has-unified-nav .req-table tbody tr.req-row--progress { border-left-color: #16a34a; }
   body.has-unified-nav .req-table tbody tr.done { border-left-color: #16a34a; }
   body.has-unified-nav .req-table tbody tr.cancelled { border-left-color: #dc2626; }
   body.has-unified-nav .req-table tbody tr.followup { border-left-color: #db2777; }

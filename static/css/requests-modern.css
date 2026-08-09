@@ -430,14 +430,30 @@ body.req-page {
 .req-table tbody tr.overdue-lead:hover { background: #ffe4e6; }
 .req-table tbody tr.sold td { background: #ecfdf5; }
 .req-table tbody tr.lost td { background: #fef2f2; }
-.req-table tbody tr.processing td { border-left: 3px solid #2563eb; }
-.req-table tbody tr.negotiation td { border-left: 3px solid #7c3aed; }
-.req-table tbody tr.onhold td { border-left: 3px solid #d97706; }
-.req-table tbody tr.progress td { border-left: 3px solid #86efac; }
-.req-table tbody tr.done td { border-left: 3px solid #16a34a; }
-.req-table tbody tr.cancelled td { border-left: 3px solid #dc2626; }
-.req-table tbody tr.followup td { border-left: 3px solid #db2777; }
-.req-table tbody tr.finalized td { border-left: 3px solid #0891b2; }
+.req-table tbody tr.processing td,
+.req-table tbody tr.req-row--processing td { border-left: 3px solid #2563eb; }
+.req-table tbody tr.negotiation td,
+.req-table tbody tr.req-row--negotiation td { border-left: 3px solid #7c3aed; }
+.req-table tbody tr.onhold td,
+.req-table tbody tr.req-row--onhold td { border-left: 3px solid #d97706; }
+.req-table tbody tr.progress td,
+.req-table tbody tr.req-row--progress td { border-left: 3px solid #86efac; }
+.req-table tbody tr.done td,
+.req-table tbody tr.req-row--done td { border-left: 3px solid #16a34a; }
+.req-table tbody tr.cancelled td,
+.req-table tbody tr.req-row--cancelled td { border-left: 3px solid #dc2626; }
+.req-table tbody tr.followup td,
+.req-table tbody tr.req-row--followup td { border-left: 3px solid #db2777; }
+.req-table tbody tr.finalized td,
+.req-table tbody tr.req-row--finalized td { border-left: 3px solid #0891b2; }
+
+/* Status "progress" must not inherit progress-bar chrome */
+.req-table tbody tr.progress,
+.req-table tbody tr.req-row--progress {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
 
 .req-status-pill {
   display: inline-block;
