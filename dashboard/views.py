@@ -249,9 +249,12 @@ def supplier_payments_list(request):
     supplier_filter = request.GET.get('supplier', '').strip()
     service_filter = request.GET.get('service', '').strip()
     show_cancelled = request.GET.get('show_cancelled', '') == 'on'
+    show_travelled = request.GET.get('show_travelled', '') == 'on'
     sort = request.GET.get('sort', SORT_DUE_ASC).strip()
 
-    base_qs = apply_upcoming_travel_filter(services, now=now)
+    base_qs = services
+    if not show_travelled:
+        base_qs = apply_upcoming_travel_filter(base_qs, now=now)
     if not show_cancelled:
         base_qs = base_qs.exclude(leadtask__status='cancelled')
 
@@ -287,6 +290,7 @@ def supplier_payments_list(request):
         'service_filter_options': service_choices,
         'supplier_choices': supplier_choices,
         'show_cancelled': show_cancelled,
+        'show_travelled': show_travelled,
         'sort': sort,
         'sort_choices': PURCHASES_SORT_CHOICES,
         'today': today,

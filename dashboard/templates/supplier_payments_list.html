@@ -29,10 +29,10 @@
                 <span class="purchases-filters__shortcuts-label">Quick filters</span>
                 <div class="purchases-filters__shortcuts-pills">
                     {% if issued_count %}
-                    <a href="?issued=issued{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--success btn--filter-pill {% if issued_filter == 'issued' %}is-active{% endif %}">{{ issued_count }} Issued</a>
+                    <a href="?issued=issued{% if show_cancelled %}&show_cancelled=on{% endif %}{% if show_travelled %}&show_travelled=on{% endif %}" class="btn btn--success btn--filter-pill {% if issued_filter == 'issued' %}is-active{% endif %}">{{ issued_count }} Issued</a>
                     {% endif %}
                     {% if overdue_count %}
-                    <a href="?overdue=on{% if show_cancelled %}&show_cancelled=on{% endif %}" class="btn btn--danger btn--filter-pill {% if overdue_filter %}is-active{% endif %}">{{ overdue_count }} Overdue{{ overdue_count|pluralize }}</a>
+                    <a href="?overdue=on{% if show_cancelled %}&show_cancelled=on{% endif %}{% if show_travelled %}&show_travelled=on{% endif %}" class="btn btn--danger btn--filter-pill {% if overdue_filter %}is-active{% endif %}">{{ overdue_count }} Overdue{{ overdue_count|pluralize }}</a>
                     {% endif %}
                 </div>
             </div>
@@ -96,6 +96,10 @@
                     <label class="purchases-filters__option">
                         <input type="checkbox" name="show_cancelled" {% if show_cancelled %}checked{% endif %}>
                         <span>Show cancelled orders</span>
+                    </label>
+                    <label class="purchases-filters__option">
+                        <input type="checkbox" name="show_travelled" {% if show_travelled %}checked{% endif %}>
+                        <span>Show travelled</span>
                     </label>
                     <div class="purchases-filters__actions">
                         <button type="submit" class="req-btn req-btn--primary req-btn--sm"><i class="fas fa-filter"></i> Apply filters</button>

@@ -53,8 +53,11 @@ def apply_purchases_filters(services, params, *, now):
     supplier_filter = (params.get('supplier') or '').strip()
     service_filter = (params.get('service') or '').strip()
     show_cancelled = params.get('show_cancelled') == 'on'
+    show_travelled = params.get('show_travelled') == 'on'
 
-    services = apply_upcoming_travel_filter(services, now=now)
+    # Default: hide past travel. "Show travelled" includes past travel dates.
+    if not show_travelled:
+        services = apply_upcoming_travel_filter(services, now=now)
 
     if not show_cancelled:
         services = services.exclude(leadtask__status='cancelled')
@@ -66,8 +69,9 @@ def apply_purchases_filters(services, params, *, now):
         services = services.filter(due_time__date__lte=due_to)
 
     today = _today(now)
-    if travel_from and travel_from > today:
-        services = services.filter(leadtask__travel_date__date__gte=travel_from)
+    if travel_from:
+        if show_travelled or travel_from > today:
+            services = services.filter(leadtask__travel_date__date__gte=travel_from)
     if travel_to:
         services = services.filter(leadtask__travel_date__date__lte=travel_to)
 
@@ -119,10 +123,14 @@ def purchases_applied_filters(params) -> list[str]:
     supplier = (params.get('supplier') or '').strip()
     service = (params.get('service') or '').strip()
     show_cancelled = params.get('show_cancelled') == 'on'
+    show_travelled = params.get('show_travelled') == 'on'
     sort = (params.get('sort') or SORT_DUE_ASC).strip()
     sort_labels = dict(SORT_CHOICES)
 
-    filters.append('Upcoming travel only')
+    if show_travelled:
+        filters.append('Including travelled (past travel dates)')
+    else:
+        filters.append('Upcoming travel only')
     if due_from:
         filters.append(f'Due from: {due_from}')
     if due_to:

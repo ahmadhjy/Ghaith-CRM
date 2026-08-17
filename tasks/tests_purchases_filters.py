@@ -125,6 +125,31 @@ class PurchasesFilterTests(TestCase):
         self.assertNotIn(past_service.pk, ids)
         self.assertNotIn(no_travel_service.pk, ids)
 
+    def test_show_travelled_includes_past_travel_dates(self):
+        past_task = LeadTask.objects.create(
+            lead=self.lead,
+            assigned_to=self.user,
+            status='progress',
+            travel_date=timezone.now() - timedelta(days=5),
+        )
+        past_service = Service.objects.create(
+            leadtask=past_task,
+            service_name='Hotel',
+            supplier='YARDS',
+            net='80',
+            due_time=timezone.now() + timedelta(days=2),
+            is_checked=False,
+        )
+        qs = Service.objects.all()
+        filtered = apply_purchases_filters(
+            qs,
+            {'issued': 'unissued', 'show_travelled': 'on'},
+            now=timezone.now(),
+        )
+        ids = list(filtered.values_list('pk', flat=True))
+        self.assertIn(self.early.pk, ids)
+        self.assertIn(past_service.pk, ids)
+
     def test_missing_due_date_sorted_last(self):
         no_due = Service.objects.create(
             leadtask=self.leadtask,
