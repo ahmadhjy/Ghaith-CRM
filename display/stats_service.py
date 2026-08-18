@@ -82,23 +82,31 @@ def _target_for_months(model, months, **filters):
 
 
 def build_stats_dashboard_context(request):
-    start, end, start_dt, end_dt = parse_date_range(request.GET)
-    can_view_team = request.user.is_staff or request.user.is_superuser
+    from display.permissions import user_can_view_management_dashboards
 
-    leads = Lead.objects.filter(modified_leads_q(start_dt, end_dt))
-    orders = LeadTask.objects.filter(
+    start, end, start_dt, end_dt = parse_date_range(request.GET)
+    # Full team numbers only for Sara / Developer / Accounting — not every staff user.
+    can_view_team = user_can_view_management_dashboards(request.user)
+
+    all_leads = Lead.objects.filter(modified_leads_q(start_dt, end_dt))
+    all_orders = LeadTask.objects.filter(
         sold_orders_q(start_dt, end_dt),
         lead__sold=True,
     ).select_related("lead", "assigned_to").prefetch_related("service_set").distinct()
 
-    if can_view_team:
-        employees = User.objects.filter(is_sales=True, is_active=True).order_by(
+    employees = list(
+        User.objects.filter(is_sales=True, is_active=True).order_by(
             "first_name", "username"
         )
+    )
+    if not can_view_team and not any(e.pk == request.user.pk for e in employees):
+        employees = [request.user] + employees
+    if can_view_team:
+        leads = all_leads
+        orders = all_orders
     else:
-        employees = User.objects.filter(pk=request.user.pk)
-        leads = leads.filter(assigned_to=request.user)
-        orders = orders.filter(assigned_to=request.user)
+        leads = all_leads.filter(assigned_to=request.user)
+        orders = all_orders.filter(assigned_to=request.user)
 
     finances_by_employee = defaultdict(
         lambda: {"profit": 0.0, "revenue": 0.0, "sales": 0}
@@ -108,6 +116,7 @@ def build_stats_dashboard_context(request):
     total_profit = 0.0
     total_revenue = 0.0
 
+    # Financial rollups use only the scoped orders (team or self).
     for order in orders:
         values = order_financials(order)
         total_profit += values["booking_profit"]
@@ -124,36 +133,64 @@ def build_stats_dashboard_context(request):
     months = list(_overlapping_months(start, end))
     team_target = _target_for_months(MonthlyTarget, months) if can_view_team else 0
     employee_stats = []
+    chart_employee_stats = []
     for employee in employees:
-        employee_leads = leads.filter(assigned_to=employee)
-        sold_leads = employee_leads.filter(sold=True)
-        values = finances_by_employee[employee.pk]
-        target = _target_for_months(
-            UserMonthlyTarget, months, user=employee
-        )
-        employee_stats.append({
-            "employee": employee,
-            "modified_leads": employee_leads.count(),
-            "sold": sold_leads.count(),
-            "sales": values["sales"],
-            "profit": values["profit"],
-            "revenue": values["revenue"],
-            "target": target,
-            "target_progress": (values["profit"] / target * 100) if target else 0,
-            "sent_offers": Offer.objects.filter(
-                created_by=employee,
-                created_at__range=(start_dt, end_dt),
-                sent=True,
-            ).count(),
-            "sold_offers": Offer.objects.filter(
-                created_by=employee,
-                sold_at__range=(start_dt, end_dt),
-                sold=True,
-            ).count(),
-        })
+        is_self = employee.pk == request.user.pk
+        blurred = not can_view_team and not is_self
+        if can_view_team or is_self:
+            employee_leads = leads.filter(assigned_to=employee)
+            sold_leads = employee_leads.filter(sold=True)
+            values = finances_by_employee[employee.pk]
+            target = _target_for_months(
+                UserMonthlyTarget, months, user=employee
+            )
+            row = {
+                "employee": employee,
+                "is_self": is_self,
+                "blurred": False,
+                "modified_leads": employee_leads.count(),
+                "sold": sold_leads.count(),
+                "sales": values["sales"],
+                "profit": values["profit"],
+                "revenue": values["revenue"],
+                "target": target,
+                "target_progress": (values["profit"] / target * 100) if target else 0,
+                "sent_offers": Offer.objects.filter(
+                    created_by=employee,
+                    created_at__range=(start_dt, end_dt),
+                    sent=True,
+                ).count(),
+                "sold_offers": Offer.objects.filter(
+                    created_by=employee,
+                    sold_at__range=(start_dt, end_dt),
+                    sold=True,
+                ).count(),
+            }
+        else:
+            # Same table layout, but no real numbers leave the server.
+            row = {
+                "employee": employee,
+                "is_self": False,
+                "blurred": True,
+                "modified_leads": None,
+                "sold": None,
+                "sales": None,
+                "profit": None,
+                "revenue": None,
+                "target": None,
+                "target_progress": None,
+                "sent_offers": None,
+                "sold_offers": None,
+            }
+        employee_stats.append(row)
+        if not blurred:
+            chart_employee_stats.append(row)
 
     if not can_view_team:
-        team_target = employee_stats[0]["target"] if employee_stats else 0
+        team_target = next(
+            (stat["target"] for stat in chart_employee_stats if stat["is_self"]),
+            0,
+        ) or 0
 
     lead_statuses = [
         ("Sold", leads.filter(sold=True).count()),
@@ -196,10 +233,10 @@ def build_stats_dashboard_context(request):
             "status_values": [value for _, value in lead_statuses],
             "employee_labels": [
                 stat["employee"].get_full_name() or stat["employee"].username
-                for stat in employee_stats
+                for stat in chart_employee_stats
             ],
-            "employee_profit": [round(stat["profit"], 2) for stat in employee_stats],
-            "employee_target": [stat["target"] for stat in employee_stats],
+            "employee_profit": [round(stat["profit"], 2) for stat in chart_employee_stats],
+            "employee_target": [stat["target"] for stat in chart_employee_stats],
             "destination_labels": [label for label, _ in top_destinations],
             "destination_values": [value for _, value in top_destinations],
         },

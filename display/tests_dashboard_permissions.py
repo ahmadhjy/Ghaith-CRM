@@ -12,11 +12,10 @@ from tasks.models import LeadTask
 
 
 class ManagementDashboardPermissionTests(TestCase):
-    def test_only_named_users_can_open_both_dashboards(self):
+    def test_order_analytics_stays_restricted_to_named_users(self):
         for username in ("Sara", "Developer", "Accounting"):
             user = User.objects.create_user(username)
             self.client.force_login(user)
-            self.assertEqual(self.client.get("/stats_dashboard/").status_code, 200)
             self.assertEqual(
                 self.client.get("/tasks/orders/analytics/").status_code, 200
             )
@@ -25,16 +24,29 @@ class ManagementDashboardPermissionTests(TestCase):
             "OtherAdmin", email="admin@example.com", password="pass"
         )
         self.client.force_login(blocked)
-        stats_response = self.client.get("/stats_dashboard/")
         orders_response = self.client.get("/tasks/orders/analytics/")
-        self.assertEqual(stats_response.status_code, 403)
         self.assertEqual(orders_response.status_code, 403)
-        self.assertContains(
-            stats_response, "Access restricted", status_code=403
-        )
         self.assertContains(
             orders_response, "Access restricted", status_code=403
         )
+
+    def test_stats_dashboard_is_open_but_team_view_is_named_users_only(self):
+        sara = User.objects.create_user("Sara")
+        other = User.objects.create_user("rayan", is_staff=True)
+        peer = User.objects.create_user("alaa")
+        User.objects.filter(pk__in=[other.pk, peer.pk]).update(is_sales=True)
+
+        self.client.force_login(sara)
+        sara_response = self.client.get("/stats_dashboard/")
+        self.assertEqual(sara_response.status_code, 200)
+        self.assertContains(sara_response, "Team Performance")
+
+        self.client.force_login(other)
+        other_response = self.client.get("/stats_dashboard/")
+        self.assertEqual(other_response.status_code, 200)
+        self.assertContains(other_response, "My Performance")
+        self.assertContains(other_response, "Personal view")
+        self.assertContains(other_response, "Restricted")
 
 
 class MergeUsersCommandTests(TestCase):

@@ -19,6 +19,16 @@
         </div>
     </header>
 
+    {% if not can_view_team %}
+    <div class="stats-restricted-banner" role="status">
+        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+        <div>
+            <strong>Personal view</strong>
+            <span>You can see your own profit, revenue and target. Other employees’ numbers are hidden.</span>
+        </div>
+    </div>
+    {% endif %}
+
     <form method="get" class="stats-filter-bar">
         <div class="req-field">
             <label for="date_from">Sold from</label>
@@ -32,10 +42,10 @@
     </form>
 
     <section class="stats-kpis">
-        <article class="stats-kpi"><span>Modified leads</span><strong>{{ modified_leads }}</strong><small>Within selected period</small></article>
-        <article class="stats-kpi stats-kpi--teal"><span>Sold invoices</span><strong>{{ sold_orders }}</strong><small>Assigned invoices marked sold</small></article>
-        <article class="stats-kpi stats-kpi--blue"><span>Invoice revenue</span><strong>${{ period_revenue|floatformat:2 }}</strong><small>Lead invoice selling totals</small></article>
-        <article class="stats-kpi stats-kpi--profit"><span>Booking-net profit</span><strong>${{ achieved_profit|floatformat:2 }}</strong><small>Selling − service net</small></article>
+        <article class="stats-kpi"><span>{% if can_view_team %}Modified leads{% else %}My modified leads{% endif %}</span><strong>{{ modified_leads }}</strong><small>Within selected period</small></article>
+        <article class="stats-kpi stats-kpi--teal"><span>{% if can_view_team %}Sold invoices{% else %}My sold invoices{% endif %}</span><strong>{{ sold_orders }}</strong><small>Assigned invoices marked sold</small></article>
+        <article class="stats-kpi stats-kpi--blue"><span>{% if can_view_team %}Invoice revenue{% else %}My revenue{% endif %}</span><strong>${{ period_revenue|floatformat:2 }}</strong><small>Lead invoice selling totals</small></article>
+        <article class="stats-kpi stats-kpi--profit"><span>{% if can_view_team %}Booking-net profit{% else %}My profit{% endif %}</span><strong>${{ achieved_profit|floatformat:2 }}</strong><small>Selling − service net</small></article>
     </section>
 
     <section class="stats-target-card">
@@ -50,11 +60,11 @@
     {{ chart_data|json_script:"stats-chart-data" }}
     <section class="stats-chart-grid">
         <article class="stats-chart-card stats-chart-card--wide">
-            <div><h2>Profit and revenue trend</h2><p>Sold invoices by sold date</p></div>
+            <div><h2>Profit and revenue trend</h2><p>{% if can_view_team %}Sold invoices by sold date{% else %}Your sold invoices by sold date{% endif %}</p></div>
             <canvas id="profitTrend"></canvas>
         </article>
         <article class="stats-chart-card">
-            <div><h2>Lead outcomes</h2><p>Selected period</p></div>
+            <div><h2>Lead outcomes</h2><p>{% if can_view_team %}Selected period{% else %}Your leads in this period{% endif %}</p></div>
             <canvas id="leadOutcomes"></canvas>
         </article>
         <article class="stats-chart-card{% if not can_view_team %} stats-chart-card--wide{% endif %}">
@@ -62,20 +72,23 @@
             <canvas id="employeePerformance"></canvas>
         </article>
         <article class="stats-chart-card">
-            <div><h2>Top destinations</h2><p>Modified leads</p></div>
+            <div><h2>Top destinations</h2><p>{% if can_view_team %}Modified leads{% else %}Your modified leads{% endif %}</p></div>
             <canvas id="destinations"></canvas>
         </article>
     </section>
 
     <section class="section stats-table-card">
-        <h2>{% if can_view_team %}Employee{% else %}My{% endif %} breakdown</h2>
+        <h2>Employee breakdown</h2>
         <div class="req-table-wrap">
             <table class="req-table">
                 <thead><tr><th>Employee</th><th>Modified leads</th><th>Sold invoices</th><th>Revenue</th><th>Profit</th><th>Target</th><th>Progress</th><th>Offers sent / sold</th></tr></thead>
                 <tbody>
                 {% for stat in employee_stats %}
-                <tr>
-                    <td>{{ stat.employee.get_full_name|default:stat.employee.username }}</td>
+                <tr class="{% if stat.blurred %}stats-row--blurred{% endif %}{% if stat.is_self %} stats-row--self{% endif %}">
+                    <td>{{ stat.employee.get_full_name|default:stat.employee.username }}{% if stat.is_self %} <span class="stats-you-pill">You</span>{% endif %}</td>
+                    {% if stat.blurred %}
+                    <td colspan="7" class="stats-blur-cell"><span class="stats-blur-mask" aria-hidden="true">•••• •••• •••• ••••</span><span class="stats-blur-note">Restricted</span></td>
+                    {% else %}
                     <td>{{ stat.modified_leads }}</td>
                     <td>{{ stat.sales }}</td>
                     <td>${{ stat.revenue|floatformat:2 }}</td>
@@ -83,6 +96,7 @@
                     <td>${{ stat.target|floatformat:0 }}</td>
                     <td>{{ stat.target_progress|floatformat:1 }}%</td>
                     <td>{{ stat.sent_offers }} / {{ stat.sold_offers }}</td>
+                    {% endif %}
                 </tr>
                 {% empty %}<tr><td colspan="8">No employee activity in this period.</td></tr>{% endfor %}
                 </tbody>

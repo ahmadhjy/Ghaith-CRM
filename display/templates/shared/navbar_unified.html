@@ -29,11 +29,9 @@
 
   <nav class="app-nav__menu" aria-label="Main">
     <div class="app-nav__section-label">Main</div>
-    {% if user_can_view_management_dashboards %}
     <a class="app-nav__item" href="{% url 'stats_dashboard' %}">
       <i class="fas fa-chart-line"></i><span>Ghaith Dashboard</span>
     </a>
-    {% endif %}
     <a class="app-nav__item" href="{% url 'calendar' %}">
       <i class="fas fa-home"></i><span>User Dashboard</span>
     </a>
@@ -44,7 +42,7 @@
       <a href="{% url 'create_lead' %}">Add New</a>
       <a href="{% url 'archived_leads' %}">Archived Leads</a>
       <a href="{% url 'list_offers' %}">Offers List</a>
-      <a href="https://drive.google.com/drive/folders/15yQzuXd18pgXV9YXH3fi4TE6DyeTYcp7?usp=sharing" target="_blank" rel="noopener noreferrer">Ghaith Offer</a>
+      <a href="https://drive.google.com/drive/folders/1gCurv3nvadS9SUiQVGCzlSg1jUIwIFAc?usp=drive_link" target="_blank" rel="noopener noreferrer">Packages</a>
     </details>
 
     <a class="app-nav__item" href="{% url 'takeover_list' %}">

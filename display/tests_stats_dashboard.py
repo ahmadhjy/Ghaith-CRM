@@ -12,7 +12,7 @@ from tasks.models import LeadTask, Service
 class StatsDashboardTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.admin = User.objects.create_user("admin_stats", is_staff=True)
+        self.admin = User.objects.create_user("Sara", is_staff=True)
         self.sales_a = User.objects.create_user("sales_a")
         self.sales_b = User.objects.create_user("sales_b")
         User.objects.filter(pk__in=[self.sales_a.pk, self.sales_b.pk]).update(is_sales=True)
@@ -50,6 +50,7 @@ class StatsDashboardTests(TestCase):
 
     def test_admin_sees_team_invoice_profit_and_target(self):
         ctx = build_stats_dashboard_context(self._request(self.admin))
+        self.assertTrue(ctx["can_view_team"])
         self.assertEqual(ctx["sold_orders"], 2)
         self.assertEqual(ctx["achieved_profit"], 600)
         self.assertEqual(ctx["monthly_target"], 1000)
@@ -61,4 +62,18 @@ class StatsDashboardTests(TestCase):
         self.assertEqual(ctx["sold_orders"], 1)
         self.assertEqual(ctx["achieved_profit"], 400)
         self.assertEqual(ctx["monthly_target"], 500)
-        self.assertEqual(len(ctx["employee_stats"]), 1)
+        self.assertEqual(len(ctx["employee_stats"]), 2)
+        self_row = next(stat for stat in ctx["employee_stats"] if stat["is_self"])
+        other_row = next(stat for stat in ctx["employee_stats"] if not stat["is_self"])
+        self.assertFalse(self_row["blurred"])
+        self.assertEqual(self_row["profit"], 400)
+        self.assertTrue(other_row["blurred"])
+        self.assertIsNone(other_row["profit"])
+
+    def test_staff_without_management_access_cannot_see_team_totals(self):
+        staff = User.objects.create_user("staff_only", is_staff=True)
+        User.objects.filter(pk=staff.pk).update(is_sales=True)
+        ctx = build_stats_dashboard_context(self._request(staff))
+        self.assertFalse(ctx["can_view_team"])
+        self.assertEqual(ctx["sold_orders"], 0)
+        self.assertTrue(any(stat["blurred"] for stat in ctx["employee_stats"]))
