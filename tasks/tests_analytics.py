@@ -223,6 +223,35 @@ class OrderAnalyticsTests(TestCase):
         self.assertEqual(hotels_only.context["filtered_count"], 2)
         self.assertEqual(len(hotels_only.context["service_type_stats"]), 1)
 
+    def test_travel_date_filter_uses_exact_travel_date(self):
+        LeadTask.objects.filter(pk=self.order.pk).update(
+            travel_date=timezone.make_aware(datetime(2026, 8, 12))
+        )
+        in_range = build_order_analytics_context({
+            "date_from": "2026-07-15",
+            "date_to": "2026-07-31",
+            "travel_from": "2026-08-01",
+            "travel_to": "2026-08-31",
+        })
+        self.assertEqual(in_range["sold_invoice_count"], 1)
+        out_of_range = build_order_analytics_context({
+            "date_from": "2026-07-15",
+            "date_to": "2026-07-31",
+            "travel_from": "2026-09-01",
+            "travel_to": "2026-09-30",
+        })
+        self.assertEqual(out_of_range["sold_invoice_count"], 0)
+
+    def test_upcoming_supplier_payments_use_issue_price_not_net(self):
+        ctx = build_order_analytics_context({
+            "date_from": "2026-07-15",
+            "date_to": "2026-07-31",
+        })
+        self.assertEqual(ctx["supplier_payable"], 650)
+        self.assertEqual(ctx["upcoming_supplier_rows"][0]["name"], "YARDS")
+        self.assertEqual(ctx["upcoming_supplier_rows"][0]["total"], 650)
+        self.assertNotEqual(ctx["upcoming_supplier_rows"][0]["total"], 600)
+
     def test_supplier_services_page_is_restricted(self):
         self.client.login(username="sales", password="pass")
         self.assertEqual(

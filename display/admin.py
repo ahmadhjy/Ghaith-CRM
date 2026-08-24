@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
+from django import forms
 from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMonthlyTarget, Department, CrmUserProfile, SophiaSyncState
 from django.db.models import Q, Sum
 from django.contrib.auth.admin import UserAdmin
@@ -157,11 +158,57 @@ class OfferAdmin(admin.ModelAdmin):
     autocomplete_fields = ['lead', 'created_by']
     list_per_page = 40
 
+class MonthPickerWidget(forms.DateInput):
+    input_type = "month"
+    format = "%Y-%m"
+
+    def format_value(self, value):
+        if value is None:
+            return ""
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m")
+        return value
+
+
+class MonthlyTargetMonthForm(forms.ModelForm):
+    month = forms.DateField(
+        widget=MonthPickerWidget(),
+        input_formats=["%Y-%m", "%Y-%m-%d"],
+        help_text="Pick the month (including upcoming months). Stored as the 1st of that month.",
+    )
+
+    def clean_month(self):
+        value = self.cleaned_data.get("month")
+        if value:
+            return value.replace(day=1)
+        return value
+
+
+class MonthlyTargetForm(MonthlyTargetMonthForm):
+    class Meta:
+        model = MonthlyTarget
+        fields = "__all__"
+
+
+class UserMonthlyTargetForm(MonthlyTargetMonthForm):
+    class Meta:
+        model = UserMonthlyTarget
+        fields = "__all__"
+
+
+class MonthlyTargetAdmin(admin.ModelAdmin):
+    form = MonthlyTargetForm
+    list_display = ["month", "target_profit"]
+    ordering = ["-month"]
+
+
 class UserMonthlyTargetAdmin(admin.ModelAdmin):
-    search_fields = ['user__username', 'month']
-    list_display = ['user', 'month', 'target_profit']
-    list_filter = ['user__username', 'month']
-    ordering = ['-month']
+    form = UserMonthlyTargetForm
+    search_fields = ["user__username", "month"]
+    list_display = ["user", "month", "target_profit"]
+    list_filter = ["user__username", "month"]
+    ordering = ["-month"]
+    autocomplete_fields = ["user"]
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -193,7 +240,7 @@ admin.site.register(Lead, LeadAdmin)
 admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Destination, DestinationAdmin)
 admin.site.register(DailyReport, DailyReportAdmin)
-admin.site.register(MonthlyTarget)
+admin.site.register(MonthlyTarget, MonthlyTargetAdmin)
 admin.site.register(UserMonthlyTarget, UserMonthlyTargetAdmin)
 admin.site.register(Offer, OfferAdmin)
 admin.site.unregister(User)

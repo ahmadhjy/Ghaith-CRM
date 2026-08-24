@@ -188,6 +188,7 @@ SHORT_DATE_FORMAT = "j M Y"
 SHORT_DATETIME_FORMAT = "j M Y, H:i"
 DATE_INPUT_FORMATS = [
     "%Y-%m-%d",
+    "%Y-%m",
     "%d/%m/%Y",
     "%d-%m-%Y",
     "%d %b %Y",

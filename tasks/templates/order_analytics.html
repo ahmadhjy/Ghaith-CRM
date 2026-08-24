@@ -22,6 +22,8 @@
     <form method="get" class="stats-filter-bar">
         <div class="req-field"><label for="date_from">Sold from</label><input type="date" id="date_from" name="date_from" value="{{ date_from }}"></div>
         <div class="req-field"><label for="date_to">Sold to</label><input type="date" id="date_to" name="date_to" value="{{ date_to }}"></div>
+        <div class="req-field"><label for="travel_from">Travelling from</label><input type="date" id="travel_from" name="travel_from" value="{{ travel_from }}"></div>
+        <div class="req-field"><label for="travel_to">Travelling to</label><input type="date" id="travel_to" name="travel_to" value="{{ travel_to }}"></div>
         <div class="req-field">
             <label for="supplier">Supplier</label>
             <select id="supplier" name="supplier"><option value="">All suppliers</option>{% for value,label in supplier_choices %}<option value="{{ value }}" {% if value == supplier_filter %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
@@ -41,7 +43,7 @@
         <article class="stats-kpi stats-kpi--profit"><span>Expected profit</span><strong>${{ booking_profit|floatformat:2 }}</strong><small>Sales minus booking cost</small></article>
         <article class="stats-kpi"><span>Cost after issuing</span><strong>${{ actual_purchase|floatformat:2 }}</strong><small>What we actually paid (issue price when set)</small></article>
         <article class="stats-kpi stats-kpi--profit"><span>Final profit</span><strong>${{ post_issue_profit|floatformat:2 }}</strong><small>Sales minus actual cost</small></article>
-        <article class="stats-kpi stats-kpi--teal"><span>We owe suppliers</span><strong>${{ supplier_payable|floatformat:2 }}</strong><small>{{ supplier_payable_count }} issued, unpaid services due in period</small></article>
+        <article class="stats-kpi stats-kpi--teal"><span>We owe suppliers</span><strong>${{ supplier_payable|floatformat:2 }}</strong><small>{{ supplier_payable_count }} unpaid service{{ supplier_payable_count|pluralize }} due {{ upcoming_payments_from }} – {{ upcoming_payments_to }} (issue price)</small></article>
         <article class="stats-kpi stats-kpi--blue"><span>Clients owe us</span><strong>${{ client_receivable|floatformat:2 }}</strong><small>{{ client_receivable_count }} unpaid client payments due in period</small></article>
     </section>
 
@@ -57,6 +59,17 @@
         <div class="req-table-wrap"><table class="req-table">
             <thead><tr><th>Supplier</th><th>Services</th><th>Original net</th><th>Issued cost</th></tr></thead>
             <tbody>{% for row in supplier_rows %}<tr class="supplier-drill-row" style="cursor:pointer" title="Double-click for options" data-supplier="{{ row.link_value }}" data-name="{{ row.name }}" ondblclick="openSupplierChoice(this)"><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.booking|floatformat:2 }}</td><td>${{ row.actual|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No supplier data in this period.</td></tr>{% endfor %}</tbody>
+        </table></div>
+    </section>
+
+    <section class="section stats-table-card">
+        <h2>Upcoming supplier payments</h2>
+        <p style="margin:4px 0 10px;color:#64748b;font-size:.85rem">
+            Unpaid services due {{ upcoming_payments_from }} – {{ upcoming_payments_to }} (defaults to the current month). Totals use each service’s <strong>issue price</strong>.
+        </p>
+        <div class="req-table-wrap"><table class="req-table">
+            <thead><tr><th>Supplier</th><th>Services</th><th>Issue price total</th></tr></thead>
+            <tbody>{% for row in upcoming_supplier_rows %}<tr><td>{{ row.name }}</td><td>{{ row.count }}</td><td>${{ row.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3">No upcoming supplier payments in this date range.</td></tr>{% endfor %}</tbody>
         </table></div>
     </section>
 

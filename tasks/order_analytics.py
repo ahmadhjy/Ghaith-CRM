@@ -8,7 +8,12 @@ from datetime import datetime, time
 
 from django.utils import timezone
 
-from tasks.constants import get_service_choices, get_supplier_choices, parse_money
+from tasks.constants import (
+    effective_service_net,
+    get_service_choices,
+    get_supplier_choices,
+    parse_money,
+)
 from tasks.models import LeadTask, Payment, Service
 
 
@@ -19,11 +24,16 @@ def _date(value, fallback):
         return fallback
 
 
-def _range(params):
-    # Default period: the current calendar month.
+def _month_bounds():
     today = timezone.localdate()
     month_start = today.replace(day=1)
     month_end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    return month_start, month_end
+
+
+def _range(params):
+    # Default period: the current calendar month.
+    month_start, month_end = _month_bounds()
     start = _date(params.get("date_from"), month_start)
     end = _date(params.get("date_to"), month_end)
     if start > end:
@@ -36,13 +46,31 @@ def _range(params):
     )
 
 
-def _money(service, *, issued=False):
-    raw = service.issue_price if issued and service.issue_price else service.net
-    return parse_money(raw)
+def _optional_travel_range(params):
+    raw_from = (params.get("travel_from") or "").strip()
+    raw_to = (params.get("travel_to") or "").strip()
+    if not raw_from and not raw_to:
+        return None, None
+    month_start, month_end = _month_bounds()
+    start = _date(raw_from, month_start)
+    end = _date(raw_to, month_end)
+    if start > end:
+        start, end = end, start
+    return start, end
+
+
+def _booking_cost(service):
+    return parse_money(service.net)
+
+
+def _issue_cost(service):
+    """Payable / issued amount from issue_price (falls back to net only if issue price is blank)."""
+    return parse_money(effective_service_net(service))
 
 
 def build_order_analytics_context(params):
     start, end, start_dt, end_dt = _range(params)
+    travel_start, travel_end = _optional_travel_range(params)
     supplier = (params.get("supplier") or "").strip()
     service_type = (params.get("service") or "").strip()
 
@@ -52,6 +80,10 @@ def build_order_analytics_context(params):
         created_at__range=(start_dt, end_dt),
         lead__sold=True,
     ).select_related("lead", "assigned_to").prefetch_related("service_set").distinct()
+    if travel_start and travel_end:
+        travel_start_dt = timezone.make_aware(datetime.combine(travel_start, time.min))
+        travel_end_dt = timezone.make_aware(datetime.combine(travel_end, time.max))
+        orders = orders.filter(travel_date__range=(travel_start_dt, travel_end_dt))
     if supplier:
         orders = orders.filter(service__supplier__iexact=supplier)
     if service_type:
@@ -66,8 +98,8 @@ def build_order_analytics_context(params):
     for order in orders:
         services = list(order.service_set.all())
         order_revenue = parse_money(order.lead.selling_price)
-        booking = sum(_money(line) for line in services)
-        actual = sum(_money(line, issued=True) for line in services)
+        booking = sum(_booking_cost(line) for line in services)
+        actual = sum(_issue_cost(line) for line in services)
         revenue += order_revenue
         booking_purchase += booking
         actual_purchase += actual
@@ -86,20 +118,35 @@ def build_order_analytics_context(params):
                 continue
             key = line.supplier or "No supplier"
             bucket = supplier_totals[key]
-            bucket["booking"] += _money(line)
-            bucket["actual"] += _money(line, issued=True)
+            bucket["booking"] += _booking_cost(line)
+            bucket["actual"] += _issue_cost(line)
             bucket["count"] += 1
 
+    payable_start, payable_end = (travel_start, travel_end) if travel_start else (start, end)
+    payable_start_dt = timezone.make_aware(datetime.combine(payable_start, time.min))
+    payable_end_dt = timezone.make_aware(datetime.combine(payable_end, time.max))
+
     payable_services = Service.objects.filter(
-        is_checked=True,
         processed=False,
-        due_time__range=(start_dt, end_dt),
-    ).exclude(leadtask__status="cancelled")
+        due_time__range=(payable_start_dt, payable_end_dt),
+    ).exclude(leadtask__status="cancelled").select_related("leadtask")
     if supplier:
         payable_services = payable_services.filter(supplier__iexact=supplier)
     if service_type:
         payable_services = payable_services.filter(service_name__iexact=service_type)
-    supplier_payable = sum(_money(line, issued=True) for line in payable_services)
+    payable_list = list(payable_services)
+    supplier_payable = sum(_issue_cost(line) for line in payable_list)
+
+    upcoming_by_supplier = defaultdict(lambda: {"count": 0, "total": 0.0})
+    for line in payable_list:
+        key = line.supplier or "No supplier"
+        upcoming_by_supplier[key]["count"] += 1
+        upcoming_by_supplier[key]["total"] += _issue_cost(line)
+    upcoming_supplier_rows = [
+        {"name": name, **values}
+        for name, values in upcoming_by_supplier.items()
+    ]
+    upcoming_supplier_rows.sort(key=lambda row: row["total"], reverse=True)
 
     receivable_payments = Payment.objects.filter(
         is_checked=False,
@@ -125,6 +172,8 @@ def build_order_analytics_context(params):
     return {
         "date_from": start.isoformat(),
         "date_to": end.isoformat(),
+        "travel_from": travel_start.isoformat() if travel_start else "",
+        "travel_to": travel_end.isoformat() if travel_end else "",
         "supplier_filter": supplier,
         "service_filter": service_type,
         "supplier_choices": get_supplier_choices(),
@@ -136,7 +185,10 @@ def build_order_analytics_context(params):
         "actual_purchase": actual_purchase,
         "post_issue_profit": revenue - actual_purchase,
         "supplier_payable": supplier_payable,
-        "supplier_payable_count": payable_services.count(),
+        "supplier_payable_count": len(payable_list),
+        "upcoming_supplier_rows": upcoming_supplier_rows,
+        "upcoming_payments_from": payable_start.isoformat(),
+        "upcoming_payments_to": payable_end.isoformat(),
         "client_receivable": client_receivable,
         "client_receivable_count": receivable_payments.count(),
         "supplier_rows": supplier_rows,

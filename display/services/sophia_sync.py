@@ -40,9 +40,31 @@ def _resolve_sophia_status(value):
     return SOPHIA_STATUS_MAP[key]
 
 
+def _agent_id_from_item(item) -> str:
+    if item in (None, ""):
+        return ""
+    if isinstance(item, dict):
+        return str(item.get("id") or item.get("agent_id") or "").strip()
+    return str(item).strip()
+
+
+def latest_assigned_agent_id(chat: dict) -> str:
+    """Sophia may send one agent or a list after a transfer. The last id wins."""
+    raw = chat.get("assigned_agent")
+    if raw in (None, ""):
+        raw = chat.get("assigned_agents")
+    if isinstance(raw, (list, tuple)):
+        for item in reversed(raw):
+            agent_id = _agent_id_from_item(item)
+            if agent_id:
+                return agent_id
+        return ""
+    return _agent_id_from_item(raw)
+
+
 def _resolve_agent(agent_id):
     """Return (user, profile) for a Sophia agent id, or (None, None)."""
-    agent_id = (str(agent_id).strip() if agent_id is not None else "")
+    agent_id = _agent_id_from_item(agent_id)
     if not agent_id:
         return None, None
     profile = (
@@ -94,8 +116,9 @@ def apply_sophia_chat(chat: dict, *, source: str = "pull") -> dict:
     if not is_create and lead.last_sync_at and changed_at <= lead.last_sync_at:
         return {"lead": lead, "created": False, "applied": False, "skipped_reason": "not_newer"}
 
-    # Resolve assignment + department.
-    agent_user, agent_profile = _resolve_agent(chat.get("assigned_agent"))
+    # Resolve assignment + department. After a transfer Sophia may send two
+    # agents; the last one is the current owner.
+    agent_user, agent_profile = _resolve_agent(latest_assigned_agent_id(chat))
     department = None
     if agent_profile and agent_profile.department_id:
         department = agent_profile.department
@@ -103,7 +126,9 @@ def apply_sophia_chat(chat: dict, *, source: str = "pull") -> dict:
         department = resolve_department(chat.get("department"))
 
     assigned_user = agent_user
-    if assigned_user is None:
+    # On create with no mapped agent, auto-assign. On update, do not steal the
+    # lead unless Sophia sent a resolvable current agent.
+    if assigned_user is None and is_create:
         assigned_user = assign_user_for_department(department)
 
     if is_create:

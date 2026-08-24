@@ -10,7 +10,7 @@ from django.utils import timezone
 from display.lead_errors import LeadSyncError
 from display.models import Department, SophiaSyncState
 from display.services.sophia_client import SophiaClient, SophiaClientError
-from display.services.sophia_sync import apply_sophia_chat
+from display.services.sophia_sync import apply_sophia_chat, latest_assigned_agent_id
 
 BEIRUT = ZoneInfo("Asia/Beirut")
 BATCH_HOUR = 7
@@ -98,7 +98,7 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False, assigned
         for chat in client.iter_changed_chats(since):
             try:
                 if agent_filter:
-                    chat_agent = str(chat.get("assigned_agent") or "").strip()
+                    chat_agent = latest_assigned_agent_id(chat)
                     if chat_agent != agent_filter:
                         filtered += 1
                         continue

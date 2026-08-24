@@ -84,6 +84,23 @@ class SophiaSyncTests(TestCase):
         self.assertEqual(lead.assigned_to_id, self.agent.id)
         self.assertEqual(lead.department_id, self.turkey.id)
 
+    def test_last_assigned_agent_wins_after_transfer(self):
+        other = User.objects.create_user(username="noura", password="pass12345")
+        CrmUserProfile.objects.filter(user=other).update(
+            department=self.sharm,
+            receives_lead_assignments=True,
+            sophia_agent_id="sophia-agent-12",
+        )
+        result = apply_sophia_chat(
+            self._chat(
+                assigned_agent=["sophia-agent-12", "sophia-agent-99"],
+                department="sharm",
+            )
+        )
+        lead = result["lead"]
+        self.assertEqual(lead.assigned_to_id, self.agent.id)
+        self.assertEqual(lead.department_id, self.turkey.id)
+
     def test_sold_webhook_requires_secret(self):
         response = self.client.post(
             "/api/whatsapp/sync/sold/",
