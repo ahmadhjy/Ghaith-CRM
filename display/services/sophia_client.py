@@ -58,8 +58,12 @@ class SophiaClient:
             raise SophiaClientError(f"Sophia GET {path} returned invalid JSON") from exc
 
     def fetch_departments(self) -> list[dict]:
-        """GET /api/crm/departments/ — returns the raw list (agents or departments)."""
-        data = self._get("/api/crm/departments/")
+        """GET {base}/departments — returns the raw list (agents or departments).
+
+        Per Sophia's go-live spec the base URL already includes
+        ``…/prospect-crm/v1/consumer``, so the path here is just ``/departments``.
+        """
+        data = self._get("/departments")
         return data.get("departments") or data.get("agents") or []
 
     def iter_changed_chats(self, status_changed_since: str, *, max_pages: int = 1000):
@@ -68,7 +72,7 @@ class SophiaClient:
         seen_pages = 0
         while page and seen_pages < max_pages:
             data = self._get(
-                "/api/crm/chats/",
+                "/chats",
                 params={"status_changed_since": status_changed_since, "page": page},
             )
             for chat in data.get("chats") or []:
