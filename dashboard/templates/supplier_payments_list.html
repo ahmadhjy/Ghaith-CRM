@@ -22,6 +22,11 @@
 {% block content %}
 <div class="list-page list-page--supplier">
 
+    <div class="list-page__downloadbar" style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+        <a href="{% url 'supplier_payments_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--primary"><i class="fas fa-download"></i> Download PDF</a>
+        <a href="{% url 'supplier_payments_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn--secondary"><i class="fas fa-file-excel"></i> Excel</a>
+    </div>
+
     <div class="list-page__filters purchases-filters">
         <form method="GET" action="{% url 'supplier_payments_list' %}" class="purchases-filters__form">
             {% if issued_count or overdue_count %}

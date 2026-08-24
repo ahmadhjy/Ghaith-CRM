@@ -58,7 +58,10 @@
 
 <div class="list-page list-page--client {% if refund_filter %}list-page--refunds{% endif %}">
 
-
+    <div class="list-page__downloadbar" style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+        {% if refund_filter %}<a href="{% url 'client_payments_list' %}" class="btn btn--secondary"><i class="fas fa-arrow-left"></i> All payments</a>{% endif %}
+        <a href="{% url 'client_payments_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--primary"><i class="fas fa-download"></i> Download PDF</a>
+    </div>
 
     {% if refund_filter %}
 
