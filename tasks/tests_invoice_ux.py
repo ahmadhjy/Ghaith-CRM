@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from display.models import Lead
 from tasks.models import LeadTask, Payment, Service
@@ -57,3 +60,18 @@ class InvoiceInlineActionsTests(TestCase):
         self.assertTrue(
             Payment.objects.filter(leadtask=self.order, amount=250).exists()
         )
+
+    def test_payment_amount_and_date_can_be_edited(self):
+        payment = Payment.objects.create(
+            leadtask=self.order,
+            amount=100,
+            date=timezone.make_aware(datetime(2026, 7, 1, 12, 0)),
+        )
+        response = self.client.post(
+            f"/tasks/payments/update/{payment.pk}/",
+            {"amount": "275", "date": "2026-08-15"},
+        )
+        self.assertEqual(response.status_code, 302)
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount, 275)
+        self.assertEqual(payment.date.date().isoformat(), "2026-08-15")

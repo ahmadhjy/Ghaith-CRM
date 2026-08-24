@@ -1054,6 +1054,27 @@ body.edit-invoice-page {
   align-items: center;
 }
 
+.pay-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pay-edit-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay-edit-input {
+  min-width: 120px;
+  padding: 7px 10px;
+  border: 1px solid var(--inv-border);
+  border-radius: var(--inv-radius-sm);
+  font-size: .85rem;
+}
+
 .attach-rename-input {
   flex: 1;
   min-width: 180px;

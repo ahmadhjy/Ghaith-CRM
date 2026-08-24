@@ -325,9 +325,15 @@
                     </thead>
                     <tbody id="invoicePaymentsBody">
                     {% for payment in lead_task_payments %}
-                    <tr class="{{ payment.is_checked|yesno:'checked,' }}">
-                        <td>{{ payment.date|date:"j M Y" }}</td>
-                        <td class="payment-amount">${{ payment.amount }}</td>
+                    <tr class="{{ payment.is_checked|yesno:'checked,' }}" id="payment-row-{{ payment.pk }}">
+                        <td>
+                            <span class="pay-view" id="pay-date-view-{{ payment.pk }}">{{ payment.date|date:"j M Y" }}</span>
+                            <input form="pay-edit-{{ payment.pk }}" type="date" name="date" value="{{ payment.date|date:'Y-m-d' }}" class="pay-edit-input" id="pay-date-edit-{{ payment.pk }}" style="display:none">
+                        </td>
+                        <td class="payment-amount">
+                            <span class="pay-view" id="pay-amt-view-{{ payment.pk }}">${{ payment.amount }}</span>
+                            <input form="pay-edit-{{ payment.pk }}" type="number" name="amount" min="0" step="1" value="{{ payment.amount }}" class="pay-edit-input" id="pay-amt-edit-{{ payment.pk }}" style="display:none">
+                        </td>
                         <td>
                             <form method="post" action="{% url 'update_payment' payment.pk %}" style="display:inline">
                                 {% csrf_token %}
@@ -337,7 +343,13 @@
                                 </label>
                             </form>
                         </td>
-                        <td>
+                        <td class="pay-actions">
+                            <form method="post" action="{% url 'update_payment' payment.pk %}" id="pay-edit-{{ payment.pk }}" class="pay-edit-form">
+                                {% csrf_token %}
+                                <button type="button" class="attach-edit-btn" id="pay-pen-{{ payment.pk }}" title="Edit amount and date" onclick="togglePaymentEdit({{ payment.pk }})"><i class="fas fa-pen"></i></button>
+                                <button type="submit" class="inv-btn inv-btn--accent inv-btn--sm" id="pay-save-{{ payment.pk }}" style="display:none"><i class="fas fa-check"></i> Save</button>
+                                <button type="button" class="inv-btn inv-btn--outline inv-btn--sm" id="pay-cancel-{{ payment.pk }}" style="display:none" onclick="togglePaymentEdit({{ payment.pk }})">Cancel</button>
+                            </form>
                             <a href="{% url 'delete_payment' payment.pk %}" class="inv-btn inv-btn--danger inv-btn--sm"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>
@@ -626,6 +638,26 @@ function toggleAttachRename(id) {
     form.style.display = editing ? 'none' : 'flex';
     if (!editing) {
         var input = form.querySelector('input[name="attachment_name"]');
+        if (input) { input.focus(); input.select(); }
+    }
+}
+
+function togglePaymentEdit(id) {
+    var dateEdit = document.getElementById('pay-date-edit-' + id);
+    if (!dateEdit) return;
+    var editing = dateEdit.style.display !== 'none';
+    var views = ['pay-date-view-', 'pay-amt-view-', 'pay-pen-'];
+    var edits = ['pay-date-edit-', 'pay-amt-edit-', 'pay-save-', 'pay-cancel-'];
+    views.forEach(function(prefix) {
+        var el = document.getElementById(prefix + id);
+        if (el) el.style.display = editing ? '' : 'none';
+    });
+    edits.forEach(function(prefix) {
+        var el = document.getElementById(prefix + id);
+        if (el) el.style.display = editing ? 'none' : (prefix.indexOf('edit') >= 0 ? 'inline-block' : 'inline-flex');
+    });
+    if (!editing) {
+        var input = document.getElementById('pay-amt-edit-' + id);
         if (input) { input.focus(); input.select(); }
     }
 }
@@ -1120,13 +1152,24 @@ document.getElementById('paymentCreateForm').addEventListener('submit', function
     .then(function(res) {
         if (!res.ok || res.data.status !== 'success') throw new Error('Could not add payment.');
         var p = res.data.payment;
+        var csrf = (form.querySelector('[name=csrfmiddlewaretoken]') || {}).value || getCookie('csrftoken');
         var row = document.createElement('tr');
+        row.id = 'payment-row-' + p.id;
         row.innerHTML =
-            '<td>' + p.date + '</td>' +
-            '<td class="payment-amount">$' + p.amount + '</td>' +
-            '<td><span class="inv-toggle"><input type="checkbox" disabled>' +
-            '<span class="inv-toggle__slider"></span></span></td>' +
-            '<td><span class="inv-flash inv-flash--success">Added</span></td>';
+            '<td><span class="pay-view" id="pay-date-view-' + p.id + '">' + (p.date_display || p.date) + '</span>' +
+            '<input form="pay-edit-' + p.id + '" type="date" name="date" value="' + (p.date_input || p.date) + '" class="pay-edit-input" id="pay-date-edit-' + p.id + '" style="display:none"></td>' +
+            '<td class="payment-amount"><span class="pay-view" id="pay-amt-view-' + p.id + '">$' + p.amount + '</span>' +
+            '<input form="pay-edit-' + p.id + '" type="number" name="amount" min="0" step="1" value="' + p.amount + '" class="pay-edit-input" id="pay-amt-edit-' + p.id + '" style="display:none"></td>' +
+            '<td><form method="post" action="' + p.update_url + '" style="display:inline">' +
+            '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrf + '">' +
+            '<label class="inv-toggle"><input type="checkbox" name="payment_checked" onchange="this.form.submit();">' +
+            '<span class="inv-toggle__slider"></span></label></form></td>' +
+            '<td class="pay-actions"><form method="post" action="' + p.update_url + '" id="pay-edit-' + p.id + '" class="pay-edit-form">' +
+            '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrf + '">' +
+            '<button type="button" class="attach-edit-btn" id="pay-pen-' + p.id + '" title="Edit amount and date" onclick="togglePaymentEdit(' + p.id + ')"><i class="fas fa-pen"></i></button>' +
+            '<button type="submit" class="inv-btn inv-btn--accent inv-btn--sm" id="pay-save-' + p.id + '" style="display:none"><i class="fas fa-check"></i> Save</button>' +
+            '<button type="button" class="inv-btn inv-btn--outline inv-btn--sm" id="pay-cancel-' + p.id + '" style="display:none" onclick="togglePaymentEdit(' + p.id + ')">Cancel</button></form>' +
+            '<a href="' + p.delete_url + '" class="inv-btn inv-btn--danger inv-btn--sm"><i class="fas fa-trash"></i></a></td>';
         document.getElementById('invoicePaymentsBody').appendChild(row);
         document.getElementById('invoicePaymentsTable').hidden = false;
         document.getElementById('invoicePaymentsEmpty').hidden = true;

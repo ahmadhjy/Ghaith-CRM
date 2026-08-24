@@ -227,8 +227,39 @@ def update_payment(request, pk):
     payment = get_object_or_404(Payment, pk=pk)
     leadtask = payment.leadtask.pk
     if request.method == 'POST':
-        payment.is_checked = request.POST.get('payment_checked', 'off') == 'on'
-        payment.save()
+        if 'amount' in request.POST or 'date' in request.POST:
+            raw_amount = (request.POST.get('amount') or '').strip()
+            raw_date = (request.POST.get('date') or '').strip()
+            try:
+                amount = int(float(raw_amount))
+            except (TypeError, ValueError):
+                amount = None
+            if amount is None or amount < 0:
+                messages.error(request, 'Enter a valid payment amount.')
+            else:
+                payment.amount = amount
+                if raw_date:
+                    try:
+                        naive = datetime.strptime(raw_date, '%Y-%m-%d')
+                        if payment.date:
+                            naive = naive.replace(
+                                hour=payment.date.hour,
+                                minute=payment.date.minute,
+                                second=payment.date.second,
+                            )
+                        payment.date = timezone.make_aware(naive) if timezone.is_naive(naive) else naive
+                    except ValueError:
+                        messages.error(request, 'Enter a valid payment date.')
+                        next_url = request.GET.get('next')
+                        if next_url:
+                            return redirect(next_url)
+                        return redirect('edit_lead_tasks', leadtask)
+                payment.save(update_fields=['amount', 'date'])
+                sync_payment_event(payment)
+        else:
+            payment.is_checked = request.POST.get('payment_checked', 'off') == 'on'
+            payment.save(update_fields=['is_checked'])
+            sync_payment_event(payment)
         next_url = request.GET.get('next')
         if next_url:
             return redirect(next_url)
@@ -769,13 +800,18 @@ def add_payment(request, pk):
             payment.save()
             sync_payment_event(payment)
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.urls import reverse as payment_reverse
                 return JsonResponse({
                     'status': 'success',
                     'payment': {
                         'id': payment.pk,
                         'amount': payment.amount,
                         'date': payment.date.strftime('%Y-%m-%d'),
+                        'date_display': f"{payment.date.day} {payment.date.strftime('%b %Y')}",
+                        'date_input': payment.date.strftime('%Y-%m-%d'),
                         'is_checked': payment.is_checked,
+                        'update_url': payment_reverse('update_payment', args=[payment.pk]),
+                        'delete_url': payment_reverse('delete_payment', args=[payment.pk]),
                     },
                 })
             return redirect("edit_lead_tasks", pk=pk)
