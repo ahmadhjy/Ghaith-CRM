@@ -8,6 +8,7 @@ SOPHIA_HTTP_TIMEOUT.
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,11 +20,38 @@ class SophiaClientError(Exception):
     """Raised when a call to Sophia fails or returns a non-2xx response."""
 
 
+def _first_setting(*names, default=""):
+    """Return the first non-empty Django setting or environment variable."""
+    for name in names:
+        value = getattr(settings, name, None)
+        if value not in (None, ""):
+            return value
+        env = os.environ.get(name)
+        if env:
+            return env
+    return default
+
+
+def sophia_config_status() -> dict:
+    """Safe diagnostic (no secrets) for why the pull client is/isn't configured."""
+    base = _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL")
+    token = _first_setting("SOPHIA_API_TOKEN", "SOPHIIA_API_TOKEN")
+    return {
+        "settings_module": getattr(settings, "SETTINGS_MODULE", ""),
+        "has_SOPHIA_BASE_URL": bool(getattr(settings, "SOPHIA_BASE_URL", "")),
+        "has_SOPHIIA_BASE_URL": bool(getattr(settings, "SOPHIIA_BASE_URL", "")),
+        "has_SOPHIA_API_TOKEN": bool(getattr(settings, "SOPHIA_API_TOKEN", "")),
+        "base_url_length": len(str(base or "")),
+        "token_length": len(str(token or "")),
+        "configured": bool(base and token),
+    }
+
+
 class SophiaClient:
     def __init__(self, base_url=None, token=None, timeout=None):
-        self.base_url = (base_url or getattr(settings, "SOPHIA_BASE_URL", "") or "").rstrip("/")
-        self.token = token or getattr(settings, "SOPHIA_API_TOKEN", "") or ""
-        self.timeout = timeout or getattr(settings, "SOPHIA_HTTP_TIMEOUT", 30)
+        self.base_url = (base_url or _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL") or "").rstrip("/")
+        self.token = token or _first_setting("SOPHIA_API_TOKEN", "SOPHIIA_API_TOKEN") or ""
+        self.timeout = timeout or int(_first_setting("SOPHIA_HTTP_TIMEOUT", default=30) or 30)
 
     @property
     def is_configured(self) -> bool:

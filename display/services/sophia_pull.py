@@ -61,6 +61,8 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False, assigned
     agent_filter = (assigned_agent or "").strip()
 
     if not client.is_configured:
+        from display.services.sophia_client import sophia_config_status
+
         msg = "Sophia client not configured (set SOPHIA_BASE_URL and SOPHIA_API_TOKEN)."
         state.last_run_at = timezone.now()
         state.last_status = "error"
@@ -71,6 +73,7 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False, assigned
             "configured": False,
             "error": msg,
             "code": "NOT_CONFIGURED",
+            "debug": sophia_config_status(),
         }
 
     run_start = timezone.now()
