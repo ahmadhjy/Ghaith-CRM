@@ -96,6 +96,24 @@ def patch_settings(path: Path) -> list[str]:
     changes: list[str] = []
     text = path.read_text(encoding='utf-8')
 
+    # Jazzmin must load before django.contrib.admin, so insert it as the first
+    # entry of INSTALLED_APPS (not at the end like the other apps below).
+    if "'jazzmin'" not in text and '"jazzmin"' not in text:
+        match = re.search(r"INSTALLED_APPS\s*=\s*\[", text)
+        if match:
+            insert_at = match.end()
+            text = text[:insert_at] + "\n    'jazzmin'," + text[insert_at:]
+            changes.append("added 'jazzmin' as first INSTALLED_APPS entry")
+
+    # Pull in the shared Jazzmin theme config (jazzmin_config.py is synced next to
+    # settings.py by deploy.sh). Relative import works in both dev and prod packages.
+    if 'JAZZMIN_SETTINGS' not in text:
+        text = text.rstrip() + (
+            "\n\n# Jazzmin admin theme (patched by deploy/patch_production_settings.py)\n"
+            "from .jazzmin_config import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402,F401\n"
+        )
+        changes.append("added Jazzmin theme import")
+
     if "'notifications'" not in text and '"notifications"' not in text:
         match = re.search(
             r"(INSTALLED_APPS\s*=\s*\[[\s\S]*?)(\n\])",
