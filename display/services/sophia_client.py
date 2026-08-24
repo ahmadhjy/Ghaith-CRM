@@ -77,11 +77,12 @@ class SophiaClient:
         req.add_header("Accept-Language", "en-US,en;q=0.9")
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                body = resp.read().decode("utf-8")
+                content_type = resp.headers.get("Content-Type", "")
+                body = resp.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
             detail = ""
             try:
-                detail = exc.read().decode("utf-8")[:500]
+                detail = exc.read().decode("utf-8", errors="replace")[:500]
             except Exception:
                 pass
             raise SophiaClientError(f"Sophia GET {path} -> HTTP {exc.code}: {detail}") from exc
@@ -90,7 +91,11 @@ class SophiaClient:
         try:
             return json.loads(body or "{}")
         except json.JSONDecodeError as exc:
-            raise SophiaClientError(f"Sophia GET {path} returned invalid JSON") from exc
+            snippet = (body or "").lstrip()[:180].replace("\n", " ")
+            kind = "HTML" if snippet.lower().startswith("<!") or "<html" in snippet.lower() else "non-JSON"
+            raise SophiaClientError(
+                f"Sophia GET {path} returned {kind} ({content_type}): {snippet!r}"
+            ) from exc
 
     def fetch_departments(self) -> list[dict]:
         """GET {base}/departments — returns the raw list (agents or departments).
