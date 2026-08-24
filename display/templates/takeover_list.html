@@ -39,8 +39,8 @@
                         <td data-label="Phone">{{ lead.phone }}</td>
                         <td data-label="Department">{% if lead.department %}{{ lead.department.name }}{% else %}—{% endif %}</td>
                         <td data-label="WhatsApp Line">{{ lead.whatsapp_received_on|default:"—" }}</td>
-                        <td data-label="Last Customer Msg">{% if lead.last_customer_message_at %}{{ lead.last_customer_message_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
-                        <td data-label="Last Agent Action">{% if lead.last_agent_action_at %}{{ lead.last_agent_action_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
+                        <td data-label="Last Customer Msg">{% if lead.last_customer_message_at %}{{ lead.last_customer_message_at|date:"j M Y, H:i" }}{% else %}—{% endif %}</td>
+                        <td data-label="Last Agent Action">{% if lead.last_agent_action_at %}{{ lead.last_agent_action_at|date:"j M Y, H:i" }}{% else %}—{% endif %}</td>
                         <td data-label="Destination">{{ lead.destination|default:"—" }}</td>
                         <td data-label="Summary">{% if lead.chat_summary %}{{ lead.chat_summary|truncatechars:50 }}{% else %}{{ lead.reason_of_travel|truncatechars:50|default:"—" }}{% endif %}</td>
                         <td data-label="Action">

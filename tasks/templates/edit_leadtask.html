@@ -260,7 +260,7 @@
                                 <td class="service-net">{{ service.net|default:"—" }}</td>
                                 <td class="service-issue-price">{{ service.issue_price|default:"—" }}</td>
                                 <td class="service-selling">{{ service.selling|default:"—" }}</td>
-                                <td class="service-due-time">{{ service.due_time|date:"M d, H:i"|default:"—" }}</td>
+                                <td class="service-due-time">{{ service.due_time|date:"j M Y, H:i"|default:"—" }}</td>
                                 <td class="service-voucher">{{ service.voucher_id|default:"—" }}</td>
                                 <td>
                                     <label class="inv-toggle-label">
@@ -326,7 +326,7 @@
                     <tbody id="invoicePaymentsBody">
                     {% for payment in lead_task_payments %}
                     <tr class="{{ payment.is_checked|yesno:'checked,' }}">
-                        <td>{{ payment.date|date:"M d, Y" }}</td>
+                        <td>{{ payment.date|date:"j M Y" }}</td>
                         <td class="payment-amount">${{ payment.amount }}</td>
                         <td>
                             <form method="post" action="{% url 'update_payment' payment.pk %}" style="display:inline">
@@ -377,9 +377,18 @@
                     {% for attachment in attachments %}
                     <tr>
                         <td>
-                            <a href="{{ attachment.file.url }}" class="attach-link" target="_blank" rel="noopener noreferrer">
-                                <i class="fas fa-file"></i> {{ attachment.attachment_name }}
-                            </a>
+                            <div class="attach-name-view" id="attach-view-{{ attachment.pk }}">
+                                <a href="{{ attachment.file.url }}" class="attach-link" target="_blank" rel="noopener noreferrer">
+                                    <i class="fas fa-file"></i> {{ attachment.attachment_name }}
+                                </a>
+                                <button type="button" class="attach-edit-btn" title="Rename" onclick="toggleAttachRename({{ attachment.pk }})"><i class="fas fa-pen"></i></button>
+                            </div>
+                            <form method="post" action="{% url 'rename_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="attach-rename-form" id="attach-edit-{{ attachment.pk }}" style="display:none">
+                                {% csrf_token %}
+                                <input type="text" name="attachment_name" value="{{ attachment.attachment_name }}" maxlength="120" class="attach-rename-input">
+                                <button type="submit" class="inv-btn inv-btn--accent inv-btn--sm"><i class="fas fa-check"></i> Save</button>
+                                <button type="button" class="inv-btn inv-btn--outline inv-btn--sm" onclick="toggleAttachRename({{ attachment.pk }})">Cancel</button>
+                            </form>
                         </td>
                         <td>
                             <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="delete-attach"><i class="fas fa-trash"></i> Delete</a>
@@ -422,7 +431,7 @@
                     {% for link in media_upload_links %}
                     <li>
                         <strong>{{ link.client_name }}</strong>
-                        <span style="color:var(--inv-muted)">{{ link.created_at|date:"M d, Y H:i" }}</span>
+                        <span style="color:var(--inv-muted)">{{ link.created_at|date:"j M Y, H:i" }}</span>
                         {% if link.is_submitted %}
                         <span class="inv-pill inv-pill--submitted">Submitted</span>
                         {% else %}
@@ -607,6 +616,20 @@
 
 <script src="{% static 'JS/passengers-field.js' %}"></script>
 <script>
+/* ── Attachment rename toggle ── */
+function toggleAttachRename(id) {
+    var view = document.getElementById('attach-view-' + id);
+    var form = document.getElementById('attach-edit-' + id);
+    if (!view || !form) return;
+    var editing = form.style.display !== 'none';
+    view.style.display = editing ? '' : 'none';
+    form.style.display = editing ? 'none' : 'flex';
+    if (!editing) {
+        var input = form.querySelector('input[name="attachment_name"]');
+        if (input) { input.focus(); input.select(); }
+    }
+}
+
 /* ── Customer collapse ── */
 document.getElementById('customerToggle').addEventListener('click', function() {
     var body = document.getElementById('customerBody');

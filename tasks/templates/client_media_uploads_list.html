@@ -28,7 +28,7 @@
                     <tr>
                         <td data-label="Client"><strong>{{ link.client_name }}</strong></td>
                         <td data-label="Invoice"><a href="{% url 'edit_lead_tasks' link.leadtask.pk %}" class="req-link">#{{ link.leadtask.pk }}</a></td>
-                        <td data-label="Created">{{ link.created_at|date:"M d, Y H:i" }}</td>
+                        <td data-label="Created">{{ link.created_at|date:"j M Y, H:i" }}</td>
                         <td data-label="Status">
                             {% if link.is_submitted %}<span class="req-pill req-pill--submitted">Submitted</span>
                             {% else %}<span class="req-pill req-pill--open">Open</span>{% endif %}

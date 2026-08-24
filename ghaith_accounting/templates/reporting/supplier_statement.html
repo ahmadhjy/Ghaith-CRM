@@ -13,7 +13,7 @@
     <tbody>
     {% for row in rows %}
         <tr{% if row.is_pending %} class="statement-row--pending"{% endif %}>
-            <td class="cell-nowrap">{{ row.date|date:"d/m/Y" }}</td>
+            <td class="cell-nowrap">{{ row.date|date:"j M Y" }}</td>
             <td>{{ row.type }}</td>
             <td class="col-detail">{{ row.description|default:"—"|truncate_detail }}</td>
             <td>{{ row.destination|default:"—" }}</td>

@@ -42,8 +42,34 @@ SECRET_KEY = 'django-insecure-%a3!s$=qh*z3#cjxbq^8exok0yd8vk=my($8=hjtc*@$8c&5c6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# here the new domain refers to nothing
-ALLOWED_HOSTS = ['thenewdomain.domain', 'localhost']
+# Local + production + tunnels (ngrok / Cloudflare) so Sophia/WhatsApp can hit this server.
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+    '0.0.0.0',
+    'thenewdomain.domain',
+    'ghaithtravel.pythonanywhere.com',
+    'www.ghaithtravel.pythonanywhere.com',
+    '.ngrok-free.app',
+    '.ngrok.io',
+    '.ngrok.app',
+    '.trycloudflare.com',
+    '.loca.lt',
+]
+# DEBUG local testing: accept any Host (needed for changing tunnel URLs).
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://ghaithtravel.pythonanywhere.com',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok.io',
+    'https://*.ngrok.app',
+    'https://*.trycloudflare.com',
+]
 
 # settings.py
 
@@ -52,6 +78,7 @@ ALLOWED_HOSTS = ['thenewdomain.domain', 'localhost']
 
 # NOTE : i think that there should be a caching app in here
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -153,6 +180,20 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Standard, unambiguous date display across the whole system: day month(name) year
+# e.g. "5 Aug 2026" so single-digit months are never confusing.
+DATE_FORMAT = "j M Y"
+DATETIME_FORMAT = "j M Y, H:i"
+SHORT_DATE_FORMAT = "j M Y"
+SHORT_DATETIME_FORMAT = "j M Y, H:i"
+DATE_INPUT_FORMATS = [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d %b %Y",
+    "%d %B %Y",
+]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -198,6 +239,21 @@ CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 # Shared secret for WhatsApp AI dashboard → CRM lead sync API (header: X-API-Key)
 EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY', 'GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT')
 
+# --- Sophia WhatsApp lead-sync integration (hybrid: daily pull + Sold webhook) ---
+# Base URL of Sophia's API we pull from (no trailing slash needed).
+SOPHIA_BASE_URL = os.environ.get('SOPHIA_BASE_URL', '')
+# Bearer token Sophia issues to the CRM for the daily pull (Authorization: Bearer ...).
+SOPHIA_API_TOKEN = os.environ.get('SOPHIA_API_TOKEN', '')
+# Shared secret the CRM issues to Sophia for the real-time Sold webhook
+# (header: X-Webhook-Secret). Provided by the CRM.
+SOPHIA_WEBHOOK_SECRET = os.environ.get(
+    'SOPHIA_WEBHOOK_SECRET', 'N7XOgeSIflfm9nJROHN0JXohXQglVYrO'
+)
+# Timeout (seconds) for outbound calls to Sophia.
+SOPHIA_HTTP_TIMEOUT = int(os.environ.get('SOPHIA_HTTP_TIMEOUT', '30'))
+# On the very first pull (no watermark yet), backfill chats changed since this date.
+SOPHIA_BACKFILL_SINCE = os.environ.get('SOPHIA_BACKFILL_SINCE', '2025-01-01T00:00:00+03:00')
+
 # Passcode for Babylon supplier hotel spreadsheet portal (/babylon/)
 BABYLON_PORTAL_PASSCODE = os.environ.get('BABYLON_PORTAL_PASSCODE') or 'Babylon-Ghaith-2026'
 
@@ -219,4 +275,160 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+}
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Ghaith Admin",
+    "site_header": "Ghaith Travel",
+    "site_brand": "Ghaith Admin",
+    "site_logo": None,
+    "welcome_sign": "Ghaith Travel administration",
+    "copyright": "Ghaith Travel",
+    "search_model": ["display.Lead", "auth.User", "tasks.LeadTask"],
+    "topmenu_links": [
+        {"name": "CRM", "url": "/", "new_window": False},
+        {"name": "Orders", "url": "/tasks/leads/current/", "new_window": False},
+        {"name": "Sophia sync", "url": "/api/whatsapp/sync/now/", "new_window": False},
+        {"model": "display.Lead"},
+        {"model": "auth.User"},
+    ],
+    "show_sidebar": True,
+    "navigation_expanded": False,
+    "hide_apps": ["api", "reporting"],
+    "hide_models": [
+        "tasks.task",
+        "tasks.tag",
+        "sales.salesinvoiceline",
+        "purchases.supplierbillline",
+        "catalog.servicefielddefinition",
+        "accounts_core.userprofile",
+        "accounts_core.documentsequence",
+        "notifications.pushsubscription",
+        "accounting_bridge.crmsupplierlink",
+        "accounting_bridge.crmdestinationlink",
+        "accounting_bridge.crmservicetypelink",
+        "accounting_bridge.crmemployeelink",
+        "treasury.arallocation",
+        "treasury.apallocation",
+    ],
+    "order_with_respect_to": [
+        "display",
+        "tasks",
+        "catalog",
+        "dashboard",
+        "notifications",
+        "auth",
+        "accounts_core",
+        "sales",
+        "purchases",
+        "treasury",
+        "expenses",
+        "accounting_bridge",
+        "auditlog",
+    ],
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.User": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "display": "fas fa-headset",
+        "display.Lead": "fas fa-user-tag",
+        "display.Department": "fas fa-sitemap",
+        "display.Destination": "fas fa-map-marker-alt",
+        "display.Offer": "fas fa-file-invoice",
+        "display.DailyReport": "fas fa-clipboard-list",
+        "display.MonthlyTarget": "fas fa-bullseye",
+        "display.UserMonthlyTarget": "fas fa-chart-line",
+        "display.SophiaSyncState": "fab fa-whatsapp",
+        "tasks": "fas fa-clipboard-check",
+        "tasks.LeadTask": "fas fa-suitcase",
+        "tasks.Service": "fas fa-concierge-bell",
+        "tasks.Supplier": "fas fa-truck",
+        "tasks.ServiceType": "fas fa-list",
+        "tasks.PdfPolicy": "fas fa-file-alt",
+        "tasks.ClientMediaUploadLink": "fas fa-photo-video",
+        "tasks.BabylonHotelEntry": "fas fa-hotel",
+        "catalog": "fas fa-book",
+        "catalog.Destination": "fas fa-globe",
+        "catalog.ServiceType": "fas fa-tags",
+        "dashboard": "fas fa-calendar-alt",
+        "dashboard.Event": "fas fa-calendar",
+        "notifications": "fas fa-bell",
+        "notifications.UserNotification": "fas fa-bell",
+        "notifications.ChatMessage": "fas fa-comments",
+        "accounts_core": "fas fa-address-book",
+        "accounts_core.Client": "fas fa-user-tie",
+        "accounts_core.Supplier": "fas fa-industry",
+        "accounts_core.Employee": "fas fa-id-badge",
+        "accounts_core.CompanyBranding": "fas fa-building",
+        "accounts_core.Currency": "fas fa-coins",
+        "sales": "fas fa-file-invoice-dollar",
+        "sales.SalesInvoice": "fas fa-file-invoice-dollar",
+        "sales.CreditNote": "fas fa-undo",
+        "purchases": "fas fa-shopping-cart",
+        "purchases.SupplierBill": "fas fa-file-invoice",
+        "purchases.ExpenseCategory": "fas fa-folder-open",
+        "treasury": "fas fa-university",
+        "treasury.Payment": "fas fa-money-check-alt",
+        "treasury.MoneyAccount": "fas fa-wallet",
+        "expenses": "fas fa-receipt",
+        "accounting_bridge": "fas fa-link",
+        "auditlog": "fas fa-history",
+    },
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": True,
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs",
+        "display.lead": "horizontal_tabs",
+        "tasks.leadtask": "horizontal_tabs",
+    },
+    "custom_links": {
+        "display": [
+            {"name": "Open CRM", "url": "/", "icon": "fas fa-home", "permissions": ["display.view_lead"]},
+            {
+                "name": "Run Sophia sync",
+                "url": "/api/whatsapp/sync/now/",
+                "icon": "fab fa-whatsapp",
+                "permissions": ["display.view_lead"],
+            },
+        ],
+        "tasks": [
+            {"name": "All orders", "url": "/tasks/leads/current/", "icon": "fas fa-list", "permissions": ["tasks.view_leadtask"]},
+        ],
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": True,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-navy",
+    "accent": "accent-navy",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": True,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-navy",
+    "sidebar_nav_small_text": True,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": True,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": True,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    "actions_sticky_top": True,
 }

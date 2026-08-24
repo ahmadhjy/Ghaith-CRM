@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMonthlyTarget, Department, CrmUserProfile
+from .models import Lead, Destination, DailyReport, MonthlyTarget, Offer, UserMonthlyTarget, Department, CrmUserProfile, SophiaSyncState
 from django.db.models import Q, Sum
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
@@ -73,19 +73,60 @@ class TakeoverFilter(admin.SimpleListFilter):
 
 class LeadAdmin(admin.ModelAdmin):
     search_fields = ['name', 'destination', 'phone', 'external_id']
-    list_display = ['__str__', 'status', 'department', 'destination', 'phone',
-                    'whatsapp_received_on', 'assigned_to',
-                    'last_customer_message_at', 'last_agent_action_at',
-                    'created_at', 'last_modified', 'is_overdue', 'takeover_added_at']
-    list_filter = ['assigned_to__username', 'department', 'type_of_service',
-                   'status', 'sold', 'lost', IsOverdueFilter, OnHoldNotTakeoverFilter, TakeoverFilter]
+    list_display = ['name', 'status', 'department', 'assigned_to', 'phone', 'sold', 'lost', 'last_modified']
+    list_filter = ['status', 'department', 'sold', 'lost', 'assigned_to', IsOverdueFilter, TakeoverFilter]
     ordering = ['-last_modified']
-
-    exclude = ['attachments', 'assignment_notes']
+    list_per_page = 40
+    date_hierarchy = 'last_modified'
+    autocomplete_fields = ['assigned_to', 'department']
+    readonly_fields = ['created_at', 'last_modified', 'assigned_at', 'takeover_added_at', 'last_sync_at']
+    exclude = ['attachments']
+    fieldsets = (
+        ('Contact', {
+            'fields': ('name', 'phone', 'country_code', 'email', 'channel'),
+        }),
+        ('Pipeline', {
+            'fields': (
+                'status', 'department', 'assigned_to', 'destination', 'type_of_service',
+                'sold', 'lost', 'urgent', 'follow_up',
+            ),
+        }),
+        ('WhatsApp / Sophia', {
+            'fields': (
+                'external_id', 'whatsapp_received_on', 'chat_summary',
+                'last_customer_message_at', 'last_agent_action_at',
+                'status_changed_at', 'last_sync_at',
+            ),
+        }),
+        ('Trip details', {
+            'classes': ('collapse',),
+            'fields': (
+                'pax', 'duration', 'travel_date_from', 'travel_date_to', 'travel_dates_flexible',
+                'reason_of_travel', 'why_this_destination', 'budget_range_from', 'budget_range_to',
+                'special_request', 'date_notes', 'supplier',
+            ),
+        }),
+        ('Pricing', {
+            'classes': ('collapse',),
+            'fields': ('selling_price', 'net', 'profit', 'finalization_notes'),
+        }),
+        ('Assignment & takeover', {
+            'classes': ('collapse',),
+            'fields': (
+                'assignment_notes', 'takeover', 'special_takeover', 'takeover_added_at',
+                'assigned_at', 'period', 'is_archived',
+                'offer_prepared', 'offer_details', 'moved_to_negotiation',
+            ),
+        }),
+        ('Timestamps', {
+            'classes': ('collapse',),
+            'fields': ('created_at', 'last_modified'),
+        }),
+    )
 
     def is_overdue(self, obj):
         return obj.is_overdue
-    is_overdue.boolean = True  # Displays a tick or cross icon
+    is_overdue.boolean = True
 
 
 class DepartmentAdmin(admin.ModelAdmin):
@@ -100,7 +141,7 @@ class CrmUserProfileInline(admin.StackedInline):
     can_delete = False
     fk_name = 'user'
     verbose_name_plural = 'CRM profile'
-    fields = ('department', 'receives_lead_assignments')
+    fields = ('department', 'receives_lead_assignments', 'sophia_agent_id')
 
 class DailyReportAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'date']
@@ -111,8 +152,10 @@ class DailyReportAdmin(admin.ModelAdmin):
 class OfferAdmin(admin.ModelAdmin):
     search_fields = ['title', 'lead__name', 'created_by__username']
     list_display = ['title', 'lead', 'created_by', 'created_at', 'sent', 'sold']
-    list_filter = ['sent', 'sold', 'created_by__username']
+    list_filter = ['sent', 'sold']
     ordering = ['-created_at']
+    autocomplete_fields = ['lead', 'created_by']
+    list_per_page = 40
 
 class UserMonthlyTargetAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'month']
@@ -155,5 +198,18 @@ admin.site.register(UserMonthlyTarget, UserMonthlyTargetAdmin)
 admin.site.register(Offer, OfferAdmin)
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
+
+
+@admin.register(SophiaSyncState)
+class SophiaSyncStateAdmin(admin.ModelAdmin):
+    list_display = ['last_pull_at', 'last_run_at', 'last_status']
+    readonly_fields = ['last_run_at', 'last_status', 'last_message']
+    fields = ('last_pull_at', 'last_run_at', 'last_status', 'last_message')
+
+    def has_add_permission(self, request):
+        return not SophiaSyncState.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 admin.site.site_header = "Ghaith Travel Administration"

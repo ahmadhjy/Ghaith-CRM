@@ -142,11 +142,11 @@
                     <td data-label="Service">{{ service.service_name|default:"—" }}</td>
                     <td data-label="Lead name">{{ service.leadtask.lead.name }}</td>
                     <td data-label="Travel date">
-                        {% if service.leadtask.travel_date %}{{ service.leadtask.travel_date|date:"Y-m-d" }}{% else %}—{% endif %}
+                        {% if service.leadtask.travel_date %}{{ service.leadtask.travel_date|date:"j M Y" }}{% else %}—{% endif %}
                     </td>
                     <td data-label="Amount">{{ service.issue_price|default:service.net|default:"—" }}</td>
                     <td data-label="Due date">
-                        {% if service.due_time %}{{ service.due_time|date:"Y-m-d" }}{% else %}—{% endif %}
+                        {% if service.due_time %}{{ service.due_time|date:"j M Y" }}{% else %}—{% endif %}
                         {% if not service.is_checked and service.due_time and service.due_time < now %}
                         <span class="list-table__overdue-badge">Overdue</span>
                         {% endif %}

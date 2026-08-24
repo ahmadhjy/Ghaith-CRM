@@ -12,11 +12,11 @@
         </div>
         <div class="pdf-doc-panel__col">
             <div class="pdf-doc-panel__label">Issue date</div>
-            <div class="pdf-doc-panel__value">{{ invoice.issue_date|date:"d/m/Y" }}</div>
+            <div class="pdf-doc-panel__value">{{ invoice.issue_date|date:"j M Y" }}</div>
             <div class="pdf-doc-panel__label">Due date</div>
-            <div class="pdf-doc-panel__value">{{ invoice.due_date|date:"d/m/Y" }}</div>
+            <div class="pdf-doc-panel__value">{{ invoice.due_date|date:"j M Y" }}</div>
             <div class="pdf-doc-panel__label">Travel date</div>
-            <div class="pdf-doc-panel__value">{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"d/m/Y" }}{% else %}—{% endif %}</div>
+            <div class="pdf-doc-panel__value">{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"j M Y" }}{% else %}—{% endif %}</div>
         </div>
     </div>
 </div>
@@ -32,7 +32,7 @@
     <tbody>
     {% for line in lines %}
         <tr>
-            <td>{{ line.effective_service_date|date:"d/m/Y" }}</td>
+            <td>{{ line.effective_service_date|date:"j M Y" }}</td>
             <td class="desc">{{ line.statement_line_details }}</td>
             <td>{{ line.destination.name|default:"—" }}</td>
             {% if show_costs %}
@@ -68,7 +68,7 @@
 <div class="panel">
     <p><strong>Client:</strong> {{ invoice.client.name_en }}</p>
     <p><strong>Issue / Due:</strong> {{ invoice.issue_date }} / {{ invoice.due_date }}</p>
-    <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</p>
+    <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"j M Y" }}{% else %}—{% endif %}</p>
     <p><strong>Total selling (USD):</strong> {{ invoice.grand_total_usd }} USD</p>
     {% if show_costs %}
     <p><strong>Total cost (USD):</strong> {{ invoice.total_line_cost_usd }} USD</p>
@@ -87,7 +87,7 @@
     <tbody>
     {% for line in lines %}
         <tr>
-            <td>{{ line.effective_service_date|date:"d/m/Y" }}</td>
+            <td>{{ line.effective_service_date|date:"j M Y" }}</td>
             <td>{{ line.statement_line_details }}</td>
             <td>{{ line.destination.name|default:"-" }}</td>
             {% if show_costs %}

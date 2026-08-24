@@ -25,6 +25,26 @@ def auth_or_401(request):
     return None
 
 
+def check_webhook_secret(request) -> bool:
+    """Validate the Sophia → CRM webhook shared secret (header: X-Webhook-Secret)."""
+    configured = getattr(settings, "SOPHIA_WEBHOOK_SECRET", None)
+    if not configured:
+        return False
+    provided = request.headers.get("X-Webhook-Secret") or request.META.get(
+        "HTTP_X_WEBHOOK_SECRET"
+    )
+    return bool(provided) and provided == configured
+
+
+def webhook_secret_or_401(request):
+    if not check_webhook_secret(request):
+        return JsonResponse(
+            {"error": "Unauthorized", "code": "UNAUTHORIZED"},
+            status=401,
+        )
+    return None
+
+
 def json_error(message, status=400, code=None, extra=None):
     payload = {"error": message}
     if code:

@@ -30,6 +30,7 @@ urlpatterns = [
     path('payment/<int:pk>/', views.add_payment, name='add_payment'),
     path('attachment/add/<int:pk>/', views.add_attachment, name='add_leadtask_attachment'),
     path('attachment/add_multiple/<int:pk>/', views.add_attachments_multiple, name='add_leadtask_attachments_multiple'),
+    path('attachment/rename/<int:attachment_id>/<int:pk>/', views.rename_attachment, name='rename_leadtask_attachment'),
     path('attachment/delete/<int:attachment_id>/<int:pk>/', views.delete_attachment, name='delete_leadtask_attachment'),
     path('attachment/list/<int:invoiceid>/', views.attachment_list, name='attachment_list'),
     path('task/attachment/add/<int:pk>/', views.add_task_attachment, name='add_task_attachment'),

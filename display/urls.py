@@ -49,4 +49,6 @@ urlpatterns = [
     path('api/destinations/', lead_api_views.api_list_destinations, name='api_list_destinations'),
     path('api/departures/', lead_api_views.api_list_departures, name='api_list_departures'),
     path('api/crm/notifications/', lead_api_views.api_create_crm_notification, name='api_create_crm_notification'),
+    path('api/whatsapp/sync/sold/', lead_api_views.api_sophia_sold_webhook, name='api_sophia_sold_webhook'),
+    path('api/whatsapp/sync/now/', lead_api_views.api_sophia_pull_now, name='api_sophia_pull_now'),
 ]

@@ -351,7 +351,7 @@ def build_report_pdf(
         response, pagesize=pagesize,
         leftMargin=28, rightMargin=28, topMargin=22, bottomMargin=24,
     )
-    generated_at = subtitle or timezone.now().strftime('%Y-%m-%d %H:%M')
+    generated_at = subtitle or timezone.now().strftime('%d %b %Y %H:%M')
     story = [
         _header_band(doc_title, '', styles),
         Spacer(1, 10),
@@ -392,13 +392,13 @@ def _section_heading(text, styles):
 def _fmt_datetime(value):
     if not value:
         return '—'
-    return value.strftime('%Y-%m-%d %H:%M')
+    return value.strftime('%d %b %Y %H:%M')
 
 
 def _fmt_date(value):
     if not value:
         return '—'
-    return value.strftime('%Y-%m-%d')
+    return value.strftime('%d %b %Y')
 
 
 def _money_display(value):

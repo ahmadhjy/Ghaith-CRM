@@ -91,13 +91,13 @@
                         <td data-label="Destination">{{ d.destination|default:"—" }}</td>
                         <td data-label="Department">{% if d.department %}{{ d.department.name }}{% else %}—{% endif %}</td>
                         <td data-label="WhatsApp Line">{{ d.whatsapp_received_on|default:"—" }}</td>
-                        <td data-label="Last Customer Msg">{% if d.last_customer_message_at %}{{ d.last_customer_message_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
-                        <td data-label="Last Agent Action">{% if d.last_agent_action_at %}{{ d.last_agent_action_at|date:"M d, Y H:i" }}{% else %}—{% endif %}</td>
+                        <td data-label="Last Customer Msg">{% if d.last_customer_message_at %}{{ d.last_customer_message_at|date:"j M Y, H:i" }}{% else %}—{% endif %}</td>
+                        <td data-label="Last Agent Action">{% if d.last_agent_action_at %}{{ d.last_agent_action_at|date:"j M Y, H:i" }}{% else %}—{% endif %}</td>
                         <td data-label="Status">
                             <span class="req-status-pill req-status-pill--{% if d.sold %}sold{% elif d.lost %}lost{% else %}{{ d.status }}{% endif %}">{{ d.status }}</span>
                         </td>
                         <td data-label="Chat Summary">{% include 'shared/table_tooltip.html' with text=d.chat_summary max_length=40 %}</td>
-                        <td data-label="Created">{{ d.created_at|date:"M d, Y" }}</td>
+                        <td data-label="Created">{{ d.created_at|date:"j M Y" }}</td>
                         <td data-label="Edit"><a href="{% url 'edit-model' d.pk %}" class="req-btn req-btn--outline req-btn--sm">Edit</a></td>
                         <td data-label="Archive"><a href="{% url 'archive_lead' d.pk %}" class="req-link--danger req-btn--sm">Archive</a></td>
                     </tr>

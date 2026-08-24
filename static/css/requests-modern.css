@@ -1210,6 +1210,11 @@ body.has-unified-nav .list-table tbody tr.list-table__row--refund {
   color: #9a3412;
 }
 
+.list-table__amount--refund {
+  color: #c2410c;
+  font-weight: 600;
+}
+
 .list-table__status-pill {
   display: inline-block;
   padding: 3px 10px;

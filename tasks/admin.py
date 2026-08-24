@@ -2,13 +2,36 @@ from django.contrib import admin
 from django import forms
 from .admin_widgets import RichTextAdminWidget
 from .models import (
-    Task, LeadTask, Payment, Tag, Supplier, ServiceType, Service,
+    LeadTask, Payment, Supplier, ServiceType, Service,
     ClientMediaUploadLink, ClientMediaFile, PdfPolicy, BabylonHotelEntry,
 )
 
-admin.site.register(Task)
-admin.site.register(Tag)
-admin.site.register(LeadTask)
+
+@admin.register(LeadTask)
+class LeadTaskAdmin(admin.ModelAdmin):
+    list_display = ('id', 'lead', 'assigned_to', 'status', 'travel_date', 'created_at')
+    list_filter = ('status', 'assigned_to')
+    search_fields = ('lead__name', 'lead__phone', 'notes')
+    autocomplete_fields = ('lead', 'assigned_to')
+    date_hierarchy = 'created_at'
+    list_per_page = 40
+    fieldsets = (
+        (None, {
+            'fields': ('lead', 'assigned_to', 'status', 'payment', 'notes'),
+        }),
+        ('Travel', {
+            'fields': ('travel_date', 'return_date', 'date_of_birth', 'passport_expiry_date'),
+        }),
+    )
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('leadtask', 'date', 'amount', 'is_refund', 'is_checked', 'processed')
+    list_filter = ('is_refund', 'is_checked', 'processed')
+    search_fields = ('leadtask__lead__name',)
+    autocomplete_fields = ('leadtask',)
+    date_hierarchy = 'date'
 
 
 @admin.register(Supplier)
@@ -28,16 +51,18 @@ class ServiceTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("service_name", "supplier", "leadtask", "due_time", "is_checked", "send_to_client", "processed")
+    list_display = ("service_name", "supplier", "leadtask", "due_time", "is_checked")
     search_fields = ("service_name", "supplier", "leadtask__lead__name")
     list_filter = ("is_checked", "send_to_client", "processed")
+    autocomplete_fields = ("leadtask",)
+    list_per_page = 40
 
 
 @admin.register(BabylonHotelEntry)
 class BabylonHotelEntryAdmin(admin.ModelAdmin):
-    list_display = ("client_name", "service_type", "entry_date", "price", "due_date", "confirmation_number", "service")
-    search_fields = ("client_name", "service_type", "details", "confirmation_number", "service__leadtask__lead__name")
-    list_filter = ("entry_date", "due_date")
+    list_display = ("client_name", "service_type", "entry_date", "price", "due_date", "confirmation_number")
+    search_fields = ("client_name", "service_type", "details", "confirmation_number")
+    list_filter = ("entry_date",)
     raw_id_fields = ("service",)
 
 
@@ -51,8 +76,9 @@ class ClientMediaFileInline(admin.TabularInline):
 class ClientMediaUploadLinkAdmin(admin.ModelAdmin):
     list_display = ("client_name", "leadtask", "created_at", "submitted_at", "is_active")
     search_fields = ("client_name", "leadtask__lead__name", "token")
-    list_filter = ("is_active", "submitted_at")
+    list_filter = ("is_active",)
     inlines = [ClientMediaFileInline]
+    autocomplete_fields = ("leadtask",)
 
 
 @admin.register(PdfPolicy)
@@ -69,15 +95,8 @@ class PdfPolicyAdmin(admin.ModelAdmin):
     list_display = (
         'title', 'is_active', 'sort_order',
         'show_on_client_invoice', 'show_on_internal_invoice',
-        'show_on_purchases_report', 'show_on_client_payments_report',
-        'show_on_travellers_report',
     )
-    list_filter = (
-        'is_active',
-        'show_on_client_invoice', 'show_on_internal_invoice',
-        'show_on_purchases_report', 'show_on_client_payments_report',
-        'show_on_travellers_report',
-    )
+    list_filter = ('is_active',)
     list_editable = ('is_active', 'sort_order')
     search_fields = ('title',)
     fieldsets = (
@@ -92,6 +111,5 @@ class PdfPolicyAdmin(admin.ModelAdmin):
                 'show_on_client_payments_report',
                 'show_on_travellers_report',
             ),
-            'description': 'Tick every PDF export that should include this policy section.',
         }),
     )

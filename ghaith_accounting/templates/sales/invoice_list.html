@@ -36,8 +36,8 @@
                 {% if invoice.status == "VOIDED" %}<span class="badge badge-VOIDED">Voided</span>{% endif %}
             </td>
             <td>{{ invoice.client.name_en|default:"—" }}</td>
-            <td>{{ invoice.issue_date|date:"M j, Y" }}</td>
-            <td>{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+            <td>{{ invoice.issue_date|date:"j M Y" }}</td>
+            <td>{% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"j M Y" }}{% else %}—{% endif %}</td>
             <td class="invoice-list-service">{% if invoice.package_type %}{{ invoice.get_package_type_display }}{% else %}—{% endif %}</td>
             <td class="num">{{ invoice.grand_total_usd }} USD</td>
             <td class="num">{{ invoice.total_line_cost_usd|floatformat:2 }} USD</td>

@@ -29,7 +29,7 @@
             <td>{{ item.leadtask.lead.name }}</td>
             <td>{{ item.leadtask.assigned_to.get_full_name|default:item.leadtask.assigned_to.username }}</td>
             <td>{{ item.get_status_display }}</td>
-            <td>{{ item.last_crm_snapshot_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ item.last_crm_snapshot_at|date:"j M Y, H:i" }}</td>
             <td><a href="{% url 'accounting_bridge:review_detail' item.pk %}">Review</a></td>
         </tr>
         {% empty %}

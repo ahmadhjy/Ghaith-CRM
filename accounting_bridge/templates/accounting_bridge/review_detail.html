@@ -39,7 +39,7 @@
             <td>{{ service.net|default:"—" }}</td>
             <td>{{ service.issue_price|default:"—" }}</td>
             <td>{{ service.selling|default:"—" }}</td>
-            <td>{{ service.due_time|date:"M d, H:i"|default:"—" }}</td>
+            <td>{{ service.due_time|date:"j M Y, H:i"|default:"—" }}</td>
             <td>{{ service.voucher_id|default:"—" }}</td>
         </tr>
         {% empty %}

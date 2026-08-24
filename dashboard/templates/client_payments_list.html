@@ -211,8 +211,18 @@
             <span class="filtered-table-total__label">Displayed {% if refund_filter %}refunds{% else %}payments{% endif %}</span>
             <strong>{{ filtered_count }} row{{ filtered_count|pluralize }}</strong>
         </div>
+        {% if not refund_filter %}
         <div class="filtered-table-total__amount">
-            <span class="filtered-table-total__label">Filtered total</span>
+            <span class="filtered-table-total__label">Payments in</span>
+            <strong>${{ payments_in_total|floatformat:2 }}</strong>
+        </div>
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">Refunds out</span>
+            <strong>-${{ refunds_out_total|floatformat:2 }}</strong>
+        </div>
+        {% endif %}
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">{% if refund_filter %}Refunds total{% else %}Net receivable{% endif %}</span>
             <strong>${{ filtered_total|floatformat:2 }}</strong>
         </div>
     </div>
@@ -252,7 +262,7 @@
 
                     <td data-label="Date">
 
-                        {{ payment.date|date:"Y-m-d" }}
+                        {{ payment.date|date:"j M Y" }}
 
                         {% if not payment.is_checked and not payment.is_refund and payment.date and payment.date < now %}
 
@@ -264,7 +274,7 @@
 
                     <td data-label="Client">{{ payment.leadtask.lead.name }}</td>
 
-                    <td data-label="Amount">${{ payment.amount }}</td>
+                    <td data-label="Amount">{% if payment.is_refund %}<span class="list-table__amount--refund">-${{ payment.amount }}</span>{% else %}${{ payment.amount }}{% endif %}</td>
 
                     <td data-label="Type">
 

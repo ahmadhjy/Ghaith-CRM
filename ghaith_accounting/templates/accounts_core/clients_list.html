@@ -23,7 +23,7 @@
             <td>{{ client.client_code }}</td>
             <td>{{ client.name_en }}</td>
             <td>{{ client.type }}</td>
-            <td>{% if client.date_of_birth %}{{ client.date_of_birth|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+            <td>{% if client.date_of_birth %}{{ client.date_of_birth|date:"j M Y" }}{% else %}-{% endif %}</td>
             <td>{{ client.phone|default:"-" }}</td>
             <td>{{ client.outstanding_receivable }}</td>
             <td>

@@ -1052,6 +1052,20 @@ def add_attachments_multiple(request, pk):
 
 
 @login_required(login_url="/login/")
+def rename_attachment(request, attachment_id, pk):
+    """Rename an uploaded attachment (edit its display name)."""
+    attachment = get_object_or_404(Attachment, pk=attachment_id, parentleadtask_id=pk)
+    if request.method == 'POST':
+        new_name = (request.POST.get('attachment_name') or '').strip()
+        if new_name:
+            if len(new_name) > 120:
+                new_name = new_name[:120]
+            attachment.attachment_name = new_name
+            attachment.save(update_fields=['attachment_name'])
+    return redirect('edit_lead_tasks', pk=pk)
+
+
+@login_required(login_url="/login/")
 def delete_attachment(request, attachment_id, pk):
     # get the attachment (and delete directly)
     attachment = get_object_or_404(Attachment, pk=attachment_id)

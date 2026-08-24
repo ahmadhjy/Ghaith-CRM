@@ -87,7 +87,7 @@
     {% for e in expenses %}
         <tr>
             <td>{{ e.expense_no }}</td>
-            <td>{{ e.expense_date|date:"d/m/Y" }}</td>
+            <td>{{ e.expense_date|date:"j M Y" }}</td>
             <td>{{ e.category.name }}</td>
             <td>{{ e.description|truncatewords:12 }}</td>
             <td class="num">{{ e.amount }} {{ e.currency }}</td>

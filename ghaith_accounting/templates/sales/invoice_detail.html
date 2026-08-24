@@ -14,7 +14,7 @@
         {% if invoice.package_type %}<span class="invoice-list-service">{{ invoice.get_package_type_display }}</span>{% endif %}
     </p>
     <p><strong>Issue / Due:</strong> {{ invoice.issue_date }} / {{ invoice.due_date }}</p>
-    <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"Y-m-d" }}{% else %}—{% endif %}</p>
+    <p><strong>Travel date:</strong> {% if invoice.crm_travel_date %}{{ invoice.crm_travel_date|date:"j M Y" }}{% else %}—{% endif %}</p>
     <p><strong>Total selling (USD):</strong> {{ invoice.grand_total_usd }} USD</p>
     <p><strong>Total cost (USD):</strong> {{ invoice.total_line_cost_usd }} USD</p>
     <p><strong>Profit (USD):</strong> {{ invoice.profit_amount }} USD</p>
@@ -39,7 +39,7 @@
     <tbody>
     {% for line in lines %}
         <tr>
-            <td class="cell-nowrap">{{ line.effective_service_date|date:"d/m/Y" }}</td>
+            <td class="cell-nowrap">{{ line.effective_service_date|date:"j M Y" }}</td>
             <td>{{ line.service_type.name|default:"—" }}</td>
             <td class="col-detail">{{ line.notes|default:line.statement_line_details|truncate_detail }}</td>
             <td>{{ line.destination.name|default:"—" }}</td>

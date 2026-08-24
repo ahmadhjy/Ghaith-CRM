@@ -10,7 +10,7 @@ class Attachment(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.attachment_name
+        return self.attachment_name or f"Attachment {self.pk}"
 
 class Destination(models.Model):
     name = models.CharField(max_length=200, unique=True)
@@ -49,10 +49,48 @@ class CrmUserProfile(models.Model):
         default=True,
         help_text="When enabled, this user can receive auto-assigned leads from the dashboard API.",
     )
+    sophia_agent_id = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        db_index=True,
+        help_text=(
+            "Stable Sophia agent id (same id returned by Sophia's /departments and "
+            "sent as 'assigned_agent' on a chat). Used to map a Sophia agent to this "
+            "CRM user; the lead's department is then taken from this user's profile."
+        ),
+    )
 
     def __str__(self):
         dept = self.department.name if self.department_id else "No department"
         return f"{self.user.username} — {dept}"
+
+
+class SophiaSyncState(models.Model):
+    """Singleton row holding the global watermark for the Sophia daily chat pull."""
+
+    singleton_key = models.CharField(max_length=20, default="default", unique=True, editable=False)
+    last_pull_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Watermark: only chats whose status_changed_at is newer are pulled next run.",
+    )
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_status = models.CharField(max_length=20, blank=True, default="")
+    last_message = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name = "Sophia sync state"
+        verbose_name_plural = "Sophia sync state"
+
+    def __str__(self):
+        return f"Sophia sync (last pull: {self.last_pull_at or 'never'})"
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(singleton_key="default")
+        return obj
 
 
 def get_destination_choices():
@@ -144,6 +182,14 @@ class Lead(models.Model):
     type_of_service = models.CharField(max_length=50, choices=SERVICE_CHOICES, blank=True, default='')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, blank=True, default='onhold')
     status_changed_at = models.DateTimeField(null=True, blank=True)
+    last_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Last Sophia status_changed_at applied to this lead. The daily pull only "
+            "applies a chat when its status_changed_at is newer than this (idempotent)."
+        ),
+    )
     destination = models.CharField(max_length=200, blank=True)
     last_customer_message_at = models.DateTimeField(
         null=True,
@@ -228,7 +274,7 @@ class Lead(models.Model):
         return False
 
     def __str__(self):
-        return self.name
+        return self.name or f"Lead #{self.pk}"
 
     def get_numeric_profit(self):
         return int(re.sub(r'\D', '', self.profit)) if self.profit else 0
@@ -242,7 +288,7 @@ class LeadPassenger(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return self.name
+        return self.name or f"Passenger #{self.pk}"
 
 
 class CrmNotification(models.Model):

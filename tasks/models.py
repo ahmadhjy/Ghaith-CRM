@@ -61,7 +61,7 @@ class LeadTask(models.Model):
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
-        return self.lead.name
+        return self.lead.name if self.lead_id and self.lead.name else f"Order #{self.pk}"
 
 
 class ServiceType(models.Model):
@@ -102,7 +102,7 @@ class Service(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)  # Add this line
 
     def __str__(self):
-        return self.service_name
+        return self.service_name or f"Service #{self.pk}"
 
 
 class BabylonHotelEntry(models.Model):
@@ -149,7 +149,13 @@ class Payment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)  # Add this field
 
     def __str__(self):
-        return f'{self.leadtask.lead.name} - {self.amount}'
+        lead_name = ""
+        if self.leadtask_id:
+            try:
+                lead_name = self.leadtask.lead.name or ""
+            except Exception:
+                lead_name = ""
+        return f"{lead_name or 'Order'} - {self.amount}"
 
 
 class Attachment(models.Model):
@@ -159,7 +165,7 @@ class Attachment(models.Model):
     parentleadtask = models.ForeignKey('LeadTask', on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):
-        self.attachment_name
+        return self.attachment_name or f"Attachment {self.pk}"
 
 
 
@@ -170,7 +176,7 @@ class TaskAttachment(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.attachment_name
+        return self.attachment_name or f"Task attachment {self.pk}"
 
 
 class ClientMediaUploadLink(models.Model):
@@ -202,7 +208,7 @@ class ClientMediaFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.original_name
+        return self.original_name or f"Client file {self.pk}"
 
     @property
     def is_video(self):

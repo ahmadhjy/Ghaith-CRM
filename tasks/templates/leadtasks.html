@@ -34,8 +34,8 @@
                 {% if supplier_filter == 'none' %}with <strong>no supplier</strong> on a service line{% else %}with supplier <strong>{{ supplier_filter }}</strong>{% endif %}
             {% endif %}
             {% if sold_from or sold_to %}
-                sold {% if sold_from %}from <strong>{{ sold_from|date:"M d, Y" }}</strong>{% endif %}
-                {% if sold_to %}to <strong>{{ sold_to|date:"M d, Y" }}</strong>{% endif %}
+                sold {% if sold_from %}from <strong>{{ sold_from|date:"j M Y" }}</strong>{% endif %}
+                {% if sold_to %}to <strong>{{ sold_to|date:"j M Y" }}</strong>{% endif %}
             {% endif %}
         </div>
         <a href="{% url 'current_lead_tasks' %}" class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-times"></i> Clear</a>

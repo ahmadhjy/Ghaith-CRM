@@ -52,7 +52,7 @@
     <tbody>
     {% for p in payments %}
         <tr>
-            <td>{{ p.payment_date|date:"d/m/Y" }}</td>
+            <td>{{ p.payment_date|date:"j M Y" }}</td>
             <td class="num">{{ p.amount }} USD</td>
             <td>{{ p.operating_expense.expense_no }}</td>
             <td>{{ p.notes|default:"—" }}</td>

@@ -275,7 +275,7 @@ Period: <strong>{{ period_label }}</strong>
             <tr class="due-overdue">
                 <td>{{ row.client_name }}</td>
                 <td>{{ row.invoice_no }}</td>
-                <td>{{ row.due_date|date:"d/m/Y" }}</td>
+                <td>{{ row.due_date|date:"j M Y" }}</td>
                 <td class="num">{{ row.total|money }}</td>
                 <td class="num">{{ row.paid|money }}</td>
                 <td class="num"><strong>{{ row.remaining|money }}</strong></td>

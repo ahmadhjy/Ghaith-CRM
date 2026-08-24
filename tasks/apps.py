@@ -6,6 +6,7 @@ class TasksConfig(AppConfig):
     # e.g. if the app lives in `system/tasks`, the installed app
     # name is typically just "tasks".
     name = "tasks"
+    verbose_name = "Orders & services"
 
     def ready(self):
         """

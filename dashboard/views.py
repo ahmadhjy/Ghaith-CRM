@@ -327,9 +327,9 @@ def _supplier_payments_export(request, *, fmt: str):
             s.supplier or "—",
             s.service_name or "—",
             s.leadtask.lead.name,
-            s.leadtask.travel_date.strftime("%Y-%m-%d") if s.leadtask.travel_date else "—",
+            s.leadtask.travel_date.strftime("%d %b %Y") if s.leadtask.travel_date else "—",
             s.issue_price or s.net or "—",
-            s.due_time.strftime("%Y-%m-%d") if s.due_time else "—",
+            s.due_time.strftime("%d %b %Y") if s.due_time else "—",
             str(s.leadtask_id),
             "Yes" if s.is_checked else "No",
             s.leadtask.status,
@@ -394,7 +394,10 @@ def _filter_client_payments(qs, params, now):
     elif overdue_filter:
         qs = qs.filter(is_checked=False, is_refund=False, date__lt=now)
     elif not date_str and not month_str and not issued_filter:
-        qs = qs.filter(Q(is_checked=False) | Q(is_refund=True))
+        # Default: only what is still outstanding. A received item (is_checked=True)
+        # is settled — including refunds that have already been paid to the client —
+        # so it must not show by default.
+        qs = qs.filter(is_checked=False)
 
     if date_str:
         try:
@@ -435,7 +438,16 @@ def client_payments_list(request):
     """Client payments schedule. Default: unissued + refunds (including overdue)."""
     now = timezone.now()
     payments, ctx = _filter_client_payments(_client_payments_queryset(request.user), request.GET, now)
-    payment_totals = payments.aggregate(total=Sum('amount'), count=Count('pk'))
+    # Payments come IN (client owes us); refunds go OUT (we owe the client). They point
+    # in opposite directions, so the net receivable is money in minus money out.
+    payment_totals = payments.aggregate(
+        count=Count('pk'),
+        payments_in=Sum('amount', filter=Q(is_refund=False)),
+        refunds_out=Sum('amount', filter=Q(is_refund=True)),
+    )
+    payments_in = payment_totals['payments_in'] or 0
+    refunds_out = payment_totals['refunds_out'] or 0
+    net_total = payments_in - refunds_out
 
     refund_stats = None
     if ctx['refund_filter']:
@@ -450,7 +462,9 @@ def client_payments_list(request):
     return render(request, 'client_payments_list.html', {
         'payments': payments,
         'filtered_count': payment_totals['count'] or 0,
-        'filtered_total': payment_totals['total'] or 0,
+        'filtered_total': net_total,
+        'payments_in_total': payments_in,
+        'refunds_out_total': refunds_out,
         'refund_stats': refund_stats,
         'today': now.date(),
         'now': now,
@@ -468,9 +482,9 @@ def client_payments_pdf(request):
 
     rows = [
         [
-            p.date.strftime("%Y-%m-%d"),
+            p.date.strftime("%d %b %Y") if p.date else "—",
             p.leadtask.lead.name,
-            str(p.amount),
+            f"-{p.amount}" if p.is_refund else str(p.amount),
             "Refund" if p.is_refund else "Payment",
             str(p.leadtask_id),
             "Yes" if p.is_checked else "No",

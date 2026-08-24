@@ -16,7 +16,7 @@
             <h1 class="req-hero__title">{{ offer.title }}</h1>
             <p class="req-hero__sub">
                 Lead: <a href="{% url 'edit-model' offer.lead.pk %}" style="color:#fff;text-decoration:underline">{{ offer.lead.name }}</a>
-                &nbsp;·&nbsp; Created {{ offer.created_at|date:"M d, Y" }}
+                &nbsp;·&nbsp; Created {{ offer.created_at|date:"j M Y" }}
             </p>
             <div class="req-hero__footer">
                 <div class="req-hero__actions">

@@ -15,7 +15,7 @@
             <h1 class="req-hero__title">{{ upload_link.client_name }}</h1>
             <p class="req-hero__sub">
                 Invoice <a href="{% url 'edit_lead_tasks' upload_link.leadtask.pk %}" style="color:#fff">#{{ upload_link.leadtask.pk }}</a>
-                {% if upload_link.is_submitted %} — Submitted {{ upload_link.submitted_at|date:"M d, Y" }}{% endif %}
+                {% if upload_link.is_submitted %} — Submitted {{ upload_link.submitted_at|date:"j M Y" }}{% endif %}
             </p>
             <div class="req-hero__footer">
                 <div class="req-hero__actions">
@@ -37,7 +37,7 @@
                 <li class="req-attach-item">
                     <div>
                         <strong>{{ file.original_name }}</strong>
-                        <div style="font-size:.8rem;color:var(--req-muted)">{{ file.uploaded_at|date:"M d, Y H:i" }}</div>
+                        <div style="font-size:.8rem;color:var(--req-muted)">{{ file.uploaded_at|date:"j M Y, H:i" }}</div>
                     </div>
                     <a href="{{ file.file.url }}" download class="req-btn req-btn--outline req-btn--sm"><i class="fas fa-download"></i> Download</a>
                 </li>

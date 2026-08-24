@@ -43,3 +43,16 @@ LEAD_STATUS_API_LABELS = {
     "followup": "Follow-Up",
     "done": "Unqualified",
 }
+
+# Sophia dashboard status labels → CRM internal stage + sold/lost flags.
+# Sophia is the source of truth for status; agents pick only from this fixed list.
+#   value: (internal_status, sold, lost)
+SOPHIA_STATUS_MAP = {
+    "new": ("onhold", False, False),
+    "progress": ("processing", False, False),
+    "offer_sent": ("negotiation", False, False),
+    "sold": ("finalized", True, False),
+    "lost": ("finalized", False, True),
+    "unqualified": ("done", False, False),
+}
+

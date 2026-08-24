@@ -9,7 +9,12 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from display.api_utils import auth_or_401, json_error, parse_json_body
+from display.api_utils import (
+    auth_or_401,
+    json_error,
+    parse_json_body,
+    webhook_secret_or_401,
+)
 from display.constants import DEPARTMENT_DEFINITIONS, LEAD_STATUS_API_LABELS
 from display.models import CrmNotification, Department, Lead
 from display.lead_errors import LeadSyncError
@@ -354,6 +359,81 @@ def api_create_crm_notification(request):
         },
         status=201,
     )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_sophia_sold_webhook(request):
+    """Sophia → CRM real-time Sold notification (docs/WHATSAPP_SOPHIA_SYNC_API.md §7).
+
+    Auth via ``X-Webhook-Secret``. Idempotent: re-sending the same Sold event is a
+    no-op. The body is a chat object; ``status`` is forced to ``sold``.
+    """
+    from display.services.sophia_sync import apply_sophia_chat
+
+    unauthorized = webhook_secret_or_401(request)
+    if unauthorized:
+        return unauthorized
+
+    data, err = parse_json_body(request)
+    if err:
+        return err
+
+    payload = dict(data or {})
+    payload["status"] = "sold"
+    try:
+        result = apply_sophia_chat(payload, source="webhook")
+    except LeadSyncError as exc:
+        return json_error(exc.message, code=exc.code, extra=exc.details or None)
+
+    lead = result["lead"]
+    return JsonResponse(
+        {"ok": True, "lead_id": lead.id if lead else None, "created": result["created"]},
+        status=200,
+    )
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_sophia_pull_now(request):
+    """Manually run the Sophia daily pull (same job as 07:00).
+
+    Auth: logged-in CRM user, or ``X-Webhook-Secret``. GET while logged in shows a
+    one-click form so you can trigger from the browser.
+    """
+    from django.http import HttpResponse
+    from display.api_utils import check_webhook_secret
+    from display.services.sophia_pull import run_sophia_pull
+
+    authed = request.user.is_authenticated or check_webhook_secret(request)
+    if not authed:
+        return json_error("Unauthorized", status=401, code="UNAUTHORIZED")
+
+    if request.method == "GET" and request.user.is_authenticated and request.GET.get("run") != "1":
+        return HttpResponse(
+            """<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sophia sync</title>
+<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}
+button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer}</style></head>
+<body>
+<h1>Sophia WhatsApp sync</h1>
+<p>This runs the same pull as the 07:00 job: chats whose status changed since the last sync.</p>
+<form method="post">
+<button type="submit">Sync now</button>
+</form>
+<p style="color:#64748b;margin-top:1.5rem">Sold chats can also be pushed immediately by Sophia to
+<code>/api/whatsapp/sync/sold/</code> when the label becomes Sold.</p>
+</body></html>""",
+            content_type="text/html",
+        )
+
+    result = run_sophia_pull(
+        since=request.GET.get("since") or request.POST.get("since") or None,
+        dry_run=(request.GET.get("dry_run") or request.POST.get("dry_run")) == "1",
+    )
+    status = 200 if result.get("configured") else 503
+    if result.get("code") == "SOPHIA_PULL_FAILED":
+        status = 502
+    return JsonResponse(result, status=status)
 
 
 def seed_departments():

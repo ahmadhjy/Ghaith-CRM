@@ -26,7 +26,7 @@
         <tr>
             <td>{{ row.get_party_type_display }}</td>
             <td>{% if row.client %}{{ row.client }}{% else %}{{ row.supplier }}{% endif %}</td>
-            <td>{{ row.as_of_date|date:"d/m/Y" }}</td>
+            <td>{{ row.as_of_date|date:"j M Y" }}</td>
             <td class="num">{{ row.debit_usd }}</td>
             <td class="num">{{ row.credit_usd }}</td>
             <td class="num">{{ row.net_balance_usd }}</td>

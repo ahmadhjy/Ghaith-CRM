@@ -68,8 +68,8 @@
                     <tr class="{% if lt.status == 'cancelled' %}lost{% endif %}">
                         <td data-label="Client"><strong>{{ lt.lead.name }}</strong></td>
                         <td data-label="Destination">{{ lt.lead.destination|default:"—" }}</td>
-                        <td data-label="Travel">{{ lt.travel_date|date:"Y-m-d" }}</td>
-                        <td data-label="Return">{% if lt.return_date %}{{ lt.return_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                        <td data-label="Travel">{{ lt.travel_date|date:"j M Y" }}</td>
+                        <td data-label="Return">{% if lt.return_date %}{{ lt.return_date|date:"j M Y" }}{% else %}—{% endif %}</td>
                         <td data-label="Services">{{ lt.services_issued }} out of {{ lt.services_total }}</td>
                         <td data-label="Order"><a href="{% url 'edit_lead_tasks' lt.pk %}" class="req-link">#{{ lt.pk }}</a></td>
                         <td data-label="Assigned">{{ lt.assigned_to.get_full_name|default:lt.assigned_to.username }}</td>

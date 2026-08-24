@@ -64,7 +64,7 @@
                     <tr>
                         <td><a href="{% url 'view_offer' offer.pk %}" class="req-link"><strong>{{ offer.title }}</strong></a></td>
                         <td>{{ offer.created_by.username }}</td>
-                        <td>{{ offer.created_at|date:"M d, Y H:i" }}</td>
+                        <td>{{ offer.created_at|date:"j M Y, H:i" }}</td>
                         <td>
                             <label class="req-toggle">
                                 <input type="checkbox" {% if offer.sent %}checked{% endif %} disabled>
