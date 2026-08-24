@@ -48,11 +48,17 @@ def _sync_departments(client: SophiaClient) -> int:
     return dept_upserts
 
 
-def run_sophia_pull(*, since: str | None = None, dry_run: bool = False) -> dict:
-    """Pull changed chats from Sophia. Returns a JSON-serializable result dict."""
+def run_sophia_pull(*, since: str | None = None, dry_run: bool = False, assigned_agent: str | None = None) -> dict:
+    """Pull changed chats from Sophia. Returns a JSON-serializable result dict.
+
+    ``assigned_agent`` (optional): only apply chats for that Sophia agent id.
+    Filtered / dry-run pulls do not advance the watermark, so a later full
+    sync still picks up the other agents.
+    """
     state = SophiaSyncState.load()
     client = SophiaClient()
     warnings: list[str] = []
+    agent_filter = (assigned_agent or "").strip()
 
     if not client.is_configured:
         msg = "Sophia client not configured (set SOPHIA_BASE_URL and SOPHIA_API_TOKEN)."
@@ -83,11 +89,16 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False) -> dict:
     except SophiaClientError as exc:
         warnings.append(f"Department pull skipped: {exc}")
 
-    created = updated = skipped = errors = 0
+    created = updated = skipped = filtered = errors = 0
     error_details: list[str] = []
     try:
         for chat in client.iter_changed_chats(since):
             try:
+                if agent_filter:
+                    chat_agent = str(chat.get("assigned_agent") or "").strip()
+                    if chat_agent != agent_filter:
+                        filtered += 1
+                        continue
                 if dry_run:
                     continue
                 result = apply_sophia_chat(chat, source="pull")
@@ -116,8 +127,13 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False) -> dict:
             "warnings": warnings,
         }
 
-    summary = f"created={created} updated={updated} skipped={skipped} errors={errors}"
-    if not dry_run:
+    summary = (
+        f"created={created} updated={updated} skipped={skipped} "
+        f"filtered={filtered} errors={errors}"
+    )
+    # Do not move the watermark on a dry-run or an agent-scoped test pull.
+    # Other agents in the same window must still be eligible for the next full sync.
+    if not dry_run and not agent_filter:
         state.last_pull_at = run_start
         state.last_run_at = timezone.now()
         state.last_status = "ok" if errors == 0 else "partial"
@@ -130,10 +146,12 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False) -> dict:
         "ok": errors == 0,
         "configured": True,
         "dry_run": dry_run,
+        "assigned_agent": agent_filter or None,
         "since": since,
         "created": created,
         "updated": updated,
         "skipped": skipped,
+        "filtered": filtered,
         "errors": errors,
         "error_details": error_details,
         "warnings": warnings,

@@ -23,9 +23,17 @@ class Command(BaseCommand):
             action="store_true",
             help="Fetch and report but do not write leads or advance the watermark.",
         )
+        parser.add_argument(
+            "--assigned-agent",
+            help="Only apply chats for this Sophia agent id (does not advance the watermark).",
+        )
 
     def handle(self, *args, **options):
-        result = run_sophia_pull(since=options.get("since"), dry_run=options.get("dry_run", False))
+        result = run_sophia_pull(
+            since=options.get("since"),
+            dry_run=options.get("dry_run", False),
+            assigned_agent=options.get("assigned_agent"),
+        )
         if not result.get("configured"):
             self.stderr.write(self.style.ERROR(result.get("error") or "Not configured"))
             return

@@ -413,14 +413,20 @@ def api_sophia_pull_now(request):
         return HttpResponse(
             """<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sophia sync</title>
 <style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}
-button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer}</style></head>
+label{display:block;margin:1rem 0 .35rem;font-size:.9rem;color:#334155}
+input{width:100%;padding:.45rem .6rem;font-size:1rem;box-sizing:border-box}
+button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer;margin-top:1rem}
+.hint{color:#64748b;font-size:.85rem}</style></head>
 <body>
 <h1>Sophia WhatsApp sync</h1>
-<p>This runs the same pull as the 07:00 job: chats whose status changed since the last sync.</p>
+<p>Pulls chats whose status changed since the last 07:00 Asia/Beirut (or the last full sync).</p>
 <form method="post">
+<label for="assigned_agent">Only this agent id (optional, for a test import)</label>
+<input id="assigned_agent" name="assigned_agent" type="text" placeholder="paste Sophia agent id">
+<p class="hint">Leave blank to import every changed chat. An agent-only run does not move the watermark.</p>
 <button type="submit">Sync now</button>
 </form>
-<p style="color:#64748b;margin-top:1.5rem">Sold chats can also be pushed immediately by Sophia to
+<p class="hint" style="margin-top:1.5rem">Sold chats can also be pushed immediately by Sophia to
 <code>/api/whatsapp/sync/sold/</code> when the label becomes Sold.</p>
 </body></html>""",
             content_type="text/html",
@@ -429,6 +435,7 @@ button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer}</style></head>
     result = run_sophia_pull(
         since=request.GET.get("since") or request.POST.get("since") or None,
         dry_run=(request.GET.get("dry_run") or request.POST.get("dry_run")) == "1",
+        assigned_agent=request.GET.get("assigned_agent") or request.POST.get("assigned_agent") or None,
     )
     status = 200 if result.get("configured") else 503
     if result.get("code") == "SOPHIA_PULL_FAILED":
