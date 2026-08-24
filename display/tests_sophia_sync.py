@@ -123,3 +123,25 @@ class SophiaSyncTests(TestCase):
             self.assertEqual(response.status_code, 200)
         self.assertEqual(Lead.objects.filter(external_id="wa_abc123").count(), 1)
         self.assertEqual(LeadTask.objects.filter(lead__external_id="wa_abc123").count(), 1)
+
+
+class LastSevenAmCutoffTests(TestCase):
+    def test_afternoon_uses_today_seven(self):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from display.services.sophia_pull import last_seven_am_beirut
+
+        beirut = ZoneInfo("Asia/Beirut")
+        now = datetime(2026, 8, 24, 13, 25, tzinfo=beirut)
+        self.assertTrue(last_seven_am_beirut(now).startswith("2026-08-24T07:00:00"))
+
+    def test_exactly_seven_uses_yesterday(self):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from display.services.sophia_pull import last_seven_am_beirut
+
+        beirut = ZoneInfo("Asia/Beirut")
+        now = datetime(2026, 8, 24, 7, 0, tzinfo=beirut)
+        self.assertTrue(last_seven_am_beirut(now).startswith("2026-08-23T07:00:00"))

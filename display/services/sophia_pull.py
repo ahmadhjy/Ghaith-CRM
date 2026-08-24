@@ -2,13 +2,30 @@
 
 from __future__ import annotations
 
-from django.conf import settings
+from datetime import timedelta
+from zoneinfo import ZoneInfo
+
 from django.utils import timezone
 
 from display.lead_errors import LeadSyncError
 from display.models import Department, SophiaSyncState
 from display.services.sophia_client import SophiaClient, SophiaClientError
 from display.services.sophia_sync import apply_sophia_chat
+
+BEIRUT = ZoneInfo("Asia/Beirut")
+BATCH_HOUR = 7
+
+
+def last_seven_am_beirut(now=None) -> str:
+    """ISO timestamp of the most recent 07:00 Asia/Beirut strictly before ``now``.
+
+    Sync now at 13:25 → today 07:00. The scheduled 07:00 job → yesterday 07:00
+    (status_changed_since is exclusive, so "today 07:00" would pull nothing).
+    """
+    local = timezone.localtime(now or timezone.now(), BEIRUT)
+    today_seven = local.replace(hour=BATCH_HOUR, minute=0, second=0, microsecond=0)
+    cutoff = today_seven if local > today_seven else today_seven - timedelta(days=1)
+    return cutoff.isoformat()
 
 
 def _sync_departments(client: SophiaClient) -> int:
@@ -52,10 +69,14 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False) -> dict:
 
     run_start = timezone.now()
     if not since:
+        # Never backfill history. First run (and any run with no watermark) only
+        # pulls chats whose status changed since the last 07:00 Asia/Beirut.
+        # After a successful pull, last_pull_at is the watermark so we do not
+        # re-fetch chats already applied.
         if state.last_pull_at:
             since = state.last_pull_at.isoformat()
         else:
-            since = getattr(settings, "SOPHIA_BACKFILL_SINCE", "2025-01-01T00:00:00+03:00")
+            since = last_seven_am_beirut(run_start)
 
     try:
         _sync_departments(client)

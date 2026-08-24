@@ -251,8 +251,6 @@ SOPHIA_WEBHOOK_SECRET = os.environ.get(
 )
 # Timeout (seconds) for outbound calls to Sophia.
 SOPHIA_HTTP_TIMEOUT = int(os.environ.get('SOPHIA_HTTP_TIMEOUT', '30'))
-# On the very first pull (no watermark yet), backfill chats changed since this date.
-SOPHIA_BACKFILL_SINCE = os.environ.get('SOPHIA_BACKFILL_SINCE', '2025-01-01T00:00:00+03:00')
 
 # Passcode for Babylon supplier hotel spreadsheet portal (/babylon/)
 BABYLON_PORTAL_PASSCODE = os.environ.get('BABYLON_PORTAL_PASSCODE') or 'Babylon-Ghaith-2026'
