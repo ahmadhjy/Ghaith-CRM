@@ -162,3 +162,29 @@ class LastSevenAmCutoffTests(TestCase):
         beirut = ZoneInfo("Asia/Beirut")
         now = datetime(2026, 8, 24, 7, 0, tzinfo=beirut)
         self.assertTrue(last_seven_am_beirut(now).startswith("2026-08-23T07:00:00"))
+
+
+class SophiaClientHeaderTests(TestCase):
+    @override_settings(
+        SOPHIA_BASE_URL="https://example.test/v1/consumer",
+        SOPHIA_API_TOKEN="tok",
+    )
+    def test_get_sends_sophia_user_agent(self):
+        from unittest.mock import MagicMock, patch
+
+        from display.services.sophia_client import SophiaClient
+
+        resp = MagicMock()
+        resp.headers = {"Content-Type": "application/json"}
+        resp.read.return_value = b'{"departments": []}'
+        resp.__enter__.return_value = resp
+        resp.__exit__.return_value = False
+
+        with patch("display.services.sophia_client.urllib.request.urlopen", return_value=resp) as mock_urlopen:
+            SophiaClient().fetch_departments()
+
+        request = mock_urlopen.call_args[0][0]
+        self.assertEqual(
+            request.get_header("User-agent"),
+            "SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)",
+        )

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Supplier Totals{% endblock %}
+
+{% block hero %}
+<header class="req-hero">
+    <div class="req-hero__bg"></div>
+    <div class="req-hero__content">
+        <div class="req-hero__eyebrow">Orders</div>
+        <h1 class="req-hero__title">Supplier Totals</h1>
+        <p class="req-hero__sub">Due and issued amounts grouped by supplier. Same filters as Purchases.</p>
+        <div class="req-hero__footer">
+            <div class="req-hero__actions">
+                <a href="{% url 'supplier_totals_pdf' %}?{{ request.GET.urlencode }}" class="req-btn-ghost"><i class="fas fa-download"></i> Download PDF</a>
+                <a href="{% url 'supplier_totals_xlsx' %}?{{ request.GET.urlencode }}" class="req-btn-ghost"><i class="fas fa-file-excel"></i> Excel</a>
+            </div>
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="list-page list-page--supplier">
+
+    <div class="list-page__downloadbar" style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+        <a href="{% url 'supplier_payments_list' %}?{{ request.GET.urlencode }}" class="btn btn--secondary"><i class="fas fa-list"></i> Purchases</a>
+        <a href="{% url 'supplier_totals_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--primary"><i class="fas fa-download"></i> Download PDF</a>
+        <a href="{% url 'supplier_totals_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn--secondary"><i class="fas fa-file-excel"></i> Excel</a>
+        <button type="button" class="btn btn--secondary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    </div>
+
+    {% include 'includes/purchases_filters.html' %}
+
+    <div class="filtered-table-total" aria-label="Supplier totals">
+        <div>
+            <span class="filtered-table-total__label">Suppliers</span>
+            <strong>{{ supplier_count }}</strong>
+        </div>
+        <div>
+            <span class="filtered-table-total__label">Purchase lines</span>
+            <strong>{{ filtered_count }}</strong>
+        </div>
+        <div>
+            <span class="filtered-table-total__label">Unissued / due</span>
+            <strong>${{ unissued_total|floatformat:2 }}</strong>
+        </div>
+        <div>
+            <span class="filtered-table-total__label">Issued</span>
+            <strong>${{ issued_total|floatformat:2 }}</strong>
+        </div>
+        <div class="filtered-table-total__amount">
+            <span class="filtered-table-total__label">Filtered total</span>
+            <strong>${{ filtered_total|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="table-wrapper table-wrapper--responsive table-wrapper--supplier-payments">
+        <table class="list-table list-table--supplier">
+            <thead>
+                <tr>
+                    <th>Supplier</th>
+                    <th>Lines</th>
+                    <th>Unissued / due</th>
+                    <th>Issued</th>
+                    <th>Total</th>
+                    <th>Earliest due</th>
+                    <th>Purchases</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in supplier_rows %}
+                <tr class="list-table__row">
+                    <td data-label="Supplier">{{ row.supplier }}</td>
+                    <td data-label="Lines">{{ row.count }}</td>
+                    <td data-label="Unissued / due">${{ row.unissued|floatformat:2 }}</td>
+                    <td data-label="Issued">${{ row.issued|floatformat:2 }}</td>
+                    <td data-label="Total"><strong>${{ row.total|floatformat:2 }}</strong></td>
+                    <td data-label="Earliest due">
+                        {% if row.earliest_due %}{{ row.earliest_due|date:"j M Y" }}{% else %}—{% endif %}
+                    </td>
+                    <td data-label="Purchases">
+                        {% if row.purchases_url %}
+                        <a href="{{ row.purchases_url }}" class="list-table__link">View lines</a>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="list-table__empty">No supplier totals for these filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -54,6 +54,63 @@ class FilteredPaymentTotalsTests(TestCase):
         self.assertEqual(response.context["filtered_count"], 1)
         self.assertEqual(response.context["filtered_total"], 120)
 
+    def test_supplier_totals_groups_amounts_by_supplier(self):
+        due = timezone.now() + timedelta(days=5)
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Hotel",
+            supplier="Babylon",
+            net="100",
+            issue_price="USD 120",
+            due_time=due,
+        )
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Transfer",
+            supplier="Babylon",
+            net="80",
+            due_time=due,
+        )
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Visa",
+            supplier="Yards",
+            net="50",
+            due_time=due,
+            is_checked=True,
+        )
+
+        response = self.client.get(
+            reverse("supplier_totals_list"),
+            {"issued": "unissued"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = {row["supplier"]: row for row in response.context["supplier_rows"]}
+        self.assertIn("Babylon", rows)
+        self.assertNotIn("Yards", rows)
+        self.assertEqual(rows["Babylon"]["count"], 2)
+        self.assertEqual(rows["Babylon"]["unissued"], 200)
+        self.assertEqual(rows["Babylon"]["issued"], 0)
+        self.assertEqual(rows["Babylon"]["total"], 200)
+        self.assertEqual(response.context["filtered_total"], 200)
+        self.assertContains(response, "Supplier Totals")
+        self.assertContains(response, "name=\"due_from\"")
+        self.assertContains(response, "name=\"travel_from\"")
+
+    def test_supplier_totals_pdf_exports(self):
+        due = timezone.now() + timedelta(days=5)
+        Service.objects.create(
+            leadtask=self.order,
+            service_name="Hotel",
+            supplier="Babylon",
+            net="100",
+            due_time=due,
+        )
+        response = self.client.get(reverse("supplier_totals_pdf"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+
     def test_client_payment_total_uses_applied_status_filter(self):
         due = timezone.now() + timedelta(days=5)
         Payment.objects.create(

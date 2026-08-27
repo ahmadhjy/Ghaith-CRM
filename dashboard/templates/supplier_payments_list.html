@@ -23,97 +23,12 @@
 <div class="list-page list-page--supplier">
 
     <div class="list-page__downloadbar" style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+        <a href="{% url 'supplier_totals_list' %}?{{ request.GET.urlencode }}" class="btn btn--secondary"><i class="fas fa-building"></i> Supplier totals</a>
         <a href="{% url 'supplier_payments_pdf' %}?{{ request.GET.urlencode }}" class="btn btn--primary"><i class="fas fa-download"></i> Download PDF</a>
         <a href="{% url 'supplier_payments_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn--secondary"><i class="fas fa-file-excel"></i> Excel</a>
     </div>
 
-    <div class="list-page__filters purchases-filters">
-        <form method="GET" action="{% url 'supplier_payments_list' %}" class="purchases-filters__form">
-            {% if issued_count or overdue_count %}
-            <div class="purchases-filters__shortcuts">
-                <span class="purchases-filters__shortcuts-label">Quick filters</span>
-                <div class="purchases-filters__shortcuts-pills">
-                    {% if issued_count %}
-                    <a href="?issued=issued{% if show_cancelled %}&show_cancelled=on{% endif %}{% if show_travelled %}&show_travelled=on{% endif %}" class="btn btn--success btn--filter-pill {% if issued_filter == 'issued' %}is-active{% endif %}">{{ issued_count }} Issued</a>
-                    {% endif %}
-                    {% if overdue_count %}
-                    <a href="?overdue=on{% if show_cancelled %}&show_cancelled=on{% endif %}{% if show_travelled %}&show_travelled=on{% endif %}" class="btn btn--danger btn--filter-pill {% if overdue_filter %}is-active{% endif %}">{{ overdue_count }} Overdue{{ overdue_count|pluralize }}</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="purchases-filters__panel">
-                <div class="purchases-filters__grid">
-                    <div class="purchases-filters__field">
-                        <label for="due_from">Due from</label>
-                        <input type="date" name="due_from" id="due_from" value="{{ due_from }}" class="purchases-filters__input">
-                    </div>
-                    <div class="purchases-filters__field">
-                        <label for="due_to">Due to</label>
-                        <input type="date" name="due_to" id="due_to" value="{{ due_to }}" class="purchases-filters__input">
-                    </div>
-                    <div class="purchases-filters__field">
-                        <label for="travel_from">Travel from</label>
-                        <input type="date" name="travel_from" id="travel_from" value="{{ travel_from }}" class="purchases-filters__input">
-                    </div>
-                    <div class="purchases-filters__field">
-                        <label for="travel_to">Travel to</label>
-                        <input type="date" name="travel_to" id="travel_to" value="{{ travel_to }}" class="purchases-filters__input">
-                    </div>
-                    <div class="purchases-filters__field">
-                        <label for="issued">Issued</label>
-                        <select name="issued" id="issued" class="purchases-filters__select">
-                            <option value="">Unissued (default)</option>
-                            <option value="issued" {% if issued_filter == 'issued' %}selected{% endif %}>Issued only</option>
-                            <option value="unissued" {% if issued_filter == 'unissued' %}selected{% endif %}>Unissued only</option>
-                        </select>
-                    </div>
-                    <div class="purchases-filters__field">
-                        <label for="sort">Sort by</label>
-                        <select name="sort" id="sort" class="purchases-filters__select">
-                            {% for value, label in sort_choices %}
-                            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="purchases-filters__field purchases-filters__field--wide">
-                        <label for="supplier">Supplier</label>
-                        <select name="supplier" id="supplier" class="purchases-filters__select">
-                            <option value="">All suppliers</option>
-                            {% for value, label in supplier_filter_options %}
-                            <option value="{{ value }}" {% if supplier_filter == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="purchases-filters__field purchases-filters__field--wide">
-                        <label for="service">Service</label>
-                        <select name="service" id="service" class="purchases-filters__select">
-                            <option value="">All services</option>
-                            {% for value, label in service_filter_options %}
-                            <option value="{{ value }}" {% if service_filter == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="purchases-filters__toolbar">
-                    <label class="purchases-filters__option">
-                        <input type="checkbox" name="show_cancelled" {% if show_cancelled %}checked{% endif %}>
-                        <span>Show cancelled orders</span>
-                    </label>
-                    <label class="purchases-filters__option">
-                        <input type="checkbox" name="show_travelled" {% if show_travelled %}checked{% endif %}>
-                        <span>Show travelled</span>
-                    </label>
-                    <div class="purchases-filters__actions">
-                        <button type="submit" class="req-btn req-btn--primary req-btn--sm"><i class="fas fa-filter"></i> Apply filters</button>
-                        <a href="{% url 'supplier_payments_list' %}" class="req-btn req-btn--ghost-dark req-btn--sm">Clear</a>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+    {% include 'includes/purchases_filters.html' %}
 
     <div class="filtered-table-total" aria-label="Filtered purchases total">
         <div>

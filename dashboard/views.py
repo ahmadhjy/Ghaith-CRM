@@ -23,6 +23,11 @@ from tasks.purchases_filters import (
     apply_upcoming_travel_filter,
     order_purchases,
 )
+from tasks.supplier_totals import (
+    NO_SUPPLIER,
+    group_purchases_by_supplier,
+    money_label,
+)
 from display.models import Lead
 from django.utils import timezone
 from tasks.forms import TaskForm, LeadTaskForm
@@ -36,7 +41,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 
-def _build_modern_pdf(title, headers, rows, filename, applied_filters=None, pdf_target=None):
+def _build_modern_pdf(title, headers, rows, filename, applied_filters=None, pdf_target=None, totals=None):
     from tasks.pdf_template import build_report_pdf
 
     response = HttpResponse(content_type="application/pdf")
@@ -47,6 +52,7 @@ def _build_modern_pdf(title, headers, rows, filename, applied_filters=None, pdf_
         applied_filters=applied_filters,
         headers=headers,
         rows=rows,
+        totals=totals,
         pdf_target=pdf_target,
     )
     return response
@@ -226,9 +232,8 @@ def delete_event(request, event_id):
         return redirect('calendar')
 
 
-@login_required(login_url="/login/")
-def supplier_payments_list(request):
-    """Purchases list: supplier services to issue. Default shows all unissued including overdue."""
+def _purchases_page_state(request):
+    """Shared Purchases filters, queryset, and template context bits."""
     user = request.user
     now = timezone.now()
     today = now.date()
@@ -272,30 +277,47 @@ def supplier_payments_list(request):
 
     supplier_choices = get_supplier_choices()
     service_choices = get_service_choices()
-    return render(request, 'supplier_payments_list.html', {
-        'services': filtered_services,
-        'filtered_count': len(filtered_services),
+    return {
+        'filtered_services': filtered_services,
         'filtered_total': filtered_total,
-        'due_from': due_from,
-        'due_to': due_to,
-        'travel_from': travel_from,
-        'travel_to': travel_to,
-        'issued_filter': issued_filter,
-        'overdue_filter': overdue_filter,
-        'overdue_count': overdue_count,
-        'issued_count': issued_count,
-        'supplier_filter': supplier_filter,
-        'service_filter': service_filter,
-        'supplier_filter_options': supplier_choices,
-        'service_filter_options': service_choices,
-        'supplier_choices': supplier_choices,
-        'show_cancelled': show_cancelled,
-        'show_travelled': show_travelled,
         'sort': sort,
-        'sort_choices': PURCHASES_SORT_CHOICES,
-        'today': today,
         'now': now,
+        'context': {
+            'filtered_count': len(filtered_services),
+            'filtered_total': filtered_total,
+            'due_from': due_from,
+            'due_to': due_to,
+            'travel_from': travel_from,
+            'travel_to': travel_to,
+            'issued_filter': issued_filter,
+            'overdue_filter': overdue_filter,
+            'overdue_count': overdue_count,
+            'issued_count': issued_count,
+            'supplier_filter': supplier_filter,
+            'service_filter': service_filter,
+            'supplier_filter_options': supplier_choices,
+            'service_filter_options': service_choices,
+            'supplier_choices': supplier_choices,
+            'show_cancelled': show_cancelled,
+            'show_travelled': show_travelled,
+            'sort': sort,
+            'sort_choices': PURCHASES_SORT_CHOICES,
+            'today': today,
+            'now': now,
+        },
+    }
+
+
+@login_required(login_url="/login/")
+def supplier_payments_list(request):
+    """Purchases list: supplier services to issue. Default shows all unissued including overdue."""
+    state = _purchases_page_state(request)
+    context = state['context']
+    context.update({
+        'services': state['filtered_services'],
+        'purchases_form_action': reverse('supplier_payments_list'),
     })
+    return render(request, 'supplier_payments_list.html', context)
 
 
 @login_required(login_url="/login/")
@@ -354,6 +376,101 @@ def _supplier_payments_export(request, *, fmt: str):
         "supplier-payments-report.pdf",
         applied_filters=applied_filters,
         pdf_target=PDF_TARGET_PURCHASES_REPORT,
+    )
+
+
+def _supplier_totals_rows(request):
+    """Filtered purchase lines collapsed to one row per supplier."""
+    state = _purchases_page_state(request)
+    rows = group_purchases_by_supplier(state['filtered_services'], state['sort'])
+    query = request.GET.copy()
+    for row in rows:
+        if row['supplier'] == NO_SUPPLIER:
+            row['purchases_url'] = ''
+            continue
+        query['supplier'] = row['supplier']
+        row['purchases_url'] = f"{reverse('supplier_payments_list')}?{query.urlencode()}"
+    return state, rows
+
+
+@login_required(login_url="/login/")
+def supplier_totals_list(request):
+    """Purchases filters, grouped by supplier for due/issued totals."""
+    state, rows = _supplier_totals_rows(request)
+    context = state['context']
+    context.update({
+        'supplier_rows': rows,
+        'supplier_count': len(rows),
+        'unissued_total': sum(row['unissued'] for row in rows),
+        'issued_total': sum(row['issued'] for row in rows),
+        'purchases_form_action': reverse('supplier_totals_list'),
+    })
+    return render(request, 'supplier_totals_list.html', context)
+
+
+@login_required(login_url="/login/")
+def supplier_totals_pdf(request):
+    return _supplier_totals_export(request, fmt='pdf')
+
+
+@login_required(login_url="/login/")
+def supplier_totals_xlsx(request):
+    return _supplier_totals_export(request, fmt='xlsx')
+
+
+def _supplier_totals_export(request, *, fmt: str):
+    from tasks.pdf_template import purchases_applied_filters
+
+    state, rows = _supplier_totals_rows(request)
+    table_rows = [
+        [
+            row['supplier'],
+            str(row['count']),
+            money_label(row['unissued']),
+            money_label(row['issued']),
+            money_label(row['total']),
+            row['earliest_due'].strftime('%d %b %Y') if row['earliest_due'] else '—',
+        ]
+        for row in rows
+    ]
+    headers = [
+        'Supplier', 'Lines', 'Unissued / due', 'Issued', 'Total', 'Earliest due',
+    ]
+    applied_filters = purchases_applied_filters(request.GET)
+    grand = state['filtered_total']
+    unissued_total = sum(row['unissued'] for row in rows)
+    issued_total = sum(row['issued'] for row in rows)
+
+    if fmt == 'xlsx':
+        from accounts_core.export_utils import build_xlsx_response
+        table_rows.append([
+            'Total',
+            str(state['context']['filtered_count']),
+            money_label(unissued_total),
+            money_label(issued_total),
+            money_label(grand),
+            '',
+        ])
+        return build_xlsx_response('supplier-totals-report', headers, table_rows)
+
+    from tasks.pdf_policy import PDF_TARGET_PURCHASES_REPORT
+    return _build_modern_pdf(
+        'Supplier Totals Report',
+        headers,
+        table_rows,
+        'supplier-totals-report.pdf',
+        applied_filters=applied_filters,
+        pdf_target=PDF_TARGET_PURCHASES_REPORT,
+        totals={
+            'lines': [
+                ('Suppliers', str(len(rows))),
+                ('Purchase lines', str(state['context']['filtered_count'])),
+                ('Unissued / due', f'${money_label(unissued_total)}'),
+                ('Issued', f'${money_label(issued_total)}'),
+            ],
+            'total_label': 'Grand total',
+            'total_value': f'${money_label(grand)}',
+        },
     )
 
 

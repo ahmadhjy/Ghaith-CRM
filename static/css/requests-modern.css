@@ -1413,3 +1413,26 @@ body.has-unified-nav .purchases-filters.list-page__filters {
     justify-content: center;
   }
 }
+
+@media print {
+  .app-nav,
+  .app-nav__toggle,
+  .app-nav__backdrop,
+  .req-hero,
+  .purchases-filters,
+  .list-page__downloadbar,
+  .notification-bell {
+    display: none !important;
+  }
+
+  .list-page {
+    margin: 0;
+    padding: 0;
+  }
+
+  .filtered-table-total,
+  .list-table {
+    break-inside: avoid;
+  }
+}
+

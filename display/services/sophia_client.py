@@ -68,12 +68,8 @@ class SophiaClient:
         req = urllib.request.Request(url, method="GET")
         req.add_header("Authorization", f"Bearer {self.token}")
         req.add_header("Accept", "application/json")
-        # Cloudflare Error 1010 bans Python-urllib's default User-Agent.
-        req.add_header(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 GhaithCRM/1.0",
-        )
+        # Sophia asked CRM clients to send this User-Agent (Cloudflare 1010).
+        req.add_header("User-Agent", "SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)")
         req.add_header("Accept-Language", "en-US,en;q=0.9")
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
