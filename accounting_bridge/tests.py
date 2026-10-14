@@ -74,6 +74,22 @@ class CrmInvoiceSyncTests(TestCase):
         self.assertIsNotNone(self.queue.sales_invoice_id)
         self.invoice = self.queue.sales_invoice
 
+    def test_linked_invoice_lines_follow_saved_crm_service_order(self):
+        first = self.leadtask.service_set.get()
+        second = Service.objects.create(
+            leadtask=self.leadtask, service_name='Visa', supplier='Hilton',
+            net='50', sort_order=1,
+        )
+        first.sort_order = 2
+        first.save(update_fields=['sort_order'])
+        sync_crm_leadtask_to_accounting(self.leadtask)
+        self.assertEqual(
+            list(self.invoice.lines.order_by('sort_order', 'pk').values_list(
+                'crm_service_id', flat=True,
+            )),
+            [second.pk, first.pk],
+        )
+
     def test_order_before_cutoff_does_not_create_invoice(self):
         config = AccountingConfig.load()
         config.invoice_sync_from = date.today() + timedelta(days=30)

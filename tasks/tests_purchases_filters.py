@@ -6,7 +6,10 @@ from django.utils import timezone
 
 from display.models import Lead
 from tasks.models import LeadTask, Service
-from tasks.purchases_filters import SORT_DUE_ASC, SORT_TRAVEL_ASC, apply_purchases_filters, order_purchases
+from tasks.purchases_filters import (
+    SORT_DUE_ASC, SORT_TRAVEL_ASC, apply_purchases_filters, order_purchases,
+    purchases_applied_filters,
+)
 
 
 class PurchasesFilterTests(TestCase):
@@ -52,6 +55,29 @@ class PurchasesFilterTests(TestCase):
         ids = list(filtered.values_list('pk', flat=True))
         self.assertIn(self.late.pk, ids)
         self.assertNotIn(self.early.pk, ids)
+
+    def test_destination_filter_uses_the_order_lead_destination(self):
+        self.lead.destination = 'Bali'
+        self.lead.save(update_fields=['destination'])
+        other_lead = Lead.objects.create(
+            name='Other destination', destination='Turkey', assigned_to=self.user,
+        )
+        other_order = LeadTask.objects.create(
+            lead=other_lead, assigned_to=self.user, status='progress',
+            travel_date=self.leadtask.travel_date,
+        )
+        other_service = Service.objects.create(
+            leadtask=other_order, service_name='Hotel', supplier='YARDS',
+        )
+        filtered = apply_purchases_filters(
+            Service.objects.all(), {'destination': 'bali', 'service': 'Hotel'},
+            now=timezone.now(),
+        )
+        self.assertEqual(list(filtered.values_list('pk', flat=True)), [self.early.pk])
+        self.assertNotIn(other_service, filtered)
+        self.assertIn(
+            'Destination: Bali', purchases_applied_filters({'destination': 'Bali'}),
+        )
 
     def test_sort_by_travel_date(self):
         qs = Service.objects.filter(due_time__isnull=False)

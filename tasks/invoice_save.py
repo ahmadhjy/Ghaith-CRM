@@ -19,6 +19,14 @@ def _parse_due_time(raw):
         return None
 
 
+def _service_position(raw, default):
+    try:
+        value = int(raw)
+    except (ValueError, TypeError):
+        return default
+    return value if 0 < value <= 2147483647 else default
+
+
 def _save_existing_services(request, leadtask, seen_ids):
     for pk in seen_ids:
         try:
@@ -41,7 +49,11 @@ def _save_existing_services(request, leadtask, seen_ids):
             'send_to_client': request.POST.get(f'service_{pk}_send_to_client') == 'on',
         }, instance=service)
         if form.is_valid():
-            saved = form.save()
+            saved = form.save(commit=False)
+            saved.sort_order = _service_position(
+                request.POST.get(f'service_{pk}_sort_order'), saved.sort_order,
+            )
+            saved.save()
             sync_service_event(saved)
             sync_entry_from_service(saved)
 
@@ -58,6 +70,7 @@ def _save_new_services(request, leadtask):
     due_times = request.POST.getlist('due_time[]')
     voucher_ids = request.POST.getlist('voucher_id[]')
     send_to_clients = request.POST.getlist('send_to_client[]')
+    positions = request.POST.getlist('sort_order[]')
     for i in range(len(names)):
         supplier = suppliers[i] if i < len(suppliers) else ''
         due_raw = due_times[i] if i < len(due_times) else None
@@ -76,6 +89,9 @@ def _save_new_services(request, leadtask):
         if form.is_valid() and (form.cleaned_data.get('service_name') or form.cleaned_data.get('supplier')):
             service = form.save(commit=False)
             service.leadtask = leadtask
+            service.sort_order = _service_position(
+                positions[i] if i < len(positions) else None, 0,
+            )
             service.save()
             sync_service_event(service)
             sync_entry_from_service(service)

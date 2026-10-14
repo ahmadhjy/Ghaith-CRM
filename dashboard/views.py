@@ -28,7 +28,7 @@ from tasks.supplier_totals import (
     group_purchases_by_supplier,
     money_label,
 )
-from display.models import Lead
+from display.models import Lead, get_destination_choices
 from django.utils import timezone
 from tasks.forms import TaskForm, LeadTaskForm
 from display.forms import LeadForm
@@ -253,6 +253,7 @@ def _purchases_page_state(request):
     overdue_filter = request.GET.get('overdue', '') == 'on' or request.GET.get('late', '') == 'on'
     supplier_filter = request.GET.get('supplier', '').strip()
     service_filter = request.GET.get('service', '').strip()
+    destination_filter = request.GET.get('destination', '').strip()
     show_cancelled = request.GET.get('show_cancelled', '') == 'on'
     show_travelled = request.GET.get('show_travelled', '') == 'on'
     sort = request.GET.get('sort', SORT_DUE_ASC).strip()
@@ -295,6 +296,10 @@ def _purchases_page_state(request):
             'issued_count': issued_count,
             'supplier_filter': supplier_filter,
             'service_filter': service_filter,
+            'destination_filter': destination_filter,
+            'destination_filter_options': [
+                (value, label) for value, label in get_destination_choices() if value
+            ],
             'supplier_filter_options': supplier_choices,
             'service_filter_options': service_choices,
             'supplier_choices': supplier_choices,

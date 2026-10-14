@@ -879,6 +879,32 @@ body.edit-invoice-page {
   align-items: center;
 }
 
+.service-order-controls {
+  display: inline-flex;
+  gap: 3px;
+}
+.service-order-controls button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 18px;
+  cursor: pointer;
+}
+.service-order-controls button:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+.service-order-controls button:disabled {
+  opacity: .3;
+  cursor: default;
+}
+.service-order-hint {
+  margin-left: 12px;
+  color: #64748b;
+  font-size: 12px;
+}
 .btn-edit-service {
   padding: 5px 10px;
   border: none;

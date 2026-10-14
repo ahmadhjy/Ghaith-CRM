@@ -630,7 +630,7 @@ def generate_pdf(request, pk):
         LeadTask.objects.select_related('lead', 'assigned_to').prefetch_related('lead__passengers'),
         pk=pk,
     )
-    services = Service.objects.filter(leadtask=lead_task).order_by('pk')
+    services = Service.objects.filter(leadtask=lead_task).order_by('sort_order', 'pk')
     payments = Payment.objects.filter(leadtask=lead_task).order_by('date')
     attachments = Attachment.objects.filter(parentleadtask=lead_task).order_by('-uploaded_at')
 

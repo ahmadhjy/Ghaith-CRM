@@ -52,6 +52,7 @@ def apply_purchases_filters(services, params, *, now):
     overdue_filter = params.get('overdue') == 'on' or params.get('late') == 'on'
     supplier_filter = (params.get('supplier') or '').strip()
     service_filter = (params.get('service') or '').strip()
+    destination_filter = (params.get('destination') or '').strip()
     show_cancelled = params.get('show_cancelled') == 'on'
     show_travelled = params.get('show_travelled') == 'on'
 
@@ -89,6 +90,8 @@ def apply_purchases_filters(services, params, *, now):
         services = services.filter(supplier__iexact=supplier_filter)
     if service_filter:
         services = services.filter(service_name__iexact=service_filter)
+    if destination_filter:
+        services = services.filter(leadtask__lead__destination__iexact=destination_filter)
 
     return services
 
@@ -122,6 +125,7 @@ def purchases_applied_filters(params) -> list[str]:
     overdue = params.get('overdue') == 'on' or params.get('late') == 'on'
     supplier = (params.get('supplier') or '').strip()
     service = (params.get('service') or '').strip()
+    destination = (params.get('destination') or '').strip()
     show_cancelled = params.get('show_cancelled') == 'on'
     show_travelled = params.get('show_travelled') == 'on'
     sort = (params.get('sort') or SORT_DUE_ASC).strip()
@@ -151,6 +155,8 @@ def purchases_applied_filters(params) -> list[str]:
         filters.append(f'Supplier: {supplier}')
     if service:
         filters.append(f'Service: {service}')
+    if destination:
+        filters.append(f'Destination: {destination}')
     if show_cancelled:
         filters.append('Including cancelled orders')
     filters.append(f'Sort: {sort_labels.get(sort, sort)}')

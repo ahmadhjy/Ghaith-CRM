@@ -99,7 +99,17 @@ class Service(models.Model):
     is_checked = models.BooleanField(default=False)
     processed = models.BooleanField(default=False)
     send_to_client = models.BooleanField(default=False)
+    sort_order = models.PositiveIntegerField(default=0, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, null=True)  # Add this line
+
+    def save(self, *args, **kwargs):
+        # Services added outside the invoice table should also append to the order.
+        if self._state.adding and not self.sort_order and self.leadtask_id:
+            last = Service.objects.filter(leadtask_id=self.leadtask_id).aggregate(
+                last=models.Max('sort_order'),
+            )['last'] or 0
+            self.sort_order = last + 1
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.service_name or f"Service #{self.pk}"

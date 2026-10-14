@@ -220,7 +220,6 @@
                                     <th>Selling</th>
                                     <th>Due</th>
                                     <th>Voucher</th>
-                                    <th>Sent to client</th>
                                     <th>Issued</th>
                                     <th>Actions</th>
                                 </tr>
@@ -239,6 +238,7 @@
                                     <input type="hidden" name="service_{{ service.pk }}_voucher_id" value="{{ service.voucher_id|default:'' }}" form="invoiceForm" data-service-inputs="view">
                                     <input type="hidden" name="service_{{ service.pk }}_is_checked" value="{% if service.is_checked %}on{% endif %}" form="invoiceForm" data-service-inputs="view">
                                     <input type="hidden" name="service_{{ service.pk }}_send_to_client" value="{% if service.send_to_client %}on{% endif %}" form="invoiceForm" data-service-inputs="view">
+                                    <input type="hidden" class="service-sort-order" name="service_{{ service.pk }}_sort_order" value="{{ forloop.counter }}" form="invoiceForm">
                                 </td>
                                 <td class="service-supplier">
                                     <div class="supplier-field-wrap">
@@ -265,20 +265,16 @@
                                 <td>
                                     <label class="inv-toggle-label">
                                         <span class="inv-toggle">
-                                            <input type="checkbox" class="service-send-to-client-cb" data-service-id="{{ service.pk }}" {% if service.send_to_client %}checked{% endif %} onchange="updateSendToClientStatus(this); syncServiceSendToClientHidden(this);">
-                                            <span class="inv-toggle__slider"></span>
-                                        </span>
-                                    </label>
-                                </td>
-                                <td>
-                                    <label class="inv-toggle-label">
-                                        <span class="inv-toggle">
                                             <input type="checkbox" class="service-is-checked-cb" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %}checked{% endif %} onchange="updateCheckboxStatus(this); syncServiceIsCheckedHidden(this);">
                                             <span class="inv-toggle__slider"></span>
                                         </span>
                                     </label>
                                 </td>
                                 <td class="service-actions">
+                                    <span class="service-order-controls" role="group" aria-label="Reorder service">
+                                        <button type="button" class="service-move-up" title="Move service up" aria-label="Move service up" onclick="moveServiceRow(this, -1)">↑</button>
+                                        <button type="button" class="service-move-down" title="Move service down" aria-label="Move service down" onclick="moveServiceRow(this, 1)">↓</button>
+                                    </span>
                                     <button type="button" class="btn-edit-service" data-service-id="{{ service.pk }}"><i class="fas fa-pen"></i> Edit</button>
                                     <a href="{% url 'delete_service' service.pk %}" class="service-delete-link" title="Delete"><i class="fas fa-times"></i></a>
                                 </td>
@@ -296,6 +292,7 @@
                 </div>
                 <div class="inv-card__foot">
                     <button type="button" class="inv-btn inv-btn--outline" onclick="addRow()"><i class="fas fa-plus"></i> Add Service</button>
+                    <span class="service-order-hint">Use ↑ / ↓ to reorder services, then Save Invoice.</span>
                 </div>
         </section>
 
@@ -717,7 +714,7 @@ function addRow() {
     serviceOptions += '<option value="{{ value|escapejs }}">{{ label|escapejs }}</option>';
     {% endfor %}
     newRow.innerHTML = `
-        <td><select name="service_name[]" class="form-control">${serviceOptions}</select></td>
+        <td><select name="service_name[]" class="form-control">${serviceOptions}</select><input type="hidden" class="service-sort-order" name="sort_order[]"><input type="hidden" name="send_to_client[]" value=""></td>
         <td><div class="supplier-field-wrap"><select name="supplier[]" class="form-control supplier-select">${supplierOptions}</select><button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button></div></td>
         <td><input type="text" name="details[]" class="form-control" placeholder="Details"></td>
         <td><input type="text" name="net[]" class="form-control" placeholder="Net"></td>
@@ -725,14 +722,54 @@ function addRow() {
         <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
         <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
         <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher"></td>
-        <td><label class="inv-toggle-label"><span class="inv-toggle"><input type="checkbox" name="send_to_client[]" value="on"><span class="inv-toggle__slider"></span></span></label></td>
         <td></td>
-        <td><button type="button" class="service-add-remove" onclick="this.closest('tr').remove(); recalcProfit();"><i class="fas fa-times"></i></button></td>
+        <td class="service-actions">
+            <span class="service-order-controls" role="group" aria-label="Reorder service">
+                <button type="button" class="service-move-up" title="Move service up" aria-label="Move service up" onclick="moveServiceRow(this, -1)">↑</button>
+                <button type="button" class="service-move-down" title="Move service down" aria-label="Move service down" onclick="moveServiceRow(this, 1)">↓</button>
+            </span>
+            <button type="button" class="service-add-remove" title="Remove service" onclick="removeNewServiceRow(this)"><i class="fas fa-times"></i></button>
+        </td>
     `;
     newRow.querySelectorAll('input[name="net[]"], input[name="issue_price[]"]').forEach(function(inp) {
         inp.addEventListener('input', recalcProfit);
     });
+    refreshServiceOrder();
+    markInvoiceDirty();
 }
+
+function serviceRows() {
+    return Array.from(document.querySelectorAll('#servicesTable tbody .service-view-row, #servicesTable tbody .service-edit-row'));
+}
+
+function refreshServiceOrder() {
+    var rows = serviceRows();
+    rows.forEach(function(row, index) {
+        row.querySelector('.service-sort-order').value = index + 1;
+        row.querySelector('.service-move-up').disabled = index === 0;
+        row.querySelector('.service-move-down').disabled = index === rows.length - 1;
+    });
+}
+
+function moveServiceRow(button, direction) {
+    var row = button.closest('tr');
+    var rows = serviceRows();
+    var adjacent = rows[rows.indexOf(row) + direction];
+    if (!adjacent) return;
+    if (direction < 0) row.parentNode.insertBefore(row, adjacent);
+    else row.parentNode.insertBefore(adjacent, row);
+    refreshServiceOrder();
+    markInvoiceDirty();
+}
+
+function removeNewServiceRow(button) {
+    button.closest('tr').remove();
+    refreshServiceOrder();
+    markInvoiceDirty();
+    recalcProfit();
+}
+
+refreshServiceOrder();
 
 var initialStatus = document.getElementById('id_status') ? document.getElementById('id_status').value : '';
 var invoiceForm = document.getElementById('invoiceForm');

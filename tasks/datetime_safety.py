@@ -95,12 +95,12 @@ def services_for_leadtask(leadtask):
     lo, hi = valid_datetime_bounds()
     return Service.objects.filter(leadtask=leadtask).filter(
         Q(due_time__isnull=True) | Q(due_time__gte=lo, due_time__lte=hi),
-    )
+    ).order_by('sort_order', 'pk')
 
 
 def services_for_client_pdf(leadtask):
     """All services on the invoice for the client PDF."""
-    return services_for_leadtask(leadtask).order_by('pk')
+    return services_for_leadtask(leadtask)
 
 
 def get_leadtask_for_edit(pk):

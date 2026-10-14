@@ -91,7 +91,7 @@ def _sync_invoice_lines_from_crm(invoice: SalesInvoice, leadtask: LeadTask) -> N
     destination = sync_destination(leadtask.lead.destination)
     issue_date = _issue_date_for_leadtask(leadtask)
 
-    crm_services = list(leadtask.service_set.all().order_by('pk'))
+    crm_services = list(leadtask.service_set.all().order_by('sort_order', 'pk'))
     crm_ids = {service.pk for service in crm_services}
 
     linked_lines = {
@@ -182,7 +182,7 @@ def build_sales_invoice_from_leadtask(leadtask: LeadTask, actor) -> SalesInvoice
     )
 
     sort_order = 0
-    for service in leadtask.service_set.all().order_by('pk'):
+    for service in leadtask.service_set.all().order_by('sort_order', 'pk'):
         sort_order += 1
         line_kwargs = crm_service_to_line_kwargs(
             service,

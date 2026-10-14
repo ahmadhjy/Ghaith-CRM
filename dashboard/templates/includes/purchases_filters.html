@@ -66,6 +66,15 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="purchases-filters__field purchases-filters__field--wide">
+                    <label for="destination">Order destination</label>
+                    <select name="destination" id="destination" class="purchases-filters__select">
+                        <option value="">All destinations</option>
+                        {% for value, label in destination_filter_options %}
+                        <option value="{{ value }}" {% if destination_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div class="purchases-filters__toolbar">

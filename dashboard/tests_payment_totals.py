@@ -98,6 +98,23 @@ class FilteredPaymentTotalsTests(TestCase):
         self.assertContains(response, "name=\"due_from\"")
         self.assertContains(response, "name=\"travel_from\"")
 
+    def test_purchase_and_supplier_totals_filter_by_order_destination(self):
+        self.order.lead.destination = 'Bali'
+        self.order.lead.save(update_fields=['destination'])
+        Service.objects.create(
+            leadtask=self.order, service_name='Hotel', supplier='Babylon', net='125',
+        )
+        for url_name in ('supplier_payments_list', 'supplier_totals_list'):
+            response = self.client.get(reverse(url_name), {'destination': 'Bali'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context['filtered_count'], 1)
+            self.assertEqual(response.context['filtered_total'], 125)
+            self.assertEqual(response.context['destination_filter'], 'Bali')
+            self.assertContains(response, 'name="destination"')
+            excluded = self.client.get(reverse(url_name), {'destination': 'Turkey'})
+            self.assertEqual(excluded.context['filtered_count'], 0)
+            self.assertEqual(excluded.context['filtered_total'], 0)
+
     def test_supplier_totals_pdf_exports(self):
         due = timezone.now() + timedelta(days=5)
         Service.objects.create(
