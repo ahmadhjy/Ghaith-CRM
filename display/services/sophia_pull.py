@@ -11,6 +11,7 @@ from display.lead_errors import LeadSyncError
 from display.models import Department, SophiaSyncState
 from display.services.sophia_client import SophiaClient, SophiaClientError
 from display.services.sophia_sync import apply_sophia_chat, latest_assigned_agent_id
+from display.services.sophia_control import paused_result, sophia_sync_enabled
 
 BEIRUT = ZoneInfo("Asia/Beirut")
 BATCH_HOUR = 7
@@ -55,6 +56,11 @@ def run_sophia_pull(*, since: str | None = None, dry_run: bool = False, assigned
     Filtered / dry-run pulls do not advance the watermark, so a later full
     sync still picks up the other agents.
     """
+    # Before loading/creating state, fetching departments, or making API calls.
+    # A paused daily task is a no-op and must not move the sync watermark.
+    if not sophia_sync_enabled():
+        return paused_result()
+
     state = SophiaSyncState.load()
     client = SophiaClient()
     warnings: list[str] = []

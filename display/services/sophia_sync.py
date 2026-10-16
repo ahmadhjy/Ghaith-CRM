@@ -21,6 +21,7 @@ from display.destinations import ensure_crm_destination
 from display.lead_errors import LeadSyncError
 from display.models import CrmUserProfile, Department, Lead
 from display.services.lead_assignment import assign_user_for_department
+from display.services.sophia_control import require_sophia_sync_enabled
 from display.services.lead_sync import (
     _parse_api_datetime,
     _sync_summary_fields,
@@ -93,6 +94,7 @@ def apply_sophia_chat(chat: dict, *, source: str = "pull") -> dict:
     Returns a dict: {"lead": Lead|None, "created": bool, "applied": bool,
     "skipped_reason": str|None}. Raises :class:`LeadSyncError` on invalid input.
     """
+    require_sophia_sync_enabled()
     if not isinstance(chat, dict):
         raise LeadSyncError("Chat payload must be an object", code="INVALID_JSON")
 

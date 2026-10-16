@@ -45,6 +45,17 @@ def webhook_secret_or_401(request):
     return None
 
 
+def sync_paused_response():
+    from display.services.sophia_control import paused_result, sophia_sync_enabled
+
+    if sophia_sync_enabled():
+        return None
+    response = JsonResponse(paused_result(), status=503)
+    # Do not acknowledge Sold events as processed; the sender can retry later.
+    response["Retry-After"] = "3600"
+    return response
+
+
 def json_error(message, status=400, code=None, extra=None):
     payload = {"error": message}
     if code:

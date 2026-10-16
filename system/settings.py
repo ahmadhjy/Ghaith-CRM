@@ -241,7 +241,10 @@ CRM_PUSH_ICON_URL = '/static/img/favicon.svg'
 EXTERNAL_API_KEY = os.environ.get('EXTERNAL_API_KEY', 'GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT')
 
 # --- Sophia WhatsApp lead-sync integration (hybrid: daily pull + Sold webhook) ---
-# Base URL of Sophia's API we pull from (no trailing slash needed).
+# Paused by default pending investigation. Applies to scheduled pulls, manual
+# imports, Sold webhooks, and legacy dashboard lead-write endpoints.
+SOPHIA_SYNC_ENABLED = os.environ.get('SOPHIA_SYNC_ENABLED', 'false').strip().lower() in {'true', '1', 'yes', 'on'}
+# Base URL of Sophia's JSON API (must include /cms/json-api/… on the live host).
 SOPHIA_BASE_URL = os.environ.get('SOPHIA_BASE_URL', '')
 # Bearer token Sophia issues to the CRM for the daily pull (Authorization: Bearer ...).
 SOPHIA_API_TOKEN = os.environ.get('SOPHIA_API_TOKEN', '')

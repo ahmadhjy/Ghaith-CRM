@@ -34,6 +34,9 @@ class Command(BaseCommand):
             dry_run=options.get("dry_run", False),
             assigned_agent=options.get("assigned_agent"),
         )
+        if result.get("paused"):
+            self.stdout.write(self.style.WARNING(result["summary"]))
+            return
         if not result.get("configured"):
             self.stderr.write(self.style.ERROR(result.get("error") or "Not configured"))
             return

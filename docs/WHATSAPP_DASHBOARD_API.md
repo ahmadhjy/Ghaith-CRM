@@ -1,5 +1,9 @@
 # WhatsApp AI Dashboard → CRM Lead Sync API
 
+> **Deployment notice — 16 October 2026:** External dashboard writes are
+> temporarily paused (HTTP 503 / `SOPHIA_SYNC_PAUSED`). Read-only lookups remain
+> available. See [pause and resumption notes](SOPHIA_SYNC_PAUSED.md).
+
 This document is for the **WhatsApp AI dashboard integration team**. It describes how to synchronize **leads only** into the Ghaith CRM.
 
 **Scope:** Lead records only. This API does **not** create or update tasks, orders, invoices, clients, or any other CRM entities.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from datetime import datetime
 
 from django.http import JsonResponse
@@ -13,6 +14,7 @@ from display.api_utils import (
     auth_or_401,
     json_error,
     parse_json_body,
+    sync_paused_response,
     webhook_secret_or_401,
 )
 from display.constants import DEPARTMENT_DEFINITIONS, LEAD_STATUS_API_LABELS
@@ -90,6 +92,10 @@ def api_sync_lead(request):
     if unauthorized:
         return unauthorized
 
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
+
     data, err = parse_json_body(request)
     if err:
         return err
@@ -107,6 +113,11 @@ def api_lead_detail(request, lead_id: int):
     unauthorized = auth_or_401(request)
     if unauthorized:
         return unauthorized
+
+    if request.method in ("PATCH", "PUT"):
+        paused = sync_paused_response()
+        if paused is not None:
+            return paused
 
     lead = get_object_or_404(Lead, pk=lead_id)
     if request.method == "GET":
@@ -133,6 +144,10 @@ def api_qualify_lead(request, lead_id: int):
     if unauthorized:
         return unauthorized
 
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
+
     lead = get_object_or_404(Lead, pk=lead_id)
     data, err = parse_json_body(request)
     if err:
@@ -151,6 +166,10 @@ def api_close_deal(request, lead_id: int):
     unauthorized = auth_or_401(request)
     if unauthorized:
         return unauthorized
+
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
 
     lead = get_object_or_404(Lead, pk=lead_id)
     data, err = parse_json_body(request)
@@ -274,6 +293,10 @@ def api_create_followup(request, lead_id: int):
     if unauthorized:
         return unauthorized
 
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
+
     lead = get_object_or_404(Lead, pk=lead_id)
     data, err = parse_json_body(request)
     if err:
@@ -327,6 +350,10 @@ def api_create_crm_notification(request):
     if unauthorized:
         return unauthorized
 
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
+
     data, err = parse_json_body(request)
     if err:
         return err
@@ -375,6 +402,10 @@ def api_sophia_sold_webhook(request):
     if unauthorized:
         return unauthorized
 
+    paused = sync_paused_response()
+    if paused is not None:
+        return paused
+
     data, err = parse_json_body(request)
     if err:
         return err
@@ -393,6 +424,69 @@ def api_sophia_sold_webhook(request):
     )
 
 
+def _sophia_sync_page_html(result=None):
+    from display.services.sophia_control import paused_result, sophia_sync_enabled
+
+    paused = not sophia_sync_enabled()
+    if paused:
+        result = paused_result()
+    error = (result or {}).get("error") or ""
+    ok = bool(result and result.get("ok"))
+    configured = bool(result and result.get("configured"))
+    description = (
+        "Scheduled pulls, manual imports, and Sold webhooks are disabled. "
+        "Existing CRM records and the last sync timestamp are preserved."
+        if paused else
+        "Pulls chats whose status changed since the last 07:00 Asia/Beirut (or the last full sync)."
+    )
+    webhook_note = (
+        "Sold webhooks are also paused; incoming events are not applied."
+        if paused else
+        "Sold chats can also be pushed immediately by Sophia when the label becomes Sold."
+    )
+    banner = ""
+    if result is not None:
+        color = "#065f46" if ok else "#991b1b"
+        bg = "#ecfdf5" if ok else "#fef2f2"
+        title = "Sync paused" if paused else ("Sync finished" if ok else "Sync failed")
+        detail = html.escape(str(error or result.get("summary") or ""))
+        extra = ""
+        if result.get("warnings"):
+            extra += "<p>" + "<br>".join(html.escape(str(w)) for w in result["warnings"]) + "</p>"
+        if result.get("error_details"):
+            extra += "<p>" + "<br>".join(html.escape(str(w)) for w in result["error_details"][:20]) + "</p>"
+        banner = (
+            f'<div style="background:{bg};color:{color};padding:.9rem 1rem;border-radius:8px;margin:1rem 0">'
+            f"<strong>{title}</strong>"
+            f"<p style='margin:.4rem 0 0;white-space:pre-wrap'>{detail}</p>{extra}</div>"
+        )
+        if result.get("debug"):
+            banner += (
+                "<p class='hint'>Config: configured="
+                f"{str(configured).lower()} cms_prefix="
+                f"{str(result['debug'].get('base_has_cms_prefix')).lower()}</p>"
+            )
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sophia sync</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}}
+label{{display:block;margin:1rem 0 .35rem;font-size:.9rem;color:#334155}}
+input{{width:100%;padding:.45rem .6rem;font-size:1rem;box-sizing:border-box}}
+button{{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer;margin-top:1rem}}
+.hint{{color:#64748b;font-size:.85rem}}</style></head>
+<body>
+<h1>Sophia WhatsApp sync</h1>
+{banner}
+<p>{description}</p>
+<form method="post">
+<label for="assigned_agent">Only this agent id (optional, for a test import)</label>
+<input id="assigned_agent" name="assigned_agent" type="text" placeholder="paste Sophia agent id">
+<p class="hint">Leave blank to import every changed chat. An agent-only run does not move the watermark.</p>
+<button type="submit"{' disabled aria-disabled="true"' if paused else ''}>{'Sync paused' if paused else 'Sync now'}</button>
+</form>
+<p class="hint" style="margin-top:1.5rem">{webhook_note}
+<code>/api/whatsapp/sync/sold/</code></p>
+</body></html>"""
+
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_sophia_pull_now(request):
@@ -409,28 +503,17 @@ def api_sophia_pull_now(request):
     if not authed:
         return json_error("Unauthorized", status=401, code="UNAUTHORIZED")
 
+    accept = request.headers.get("Accept") or ""
+    wants_html = request.user.is_authenticated and "application/json" not in accept
+
     if request.method == "GET" and request.user.is_authenticated and request.GET.get("run") != "1":
-        return HttpResponse(
-            """<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sophia sync</title>
-<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}
-label{display:block;margin:1rem 0 .35rem;font-size:.9rem;color:#334155}
-input{width:100%;padding:.45rem .6rem;font-size:1rem;box-sizing:border-box}
-button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer;margin-top:1rem}
-.hint{color:#64748b;font-size:.85rem}</style></head>
-<body>
-<h1>Sophia WhatsApp sync</h1>
-<p>Pulls chats whose status changed since the last 07:00 Asia/Beirut (or the last full sync).</p>
-<form method="post">
-<label for="assigned_agent">Only this agent id (optional, for a test import)</label>
-<input id="assigned_agent" name="assigned_agent" type="text" placeholder="paste Sophia agent id">
-<p class="hint">Leave blank to import every changed chat. An agent-only run does not move the watermark.</p>
-<button type="submit">Sync now</button>
-</form>
-<p class="hint" style="margin-top:1.5rem">Sold chats can also be pushed immediately by Sophia to
-<code>/api/whatsapp/sync/sold/</code> when the label becomes Sold.</p>
-</body></html>""",
-            content_type="text/html",
-        )
+        return HttpResponse(_sophia_sync_page_html(), content_type="text/html")
+
+    paused = sync_paused_response()
+    if paused is not None:
+        if wants_html:
+            return HttpResponse(_sophia_sync_page_html(), content_type="text/html", status=503)
+        return paused
 
     result = run_sophia_pull(
         since=request.GET.get("since") or request.POST.get("since") or None,
@@ -440,6 +523,8 @@ button{font-size:1rem;padding:.6rem 1.2rem;cursor:pointer;margin-top:1rem}
     status = 200 if result.get("configured") else 503
     if result.get("code") == "SOPHIA_PULL_FAILED":
         status = 502
+    if wants_html:
+        return HttpResponse(_sophia_sync_page_html(result), content_type="text/html", status=status)
     return JsonResponse(result, status=status)
 
 

@@ -9,7 +9,7 @@ from django.test import Client, TestCase, override_settings
 from display.models import CrmUserProfile, Department, Lead
 
 
-@override_settings(EXTERNAL_API_KEY="GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT")
+@override_settings(EXTERNAL_API_KEY="GhaithDashboard-2026-xK9mP2vL7nQ4wR8sT", SOPHIA_SYNC_ENABLED=True)
 class LeadApiTests(TestCase):
     def setUp(self):
         self.client = Client()

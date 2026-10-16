@@ -8,12 +8,13 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from display.api_utils import normalize_phone
 from display.constants import DEPARTMENT_ALIASES, LEAD_STATUS_API_VALUES
 from display.destinations import ensure_crm_destination
 from display.lead_errors import LeadSyncError
 from display.models import Department, Lead
+from display.phone_utils import digits_only
 from display.services.lead_assignment import assign_user_for_department
+from display.services.sophia_control import require_sophia_sync_enabled
 from display.services.lead_close_deal import apply_close_deal, resolve_close_outcome
 from display.services.lead_qualification import (
     apply_qualification_action,
@@ -77,14 +78,39 @@ def parse_lead_name(data: dict) -> str:
     return ""
 
 
+def to_e164_phone(phone: str, default_cc: str = "+961") -> str:
+    """Accept +961…, 961…, or local 70… and store a single +country form.
+
+    Sophia currently sends ``96170990439`` (no plus). Prepending ``+961`` blindly
+    would produce ``+961961…``; if the digits already start with the country
+    code we only add ``+``.
+    """
+    raw = (phone or "").strip()
+    if not raw:
+        return ""
+    digits = digits_only(raw)
+    if not digits:
+        return ""
+    cc = (default_cc or "+961").strip() or "+961"
+    if not cc.startswith("+"):
+        cc = f"+{digits_only(cc)}"
+    cc_digits = digits_only(cc)
+    if raw.startswith("+"):
+        return f"+{digits}"
+    if digits.startswith("00") and len(digits) > 4:
+        return f"+{digits[2:]}"
+    if cc_digits and digits.startswith(cc_digits):
+        return f"+{digits}"
+    return f"{cc}{digits}"
+
+
 def parse_phone_fields(data: dict) -> tuple[str, str]:
     phone = (data.get("phone") or "").strip()
     country_code = (data.get("country_code") or "+961").strip()
     mobile_number = (data.get("mobile_number") or "").strip()
-    if phone:
-        return country_code, phone if phone.startswith("+") else normalize_phone(country_code, phone)
-    if mobile_number:
-        return country_code, normalize_phone(country_code, mobile_number)
+    raw = phone or mobile_number
+    if raw:
+        return country_code, to_e164_phone(raw, country_code)
     return country_code, ""
 
 
@@ -220,6 +246,7 @@ def create_or_update_lead_from_dashboard(data: dict) -> tuple[Lead, bool]:
 
     Returns (lead, created).
     """
+    require_sophia_sync_enabled()
     country_code, phone = parse_phone_fields(data)
     name = parse_lead_name(data)
     department_value = data.get("department")
@@ -286,6 +313,7 @@ def create_or_update_lead_from_dashboard(data: dict) -> tuple[Lead, bool]:
 
 
 def update_lead_from_dashboard(lead: Lead, data: dict) -> Lead:
+    require_sophia_sync_enabled()
     department_value = data.get("department")
     if department_value is not None:
         department = resolve_department(department_value)

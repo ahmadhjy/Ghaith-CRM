@@ -1,3 +1,4 @@
+requests==2.32.5
 asgiref==3.7.2
 Brotli==1.1.0
 cffi==1.16.0

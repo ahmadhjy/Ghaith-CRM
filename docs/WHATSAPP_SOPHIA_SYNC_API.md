@@ -1,6 +1,10 @@
 # WhatsApp (Sophia) ↔ Ghaith CRM — Lead Sync Integration Spec
 
 **Audience:** Sophia dashboard development team.
+**Deployment notice (16 October 2026):** CRM imports are temporarily paused.
+Scheduled/manual pulls, Sold webhooks, and legacy dashboard write endpoints are
+disabled by default. Existing records and sync watermarks are preserved.
+See [pause and resumption notes](SOPHIA_SYNC_PAUSED.md) before testing or resuming.
 **Status:** Draft for implementation. This document defines the contracts both sides must build.
 **Scope:** Lead records only. No orders, invoices, clients, payments, or two‑way WhatsApp messaging.
 

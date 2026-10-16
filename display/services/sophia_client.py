@@ -1,19 +1,22 @@
-"""Minimal HTTP client for pulling data from Sophia's API.
+"""HTTP client for pulling data from Sophia's API.
 
-Uses the standard library only (``urllib``) so no extra dependency is required on
-PythonAnywhere. Configured via settings: SOPHIA_BASE_URL, SOPHIA_API_TOKEN,
-SOPHIA_HTTP_TIMEOUT.
+Sophia asked CRM clients to call with ``requests`` and this User-Agent:
+
+    User-Agent: SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)
+
+Configured via settings: SOPHIA_BASE_URL, SOPHIA_API_TOKEN, SOPHIA_HTTP_TIMEOUT.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
 
+import requests
 from django.conf import settings
+
+SOPHIA_USER_AGENT = "SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)"
+_SOFIA_HOST = "sofiiaai-prospect.ucheed.dev"
 
 
 class SophiaClientError(Exception):
@@ -32,9 +35,25 @@ def _first_setting(*names, default=""):
     return default
 
 
+def normalize_sophia_base_url(url: str) -> str:
+    """Insert ``/cms`` on the live Sofiia host.
+
+    Their credentials PDF listed ``…/json-api/…``, but the JSON API is actually
+    served at ``…/cms/json-api/…``. Without ``/cms``, Cloudflare returns the
+    Prospect SPA HTML and the CRM reports invalid JSON.
+    """
+    url = (url or "").strip().rstrip("/")
+    old = f"://{_SOFIA_HOST}/json-api/"
+    new = f"://{_SOFIA_HOST}/cms/json-api/"
+    if old in url and new not in url:
+        url = url.replace(old, new, 1)
+    return url
+
+
 def sophia_config_status() -> dict:
     """Safe diagnostic (no secrets) for why the pull client is/isn't configured."""
-    base = _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL")
+    raw = _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL")
+    base = normalize_sophia_base_url(raw)
     token = _first_setting("SOPHIA_API_TOKEN", "SOPHIIA_API_TOKEN")
     return {
         "settings_module": getattr(settings, "SETTINGS_MODULE", ""),
@@ -42,14 +61,23 @@ def sophia_config_status() -> dict:
         "has_SOPHIIA_BASE_URL": bool(getattr(settings, "SOPHIIA_BASE_URL", "")),
         "has_SOPHIA_API_TOKEN": bool(getattr(settings, "SOPHIA_API_TOKEN", "")),
         "base_url_length": len(str(base or "")),
+        "base_has_cms_prefix": "/cms/json-api/" in str(base or ""),
         "token_length": len(str(token or "")),
         "configured": bool(base and token),
     }
 
 
+def _unwrap(payload):
+    """Sofia's live API wraps resources in ``{success, data: {…}}``."""
+    if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+        return payload["data"]
+    return payload if isinstance(payload, dict) else {}
+
+
 class SophiaClient:
     def __init__(self, base_url=None, token=None, timeout=None):
-        self.base_url = (base_url or _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL") or "").rstrip("/")
+        raw = base_url or _first_setting("SOPHIA_BASE_URL", "SOPHIIA_BASE_URL") or ""
+        self.base_url = normalize_sophia_base_url(raw)
         self.token = token or _first_setting("SOPHIA_API_TOKEN", "SOPHIIA_API_TOKEN") or ""
         self.timeout = timeout or int(_first_setting("SOPHIA_HTTP_TIMEOUT", default=30) or 30)
 
@@ -57,50 +85,53 @@ class SophiaClient:
     def is_configured(self) -> bool:
         return bool(self.base_url and self.token)
 
+    def _headers(self) -> dict:
+        return {
+            "User-Agent": SOPHIA_USER_AGENT,
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.token}",
+        }
+
     def _get(self, path: str, params: dict | None = None) -> dict:
         if not self.is_configured:
             raise SophiaClientError(
                 "Sophia client is not configured (set SOPHIA_BASE_URL and SOPHIA_API_TOKEN)."
             )
         url = f"{self.base_url}{path}"
-        if params:
-            url = f"{url}?{urllib.parse.urlencode(params)}"
-        req = urllib.request.Request(url, method="GET")
-        req.add_header("Authorization", f"Bearer {self.token}")
-        req.add_header("Accept", "application/json")
-        # Sophia asked CRM clients to send this User-Agent (Cloudflare 1010).
-        req.add_header("User-Agent", "SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)")
-        req.add_header("Accept-Language", "en-US,en;q=0.9")
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                content_type = resp.headers.get("Content-Type", "")
-                body = resp.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            detail = ""
+            resp = requests.get(url, headers=self._headers(), params=params, timeout=self.timeout)
+        except requests.RequestException as exc:
+            raise SophiaClientError(f"Sophia GET {path} failed: {exc}") from exc
+
+        content_type = resp.headers.get("Content-Type", "")
+        body = resp.text or ""
+        if resp.status_code >= 400:
+            detail = body[:500]
             try:
-                detail = exc.read().decode("utf-8", errors="replace")[:500]
-            except Exception:
+                parsed = json.loads(body)
+                detail = parsed.get("message") or parsed.get("error") or detail
+            except json.JSONDecodeError:
                 pass
-            raise SophiaClientError(f"Sophia GET {path} -> HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise SophiaClientError(f"Sophia GET {path} failed: {exc.reason}") from exc
+            raise SophiaClientError(f"Sophia GET {path} -> HTTP {resp.status_code}: {detail}")
+
+        snippet = body.lstrip()[:180].replace("\n", " ")
+        if "html" in content_type.lower() or snippet.lower().startswith("<!") or "<html" in snippet.lower():
+            raise SophiaClientError(
+                f"Sophia GET {path} returned HTML ({content_type}): {snippet!r}. "
+                "The JSON API is at /cms/json-api/…, not /json-api/…"
+            )
         try:
             return json.loads(body or "{}")
         except json.JSONDecodeError as exc:
-            snippet = (body or "").lstrip()[:180].replace("\n", " ")
             kind = "HTML" if snippet.lower().startswith("<!") or "<html" in snippet.lower() else "non-JSON"
             raise SophiaClientError(
                 f"Sophia GET {path} returned {kind} ({content_type}): {snippet!r}"
             ) from exc
 
     def fetch_departments(self) -> list[dict]:
-        """GET {base}/departments — returns the raw list (agents or departments).
-
-        Per Sophia's go-live spec the base URL already includes
-        ``…/prospect-crm/v1/consumer``, so the path here is just ``/departments``.
-        """
-        data = self._get("/departments")
-        return data.get("departments") or data.get("agents") or []
+        """GET {base}/departments — agents or departments list."""
+        payload = _unwrap(self._get("/departments"))
+        return payload.get("departments") or payload.get("agents") or []
 
     def iter_changed_chats(self, status_changed_since: str, *, max_pages: int = 1000):
         """Yield chat dicts across all pages, newest-changes pagination aware."""
@@ -109,9 +140,15 @@ class SophiaClient:
         while page and seen_pages < max_pages:
             data = self._get(
                 "/chats",
-                params={"status_changed_since": status_changed_since, "page": page},
+                params={
+                    "status_changed_since": status_changed_since,
+                    "page": page,
+                    # Their /chats route 500s on lowercase "asc"; send the documented enum.
+                    "order": "DESC",
+                },
             )
-            for chat in data.get("chats") or []:
+            payload = _unwrap(data)
+            for chat in payload.get("chats") or []:
                 yield chat
-            page = data.get("next_page")
+            page = payload.get("next_page")
             seen_pages += 1

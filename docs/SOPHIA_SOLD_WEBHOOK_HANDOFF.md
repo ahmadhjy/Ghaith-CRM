@@ -1,5 +1,10 @@
 # Reply to the Sophia team — Ghaith CRM go-live
 
+> **Current status — 16 October 2026: paused.** The go-live reply below is
+> historical, not a request to resume. The CRM currently rejects Sold events with
+> HTTP 503 / `SOPHIA_SYNC_PAUSED`; no lead or order is created or changed.
+> See [pause and resumption notes](SOPHIA_SYNC_PAUSED.md).
+
 Sophia already sent the Integration Guide (v1.1) and the credentials doc. This is
 the reply to send back, answering their open items (credentials §5 / guide §11).
 
@@ -36,7 +41,7 @@ Configure these on production (`ghaithleads/settings.py` or environment). Copy t
 real token/secret from the `GHAITH-LEADSYNC-CREDENTIALS` PDF — do not commit them.
 
 ```
-SOPHIA_BASE_URL=https://sofiiaai-prospect.ucheed.dev/json-api/prospect-crm/v1/consumer
+SOPHIA_BASE_URL=https://sofiiaai-prospect.ucheed.dev/cms/json-api/prospect-crm/v1/consumer
 SOPHIA_API_TOKEN=<pull API key from the credentials PDF, starts with psk_live_>
 SOPHIA_WEBHOOK_SECRET=<webhook secret from the credentials PDF, starts with whsec_>
 ```

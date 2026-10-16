@@ -13,7 +13,7 @@ from tasks.models import LeadTask
 WEBHOOK_SECRET = "test-webhook-secret"
 
 
-@override_settings(SOPHIA_WEBHOOK_SECRET=WEBHOOK_SECRET)
+@override_settings(SOPHIA_WEBHOOK_SECRET=WEBHOOK_SECRET, SOPHIA_SYNC_ENABLED=True)
 class SophiaSyncTests(TestCase):
     def setUp(self):
         self.client = Client()
@@ -40,6 +40,12 @@ class SophiaSyncTests(TestCase):
         }
         chat.update(overrides)
         return chat
+
+    def test_phone_without_plus_is_normalized(self):
+        result = apply_sophia_chat(self._chat(external_id="wa_phone_1", phone="96170990439"))
+        self.assertEqual(result["lead"].phone, "+96170990439")
+        local = apply_sophia_chat(self._chat(external_id="wa_phone_2", phone="70990440"))
+        self.assertEqual(local["lead"].phone, "+96170990440")
 
     def test_status_mapping_and_create(self):
         result = apply_sophia_chat(self._chat(status="offer_sent"))
@@ -165,26 +171,62 @@ class LastSevenAmCutoffTests(TestCase):
 
 
 class SophiaClientHeaderTests(TestCase):
+    def _json_response(self, payload, status=200):
+        from unittest.mock import Mock
+
+        resp = Mock()
+        resp.status_code = status
+        resp.headers = {"Content-Type": "application/json; charset=UTF-8"}
+        resp.text = json.dumps(payload)
+        resp.content = resp.text.encode()
+        return resp
+
     @override_settings(
         SOPHIA_BASE_URL="https://example.test/v1/consumer",
         SOPHIA_API_TOKEN="tok",
     )
     def test_get_sends_sophia_user_agent(self):
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
+
+        from display.services.sophia_client import SOPHIA_USER_AGENT, SophiaClient
+
+        resp = self._json_response({"data": {"departments": []}})
+        with patch("display.services.sophia_client.requests.get", return_value=resp) as mock_get:
+            SophiaClient().fetch_departments()
+
+        headers = mock_get.call_args.kwargs["headers"]
+        self.assertEqual(headers["User-Agent"], SOPHIA_USER_AGENT)
+        self.assertEqual(headers["Authorization"], "Bearer tok")
+
+    def test_live_host_json_api_url_gets_cms_prefix(self):
+        from display.services.sophia_client import normalize_sophia_base_url
+
+        self.assertEqual(
+            normalize_sophia_base_url(
+                "https://sofiiaai-prospect.ucheed.dev/json-api/prospect-crm/v1/consumer"
+            ),
+            "https://sofiiaai-prospect.ucheed.dev/cms/json-api/prospect-crm/v1/consumer",
+        )
+
+    @override_settings(
+        SOPHIA_BASE_URL="https://sofiiaai-prospect.ucheed.dev/json-api/prospect-crm/v1/consumer",
+        SOPHIA_API_TOKEN="tok",
+    )
+    def test_fetch_departments_unwraps_success_envelope(self):
+        from unittest.mock import patch
 
         from display.services.sophia_client import SophiaClient
 
-        resp = MagicMock()
-        resp.headers = {"Content-Type": "application/json"}
-        resp.read.return_value = b'{"departments": []}'
-        resp.__enter__.return_value = resp
-        resp.__exit__.return_value = False
+        payload = {
+            "success": True,
+            "message": "Success",
+            "data": {"departments": [{"id": 1, "full_name": "Desk"}]},
+        }
+        with patch(
+            "display.services.sophia_client.requests.get",
+            return_value=self._json_response(payload),
+        ) as mock_get:
+            rows = SophiaClient().fetch_departments()
 
-        with patch("display.services.sophia_client.urllib.request.urlopen", return_value=resp) as mock_urlopen:
-            SophiaClient().fetch_departments()
-
-        request = mock_urlopen.call_args[0][0]
-        self.assertEqual(
-            request.get_header("User-agent"),
-            "SofiiaAI-CRM-Sync/1.0 (+https://ucheed.dev)",
-        )
+        self.assertEqual(rows, [{"id": 1, "full_name": "Desk"}])
+        self.assertIn("/cms/json-api/", mock_get.call_args.args[0])
