@@ -172,7 +172,19 @@ class Attachment(models.Model):
     attachment_name = models.CharField(max_length=120)
     file = models.FileField(upload_to='static/attachments/%Y/%m/%d/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    sort_order = models.PositiveIntegerField(default=0, editable=False)
     parentleadtask = models.ForeignKey('LeadTask', on_delete=models.CASCADE, blank=True, null=True)
+
+    class Meta:
+        ordering = ['sort_order', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.sort_order and self.parentleadtask_id:
+            last = Attachment.objects.filter(
+                parentleadtask_id=self.parentleadtask_id,
+            ).aggregate(last=models.Max('sort_order'))['last'] or 0
+            self.sort_order = last + 1
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.attachment_name or f"Attachment {self.pk}"

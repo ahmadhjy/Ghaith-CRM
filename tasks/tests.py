@@ -36,6 +36,47 @@ class LeadTasksListFilterTests(TestCase):
             status="done",
         )
 
+    def test_travel_date_sorting_keeps_undated_orders_last(self):
+        early = LeadTask.objects.create(
+            lead=self.lead, assigned_to=self.user, status='progress',
+            travel_date=timezone.make_aware(datetime(2026, 11, 1, 10, 0)),
+        )
+        late = LeadTask.objects.create(
+            lead=self.lead, assigned_to=self.user, status='progress',
+            travel_date=timezone.make_aware(datetime(2026, 11, 20, 10, 0)),
+        )
+        for sort, expected in (
+            ('travel', [early.pk, late.pk, self.active.pk]),
+            ('-travel', [late.pk, early.pk, self.active.pk]),
+        ):
+            response = self.client.get(reverse('current_lead_tasks'), {'sort': sort})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([o.pk for o in response.context['data']], expected)
+            self.assertEqual(response.context['sort'], sort)
+            self.assertContains(response, 'name="sort"')
+            self.assertContains(response, 'data-label="Travel date"')
+
+    def test_travel_sort_retains_status_supplier_and_user_filters(self):
+        other = get_user_model().objects.create_user(username='another')
+        foreign = LeadTask.objects.create(
+            lead=self.lead, assigned_to=other, status='progress',
+            travel_date=timezone.now(),
+        )
+        for order in (self.active, self.done, foreign):
+            Service.objects.create(leadtask=order, service_name='Hotel', supplier='BABYLON')
+        response = self.client.get(
+            reverse('current_lead_tasks'),
+            {'sort': 'travel', 'supplier': 'BABYLON', 'status': 'progress'},
+        )
+        self.assertEqual([o.pk for o in response.context['data']], [self.active.pk])
+
+    def test_unknown_sort_uses_newest_orders(self):
+        response = self.client.get(
+            reverse('current_lead_tasks'), {'sort': 'not-allowed', 'status': 'all'},
+        )
+        self.assertEqual([o.pk for o in response.context['data']], [self.done.pk, self.active.pk])
+        self.assertEqual(response.context['sort'], 'newest')
+
     def test_default_excludes_done_orders(self):
         response = self.client.get(reverse("current_lead_tasks"))
         self.assertEqual(response.status_code, 200)

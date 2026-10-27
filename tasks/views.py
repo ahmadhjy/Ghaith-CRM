@@ -16,7 +16,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.forms import inlineformset_factory, formset_factory
 from django.utils.dateparse import parse_datetime
-from django.db.models import Q
+from django.db.models import F, Q
 from django.views.decorators.http import require_POST
 from collections import Counter
 from reportlab.pdfgen import canvas
@@ -632,7 +632,7 @@ def generate_pdf(request, pk):
     )
     services = Service.objects.filter(leadtask=lead_task).order_by('sort_order', 'pk')
     payments = Payment.objects.filter(leadtask=lead_task).order_by('date')
-    attachments = Attachment.objects.filter(parentleadtask=lead_task).order_by('-uploaded_at')
+    attachments = Attachment.objects.filter(parentleadtask=lead_task)
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Invoice - {lead_task.lead.name}.pdf"'
@@ -717,6 +717,9 @@ def current_leadtasks(request):
     travel_date_only = request.GET.get('travel_date_only', '') == 'on'
     assigned_to_me = request.GET.get('assigned_to_me', '') == 'on'
     supplier_filter = request.GET.get('supplier', '').strip()
+    sort = request.GET.get('sort', 'newest')
+    if sort not in ('newest', 'travel', '-travel'):
+        sort = 'newest'
     sold_from = _parse_filter_date(request.GET.get('sold_from'))
     sold_to = _parse_filter_date(request.GET.get('sold_to'))
 
@@ -758,8 +761,13 @@ def current_leadtasks(request):
             Q(assigned_to__username__icontains=search_query)
         ).distinct()
 
-    # Sort LeadTasks from newest to oldest
-    lead_tasks = lead_tasks.select_related('lead', 'assigned_to').prefetch_related('lead__passengers').order_by('-pk')
+    lead_tasks = lead_tasks.select_related('lead', 'assigned_to').prefetch_related('lead__passengers')
+    if sort == 'travel':
+        lead_tasks = lead_tasks.order_by(F('travel_date').asc(nulls_last=True), '-pk')
+    elif sort == '-travel':
+        lead_tasks = lead_tasks.order_by(F('travel_date').desc(nulls_last=True), '-pk')
+    else:
+        lead_tasks = lead_tasks.order_by('-pk')
 
     # Calculate counts for each status (include all tasks for counts)
     if request.user.is_staff and not assigned_to_me:
@@ -778,6 +786,7 @@ def current_leadtasks(request):
         'assigned_to_me': assigned_to_me,
         'is_staff': request.user.is_staff,
         'supplier_filter': supplier_filter,
+        'sort': sort,
         'sold_from': sold_from,
         'sold_to': sold_to,
     })

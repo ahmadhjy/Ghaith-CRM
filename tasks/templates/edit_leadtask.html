@@ -220,6 +220,7 @@
                                     <th>Selling</th>
                                     <th>Due</th>
                                     <th>Voucher</th>
+                                    <th>Sent to client</th>
                                     <th>Issued</th>
                                     <th>Actions</th>
                                 </tr>
@@ -265,6 +266,14 @@
                                 <td>
                                     <label class="inv-toggle-label">
                                         <span class="inv-toggle">
+                                            <input type="checkbox" class="service-send-to-client-cb" data-service-id="{{ service.pk }}" aria-label="Sent to client" {% if service.send_to_client %}checked{% endif %} onchange="syncServiceSendToClientHidden(this); updateSendToClientStatus(this); markInvoiceDirty();">
+                                            <span class="inv-toggle__slider"></span>
+                                        </span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <label class="inv-toggle-label">
+                                        <span class="inv-toggle">
                                             <input type="checkbox" class="service-is-checked-cb" name="is_checked" data-service-id="{{ service.pk }}" {% if service.is_checked %}checked{% endif %} onchange="updateCheckboxStatus(this); syncServiceIsCheckedHidden(this);">
                                             <span class="inv-toggle__slider"></span>
                                         </span>
@@ -281,7 +290,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="10">
+                                <td colspan="11">
                                     <div class="inv-empty"><i class="fas fa-inbox"></i>No services yet — add one below.</div>
                                 </td>
                             </tr>
@@ -375,7 +384,7 @@
             </div>
             <div class="inv-card__body" style="padding-top:0">
                 {% if attachments %}
-                <table class="attach-table">
+                <table class="attach-table" id="attachmentsTable">
                     <thead>
                         <tr>
                             <th>File</th>
@@ -384,8 +393,9 @@
                     </thead>
                     <tbody>
                     {% for attachment in attachments %}
-                    <tr>
+                    <tr class="attachment-row">
                         <td>
+                            <input type="hidden" name="attachment_order[]" value="{{ attachment.pk }}" form="invoiceForm">
                             <div class="attach-name-view" id="attach-view-{{ attachment.pk }}">
                                 <a href="{{ attachment.file.url }}" class="attach-link" target="_blank" rel="noopener noreferrer">
                                     <i class="fas fa-file"></i> {{ attachment.attachment_name }}
@@ -400,12 +410,17 @@
                             </form>
                         </td>
                         <td>
+                            <span class="service-order-controls" role="group" aria-label="Reorder attachment">
+                                <button type="button" class="attachment-move-up" title="Move attachment up" aria-label="Move attachment up" onclick="moveAttachmentRow(this, -1)">↑</button>
+                                <button type="button" class="attachment-move-down" title="Move attachment down" aria-label="Move attachment down" onclick="moveAttachmentRow(this, 1)">↓</button>
+                            </span>
                             <a href="{% url 'delete_leadtask_attachment' attachment_id=attachment.pk pk=leadid %}" class="delete-attach"><i class="fas fa-trash"></i> Delete</a>
                         </td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
+                <p class="service-order-hint">Use ↑ / ↓ to reorder attachments, then Save Invoice.</p>
                 {% else %}
                 <div class="inv-empty"><i class="fas fa-folder-open"></i>No attachments uploaded yet.</div>
                 {% endif %}
@@ -559,11 +574,7 @@
                     </select>
                     <button type="button" class="btn-add-supplier" title="Add supplier" onclick="openSupplierModal(this)"><i class="fas fa-plus"></i></button>
                 </div>
-                <label>Send to Client</label>
-                <label class="inv-toggle">
-                    <input type="checkbox" name="send_to_client" {% if service.send_to_client %}checked{% endif %}>
-                    <span class="inv-toggle__slider"></span>
-                </label>
+                <input type="hidden" name="send_to_client" value="{% if service.send_to_client %}on{% endif %}">
                 <label>Details</label>
                 <input type="text" name="details" value="{{ service.details|default:'' }}" class="form-control">
                 <label>Issue Price</label>
@@ -699,6 +710,35 @@ document.querySelectorAll('.inv-section-nav a').forEach(function(a) {
     onScroll();
 })();
 
+function attachmentRows() {
+    return Array.from(document.querySelectorAll('#attachmentsTable tbody .attachment-row'));
+}
+
+function refreshAttachmentOrder() {
+    var rows = attachmentRows();
+    rows.forEach(function(row, index) {
+        row.querySelector('.attachment-move-up').disabled = index === 0;
+        row.querySelector('.attachment-move-down').disabled = index === rows.length - 1;
+    });
+}
+
+function moveAttachmentRow(button, direction) {
+    var row = button.closest('tr');
+    var rows = attachmentRows();
+    var adjacent = rows[rows.indexOf(row) + direction];
+    if (!adjacent) return;
+    if (direction < 0) row.parentNode.insertBefore(row, adjacent);
+    else row.parentNode.insertBefore(adjacent, row);
+    refreshAttachmentOrder();
+    markInvoiceDirty();
+}
+
+refreshAttachmentOrder();
+
+function syncNewServiceSendToClient(checkbox) {
+    checkbox.closest('tr').querySelector('input[name="send_to_client[]"]').value = checkbox.checked ? 'on' : '';
+}
+
 function addRow() {
     const table = document.getElementById('servicesTable').getElementsByTagName('tbody')[0];
     const emptyRow = table.querySelector('td[colspan]');
@@ -722,6 +762,7 @@ function addRow() {
         <td><input type="text" name="selling[]" class="form-control" placeholder="Selling"></td>
         <td><input type="datetime-local" name="due_time[]" class="form-control"></td>
         <td><input type="text" name="voucher_id[]" class="form-control" placeholder="Voucher"></td>
+        <td><label class="inv-toggle-label"><span class="inv-toggle"><input type="checkbox" class="new-service-send-to-client-cb" aria-label="Sent to client" onchange="syncNewServiceSendToClient(this); markInvoiceDirty();"><span class="inv-toggle__slider"></span></span></label></td>
         <td></td>
         <td class="service-actions">
             <span class="service-order-controls" role="group" aria-label="Reorder service">
@@ -1301,14 +1342,23 @@ function updateSendToClientStatus(checkbox) {
         },
         body: 'send_to_client=' + isChecked
     }).then(function(response) {
-        if (!response.ok) checkbox.checked = !checkbox.checked;
-    }).catch(function() { checkbox.checked = !checkbox.checked; });
+        if (!response.ok) {
+            checkbox.checked = !checkbox.checked;
+            syncServiceSendToClientHidden(checkbox);
+        }
+    }).catch(function() {
+        checkbox.checked = !checkbox.checked;
+        syncServiceSendToClientHidden(checkbox);
+    });
 }
 
 function syncServiceSendToClientHidden(checkbox) {
     var sid = checkbox.getAttribute('data-service-id');
     var hid = document.querySelector('input[name="service_' + sid + '_send_to_client"][data-service-inputs="view"]');
     if (hid) hid.value = checkbox.checked ? 'on' : '';
+    var modal = document.getElementById('modal-service-' + sid);
+    var modalValue = modal && modal.querySelector('input[name="send_to_client"]');
+    if (modalValue) modalValue.value = checkbox.checked ? 'on' : '';
 }
 document.querySelectorAll('.service-send-to-client-cb').forEach(function(cb) { syncServiceSendToClientHidden(cb); });
 

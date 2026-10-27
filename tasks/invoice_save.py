@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 
 from .calendar_sync import sync_payment_event, sync_service_event
 from .forms import LeadTaskForm, ServiceForm
-from .models import LeadTask, Payment, Service
+from .models import Attachment, LeadTask, Payment, Service
 from .babylon_sync import sync_entry_from_service
 from .service_defaults import default_service_due_time
 
@@ -154,6 +154,24 @@ def save_invoice_from_post(request, leadtask):
                 seen_ids.add(int(sid))
     _save_existing_services(request, updated, seen_ids)
     _save_new_services(request, updated)
+
+    # External form inputs follow the attachment rows' DOM order. Only reorder
+    # this invoice's files; invalid/duplicate/foreign ids cannot modify others.
+    attachment_ids = request.POST.getlist('attachment_order[]')
+    if attachment_ids:
+        attachments = {
+            str(a.pk): a for a in Attachment.objects.filter(parentleadtask=updated)
+        }
+        ordered = []
+        for raw_id in attachment_ids:
+            attachment = attachments.pop(raw_id, None)
+            if attachment is not None:
+                ordered.append(attachment)
+        # Preserve files uploaded in another tab since this form was opened.
+        ordered.extend(attachments.values())
+        for index, attachment in enumerate(ordered, start=1):
+            attachment.sort_order = index
+        Attachment.objects.bulk_update(ordered, ['sort_order'])
 
     if old_status != 'cancelled' and updated.status == 'cancelled':
         refund_amount = request.POST.get('refund_amount', '').strip()

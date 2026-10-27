@@ -21,6 +21,8 @@ function makeRow(id) {
         '.service-sort-order': { value: '' },
         '.service-move-up': { disabled: false },
         '.service-move-down': { disabled: false },
+        '.attachment-move-up': { disabled: false },
+        '.attachment-move-down': { disabled: false },
     };
     const row = {
         id, parentNode: parent,
@@ -67,3 +69,36 @@ verify(['existing-a']);
 context.removeNewServiceRow(button(rows[0]));
 verify([]);
 console.log('Service row reordering: all checks passed.');
+
+// Check the actual attachment handlers too; hidden form inputs move with rows.
+rows.push(makeRow('file-a'), makeRow('file-b'), makeRow('file-c'));
+const attachmentStart = template.indexOf('function attachmentRows()');
+const attachmentEnd = template.indexOf('function addRow()', attachmentStart);
+assert.ok(attachmentStart > 0 && attachmentEnd > attachmentStart);
+dirty = false;
+vm.runInContext(template.slice(attachmentStart, attachmentEnd), context);
+assert.equal(rows[0].querySelector('.attachment-move-up').disabled, true);
+assert.equal(rows[2].querySelector('.attachment-move-down').disabled, true);
+const attachment = rows[1];
+context.moveAttachmentRow(button(attachment), -1);
+assert.deepEqual(rows.map(row => row.id), ['file-b', 'file-a', 'file-c']);
+assert.equal(dirty, true);
+assert.equal(attachment.querySelector('.attachment-move-up').disabled, true);
+context.moveAttachmentRow(button(attachment), -1);
+assert.deepEqual(rows.map(row => row.id), ['file-b', 'file-a', 'file-c']);
+context.moveAttachmentRow(button(attachment), 1);
+assert.deepEqual(rows.map(row => row.id), ['file-a', 'file-b', 'file-c']);
+context.moveAttachmentRow(button(rows[2]), 1);
+assert.deepEqual(rows.map(row => row.id), ['file-a', 'file-b', 'file-c']);
+
+const sentValue = { value: '' };
+const newCheckbox = {
+    checked: true,
+    closest: () => ({ querySelector: () => sentValue }),
+};
+context.syncNewServiceSendToClient(newCheckbox);
+assert.equal(sentValue.value, 'on');
+newCheckbox.checked = false;
+context.syncNewServiceSendToClient(newCheckbox);
+assert.equal(sentValue.value, '');
+console.log('Attachment row ordering and new-service flags: all checks passed.');

@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from display.models import Lead
-from tasks.models import LeadTask, Payment, Service
+from tasks.models import Attachment, LeadTask, Payment, Service
 from tasks.datetime_safety import services_for_client_pdf, services_for_leadtask
 
 
@@ -105,14 +105,100 @@ class InvoiceInlineActionsTests(TestCase):
         other_service.refresh_from_db()
         self.assertEqual(other_service.sort_order, original)
 
-    def test_invoice_table_has_reorder_controls_but_no_sent_column(self):
+    def test_invoice_table_has_reorder_controls_and_sent_column(self):
         response = self.client.get(f'/tasks/leads/edit/{self.order.pk}/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="service-move-up"')
         self.assertContains(response, 'class="service-move-down"')
-        self.assertNotContains(response, '<th>Sent to client</th>')
-        self.assertNotContains(response, 'class="service-send-to-client-cb"')
+        self.assertContains(response, '<th>Sent to client</th>', count=1)
+        self.assertContains(response, 'class="service-send-to-client-cb"')
+        self.assertNotContains(response, '<label>Send to Client</label>')
         self.assertContains(response, f'name="service_{self.service.pk}_send_to_client"')
+
+    def test_sent_to_client_toggle_can_be_set_and_unset(self):
+        for value, expected in [('on', True), ('off', False)]:
+            response = self.client.post(
+                f'/tasks/service/update_send_to_client/{self.service.pk}/',
+                {'send_to_client': value},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.service.refresh_from_db()
+            self.assertEqual(self.service.send_to_client, expected)
+
+    def test_new_services_keep_independent_sent_to_client_flags(self):
+        data = self.invoice_data([(self.service, 1)])
+        data.update({
+            'service_name[]': ['Visa', 'Transfer', 'Hotel'],
+            'details[]': ['first', 'second', 'third'],
+            'supplier[]': ['BABYLON', 'BABYLON', 'BABYLON'],
+            'send_to_client[]': ['', 'on', ''],
+        })
+        response = self.client.post(f'/tasks/leads/edit/{self.order.pk}/', data)
+        self.assertEqual(response.status_code, 302)
+        created = self.order.service_set.exclude(pk=self.service.pk).order_by('pk')
+        self.assertEqual(list(created.values_list('send_to_client', flat=True)), [False, True, False])
+
+    def test_attachments_can_be_reordered_without_changing_files(self):
+        first = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='Visa.pdf', file='visa.pdf',
+        )
+        second = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='Hotel.pdf', file='hotel.pdf',
+        )
+        data = self.invoice_data([(self.service, 1)])
+        data['attachment_order[]'] = [str(second.pk), str(first.pk)]
+        response = self.client.post(f'/tasks/leads/edit/{self.order.pk}/', data)
+        self.assertEqual(response.status_code, 302)
+        ordered = Attachment.objects.filter(parentleadtask=self.order)
+        self.assertEqual(list(ordered.values_list('pk', flat=True)), [second.pk, first.pk])
+        self.assertEqual(
+            list(ordered.values_list('attachment_name', 'file')),
+            [('Hotel.pdf', 'hotel.pdf'), ('Visa.pdf', 'visa.pdf')],
+        )
+        page = self.client.get(f'/tasks/leads/edit/{self.order.pk}/')
+        self.assertEqual([a.pk for a in page.context['attachments']], [second.pk, first.pk])
+        self.assertContains(page, 'class="attachment-move-up"')
+        self.assertContains(page, 'name="attachment_order[]"')
+        appended = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='New.pdf', file='new.pdf',
+        )
+        self.assertEqual(appended.sort_order, 3)
+
+    def test_attachment_reordering_ignores_foreign_and_duplicate_ids(self):
+        other_order = LeadTask.objects.create(
+            lead=self.order.lead, assigned_to=self.user, status='progress',
+        )
+        foreign = Attachment.objects.create(
+            parentleadtask=other_order, attachment_name='Other.pdf', file='other.pdf',
+        )
+        first = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='First.pdf', file='first.pdf',
+        )
+        second = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='Second.pdf', file='second.pdf',
+        )
+        data = self.invoice_data([])
+        data['attachment_order[]'] = [str(second.pk), str(second.pk), str(foreign.pk), 'invalid']
+        response = self.client.post(f'/tasks/leads/edit/{self.order.pk}/', data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            list(Attachment.objects.filter(parentleadtask=self.order).values_list('pk', flat=True)),
+            [second.pk, first.pk],
+        )
+        foreign.refresh_from_db()
+        self.assertEqual(foreign.sort_order, 1)
+
+    def test_posts_without_attachment_order_preserve_it(self):
+        attachment = Attachment.objects.create(
+            parentleadtask=self.order, attachment_name='File.pdf',
+            file='file.pdf', sort_order=7,
+        )
+        response = self.client.post(
+            f'/tasks/leads/edit/{self.order.pk}/', self.invoice_data([]),
+        )
+        self.assertEqual(response.status_code, 302)
+        attachment.refresh_from_db()
+        self.assertEqual(attachment.sort_order, 7)
 
     def test_service_modal_can_save_as_json_without_page_redirect(self):
         response = self.client.post(
