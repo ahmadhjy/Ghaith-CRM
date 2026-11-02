@@ -69,6 +69,20 @@
         </form>
     </section>
 
+    <section class="ep-panel" aria-label="Expense type totals">
+        <div class="ep-panel-heading ep-table-heading"><div><h2>Totals by expense type</h2><p>Uses the same filters as the payment schedule, across all pages. All amounts in USD.</p></div></div>
+        <div class="ep-table-scroll"><table class="ep-table">
+            <thead><tr><th>Expense type</th><th>Payments</th><th class="ep-money">Original amount</th><th class="ep-money">Paid</th><th class="ep-money">Remaining</th></tr></thead>
+            <tbody>{% for group in type_totals %}<tr>
+                <td data-label="Expense type"><strong>{{ group.payment_type__name }}</strong></td>
+                <td data-label="Payments">{{ group.payment_count }}</td>
+                <td data-label="Original amount" class="ep-money">{{ group.original_total|floatformat:2 }}</td>
+                <td data-label="Paid" class="ep-money">{{ group.paid_total|floatformat:2 }}</td>
+                <td data-label="Remaining" class="ep-money"><strong>{{ group.remaining_total|floatformat:2 }}</strong></td>
+            </tr>{% empty %}<tr><td colspan="5"><div class="ep-empty"><p>No expense types match the selected filters.</p></div></td></tr>{% endfor %}</tbody>
+        </table></div>
+    </section>
+
     <section class="ep-panel">
         <div class="ep-panel-heading ep-table-heading">
             <div><h2>Payment schedule <span class="ep-count">{{ page.paginator.count }}</span></h2><p>Paid items leave the default list. Switch the status filter to see their history.</p></div>
@@ -76,13 +90,13 @@
         </div>
         <div class="ep-table-scroll">
             <table class="ep-table">
-                <thead><tr><th>Payment type</th><th>Description</th><th class="ep-money">Amount</th><th>Due date</th><th>Frequency</th><th>Paid</th><th><span class="ep-sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th>Payment type</th><th>Description</th><th class="ep-money">Remaining balance</th><th>Due date</th><th>Frequency</th><th>Paid</th><th><span class="ep-sr-only">Actions</span></th></tr></thead>
                 <tbody>
                 {% for payment in page %}
                 <tr class="{% if payment.is_paid %}ep-row-paid{% elif payment.due_date < today %}ep-row-overdue{% endif %}">
                     <td data-label="Payment type"><span class="ep-type-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span><strong>{{ payment.payment_type.name }}</strong></td>
                     <td data-label="Description" class="ep-description">{{ payment.description|default:"—"|linebreaksbr }}</td>
-                    <td data-label="Amount" class="ep-money"><div><strong>{{ payment.amount|floatformat:2 }}</strong> <span class="ep-currency">USD original</span><small class="ep-success">Paid {{ payment.amount_paid|floatformat:2 }}</small><small><b>Remaining {{ payment.balance|floatformat:2 }} USD</b></small></div></td>
+                    <td data-label="Remaining balance" class="ep-money"><div><strong class="ep-remaining">Remaining {{ payment.balance|floatformat:2 }}</strong> <span class="ep-currency">USD</span><small>Original {{ payment.amount|floatformat:2 }} USD</small><small class="ep-success">Paid {{ payment.amount_paid|floatformat:2 }} USD</small></div></td>
                     <td data-label="Due date">
                         <strong class="ep-date">{{ payment.due_date|date:"d M Y" }}</strong>
                         {% if payment.is_paid %}
@@ -151,7 +165,15 @@
 </dialog>
 <dialog id="addType" class="ep-dialog" {% if open_dialog == 'addType' %}data-open{% endif %}>
     <div class="ep-dialog-heading"><div><span class="ep-eyebrow">Your categories</span><h2>Payment types</h2></div><button type="button" data-close aria-label="Close">×</button></div>
-    <div class="ep-types">{% for type in create_form.fields.payment_type.queryset %}<span class="ep-badge">{{ type.name }}</span>{% empty %}<p>Add your first payment type below.</p>{% endfor %}</div>
+    <p class="ep-dialog-intro">Rename a type without deleting it. Linked expenses and payment history stay intact.</p>
+    {% if rename_error %}<p class="ep-errors" role="alert">{{ rename_error }}</p>{% endif %}
+    <div class="ep-type-editor">{% for type in create_form.fields.payment_type.queryset %}
+        <form method="post" class="ep-type-rename">{% csrf_token %}<input type="hidden" name="action" value="rename_type"><input type="hidden" name="type_id" value="{{ type.pk }}">
+            <label class="ep-sr-only" for="rename-type-{{ type.pk }}">Rename {{ type.name }}</label>
+            <input class="ep-input" id="rename-type-{{ type.pk }}" name="new_name" value="{{ type.name }}" maxlength="100" required>
+            <button class="ep-button ep-button-quiet" type="submit">Save name</button>
+        </form>
+    {% empty %}<p>Add your first payment type below.</p>{% endfor %}</div>
     <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_type">{{ type_form.non_field_errors }}
         {% for field in type_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
         <footer><button type="button" class="ep-button ep-button-quiet" data-close>Close</button><button type="submit" class="ep-button ep-button-dark">Add type</button></footer>

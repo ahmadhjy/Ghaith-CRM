@@ -8,13 +8,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import F, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from expenses.models import UpcomingExpensePayment, UpcomingExpensePlan
+from expenses.models import UpcomingExpensePayment, UpcomingExpensePlan, UpcomingExpenseType
 from expenses.upcoming_forms import (
     UpcomingExpenseForm, UpcomingFilterForm, UpcomingPaymentEditForm, UpcomingTypeForm,
 )
@@ -44,6 +44,7 @@ def expense_planner(request):
     edit_payment = None
     plan_form = None
     selected_plan = None
+    rename_error = ""
     open_dialog = ""
     if request.method == "POST":
         action = request.POST.get("action")
@@ -69,6 +70,20 @@ def expense_planner(request):
                     type_form.add_error("name", "This payment type already exists.")
                     open_dialog = "addType"
             else:
+                open_dialog = "addType"
+        elif action == "rename_type":
+            payment_type = get_object_or_404(UpcomingExpenseType, pk=_positive_id(request.POST.get("type_id")))
+            rename_form = UpcomingTypeForm({"name": request.POST.get("new_name", "")}, instance=payment_type)
+            if rename_form.is_valid():
+                try:
+                    with transaction.atomic():
+                        rename_form.save()
+                    messages.success(request, "Expense type renamed. Linked schedules and payments keep their history.")
+                except IntegrityError:
+                    rename_error = "This payment type already exists."
+            else:
+                rename_error = " ".join(str(error) for errors in rename_form.errors.values() for error in errors)
+            if rename_error:
                 open_dialog = "addType"
         elif action in ("partial", "delete", "delete_plan", "edit_plan"):
             if action in ("partial", "delete"):
@@ -177,6 +192,10 @@ def expense_planner(request):
         paid_total=Sum("amount_paid"),
     )
     totals = {key: value or Decimal("0.00") for key, value in totals.items()}
+    type_totals = payments.order_by().values("payment_type_id", "payment_type__name").annotate(
+        payment_count=Count("pk"), original_total=Sum("amount"),
+        paid_total=Sum("amount_paid"), remaining_total=Sum(F("amount")-F("amount_paid")),
+    ).order_by("payment_type__name")
     query = request.GET.copy()
     query.pop("page", None)
     query.pop("edit", None)
@@ -186,6 +205,7 @@ def expense_planner(request):
         "create_form": create_form, "type_form": type_form, "edit_form": edit_form,
         "edit_payment": edit_payment, "filters": filters, "page": page,
         "totals": totals, "today": today, "filter_query": query.urlencode(),
+        "type_totals": type_totals, "rename_error": rename_error,
         "plans": UpcomingExpensePlan.objects.filter(frequency="monthly", is_active=True, is_deleted=False).select_related("payment_type"),
         "plan_form": plan_form, "selected_plan": selected_plan,
         "payment_request_id": uuid4(),

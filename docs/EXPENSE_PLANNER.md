@@ -11,6 +11,9 @@ change client/supplier balances, or create invoice payments.
 
 1. Add payment types using **Manage payment types**. Rent, Utilities, Salaries,
    Subscriptions, and Other are included initially.
+   Each existing type has a name field and **Save name** button. Renaming keeps
+   its linked schedules, installments, and payment history; duplicate names are
+   rejected without deleting or merging anything.
 2. Choose **Add payment** and enter a type, free-text description, amount, first
    due date, and One time or Monthly frequency.
 3. The default list shows every unpaid payment, including overdue payments.
@@ -19,6 +22,10 @@ change client/supplier balances, or create invoice payments.
    Paid date and user are retained while a payment is marked paid.
 5. Filter by payment type, dates, frequency, search text, status, or overdue-only.
    Totals use all matching records, not only the current table page (50 rows).
+   **Totals by expense type** groups those same filtered records by type and
+   shows payment count, original amount, amount paid, and remaining balance.
+   The payment table emphasizes remaining balance in bold, with original and
+   paid amounts underneath.
 6. **Record payment** accepts partial amounts: an original USD 1,000 payment
    with USD 700 paid keeps its original amount and shows USD 300 remaining.
    Multiple receipts are retained in Payment history. Settle remaining pays the

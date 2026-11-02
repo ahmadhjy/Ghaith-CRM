@@ -51,6 +51,8 @@ class SuperuserExpenseAdmin(admin.ModelAdmin):
 
 @admin.register(UpcomingExpenseType)
 class UpcomingExpenseTypeAdmin(SuperuserExpenseAdmin):
+    list_display = ("name",)
+    list_display_links = ("name",)
     search_fields = ("name",)
 
 

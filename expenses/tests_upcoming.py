@@ -41,7 +41,7 @@ class ExpensePlannerTests(TestCase):
             user.user_permissions.set(Permission.objects.filter(content_type__app_label="expenses"))
             self.client.force_login(user)
             self.assertEqual(self.client.get(self.url).status_code, 403)
-            for action in ("create", "create_type", "paid", "edit", "stop", "partial", "delete", "delete_plan", "edit_plan"):
+            for action in ("create", "create_type", "rename_type", "paid", "edit", "stop", "partial", "delete", "delete_plan", "edit_plan"):
                 response = self.client.post(self.url, {"action": action})
                 self.assertEqual(response.status_code, 403)
         self.assertFalse(UpcomingExpensePlan.objects.exists())
@@ -445,3 +445,84 @@ class ExpensePlannerTests(TestCase):
         plan.refresh_from_db()
         self.assertFalse(plan.is_active)
         self.assertEqual(plan.payments.count(), 1)
+
+    def test_rename_type_preserves_linked_schedules_and_receipts(self):
+        from expenses.upcoming_services import record_partial_payment
+        plan = self.plan()
+        payment = plan.payments.get()
+        record_partial_payment(payment.pk, "40", self.user)
+        for name in ("Office expenses renamed", "office expenses renamed"):
+            response = self.client.post(self.url, {
+                "action": "rename_type", "type_id": self.type.pk, "new_name": name,
+            })
+            self.assertEqual(response.status_code, 302)
+        self.type.refresh_from_db(); plan.refresh_from_db(); payment.refresh_from_db()
+        self.assertEqual(self.type.name, "office expenses renamed")
+        self.assertEqual(plan.payment_type_id, self.type.pk)
+        self.assertEqual(payment.payment_type_id, self.type.pk)
+        self.assertEqual(payment.receipts.count(), 1)
+        self.assertEqual(payment.balance, Decimal("60"))
+        page = self.client.get(self.url)
+        self.assertContains(page, "Save name")
+        self.assertContains(page, "office expenses renamed")
+
+    def test_rename_type_rejects_duplicate_and_blank_names(self):
+        UpcomingExpenseType.objects.create(name="Unique other type")
+        for name in ("", "   ", "unique OTHER type"):
+            response = self.client.post(self.url, {
+                "action": "rename_type", "type_id": self.type.pk, "new_name": name,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.context["rename_error"])
+            self.assertEqual(response.context["open_dialog"], "addType")
+        self.type.refresh_from_db()
+        self.assertEqual(self.type.name, "Office rent test")
+
+    def test_type_totals_group_different_dates_and_track_partial_balances(self):
+        from expenses.upcoming_services import record_partial_payment
+        first = self.plan(amount=Decimal("800"), start_date=date(2026, 10, 28)).payments.get()
+        self.plan(amount=Decimal("200"), start_date=date(2026, 11, 10))
+        other = UpcomingExpenseType.objects.create(name="Other test category")
+        self.plan(payment_type=other, amount=Decimal("55"))
+        record_partial_payment(first.pk, "500", self.user)
+        response = self.client.get(self.url)
+        groups = {row["payment_type_id"]: row for row in response.context["type_totals"]}
+        self.assertEqual(len(groups), 2)
+        self.assertEqual(groups[self.type.pk]["payment_count"], 2)
+        self.assertEqual(groups[self.type.pk]["original_total"], Decimal("1000"))
+        self.assertEqual(groups[self.type.pk]["paid_total"], Decimal("500"))
+        self.assertEqual(groups[self.type.pk]["remaining_total"], Decimal("500"))
+        self.assertEqual(sum(g["remaining_total"] for g in groups.values()), response.context["totals"]["outstanding"])
+        self.assertContains(response, '<strong class="ep-remaining">Remaining 300.00</strong>')
+        self.assertContains(response, "Original 800.00 USD")
+        self.assertNotContains(response, "<strong>800.00</strong>")
+        filtered = self.client.get(self.url, {
+            "due_from": "2026-10-01", "due_to": "2026-10-31",
+            "payment_type": self.type.pk, "search": "Office", "repeat": "once",
+            "overdue": "on", "sort": "-due",
+        })
+        self.assertEqual(list(filtered.context["type_totals"])[0]["remaining_total"], Decimal("300"))
+        self.assertEqual(list(filtered.context["type_totals"])[0]["payment_count"], 1)
+        set_payment_paid(first.pk, True, self.user)
+        paid = self.client.get(self.url, {"status": "paid"})
+        self.assertEqual(list(paid.context["type_totals"])[0]["remaining_total"], 0)
+        self.assertEqual(list(paid.context["type_totals"])[0]["paid_total"], Decimal("800"))
+
+    def test_type_totals_include_all_pages_exclude_deleted_and_invalid_filters(self):
+        plan = self.plan(amount=Decimal("10"))
+        UpcomingExpensePayment.objects.bulk_create([
+            UpcomingExpensePayment(
+                plan=plan, payment_type=self.type, amount=Decimal("10"),
+                scheduled_for=date(2027, 1 + i // 28, 1 + i % 28),
+                due_date=date(2027, 1 + i // 28, 1 + i % 28),
+            ) for i in range(52)
+        ])
+        deleted = self.plan(amount=Decimal("999")).payments.get()
+        deleted.is_deleted = True
+        deleted.save()
+        response = self.client.get(self.url, {"page": 2})
+        group = list(response.context["type_totals"])[0]
+        self.assertEqual(group["payment_count"], 53)
+        self.assertEqual(group["remaining_total"], Decimal("530"))
+        invalid = self.client.get(self.url, {"due_from": "not-a-date"})
+        self.assertEqual(list(invalid.context["type_totals"]), [])

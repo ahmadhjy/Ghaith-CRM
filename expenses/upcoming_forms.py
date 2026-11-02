@@ -78,7 +78,7 @@ class UpcomingTypeForm(PaymentFieldsMixin, forms.ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
-        if UpcomingExpenseType.objects.filter(name__iexact=name).exists():
+        if UpcomingExpenseType.objects.filter(name__iexact=name).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("This payment type already exists.")
         return name
 
