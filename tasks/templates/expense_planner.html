@@ -1,0 +1,179 @@
+<!doctype html>
+{% load static %}
+<html lang="en">
+<head>
+    {% include 'shared/app_head.html' %}
+    <link rel="stylesheet" href="{% static 'css/expense-planner.css' %}">
+    <title>Expense Planner — Ghaith CRM</title>
+</head>
+<body class="has-unified-nav req-page">
+{% include 'navbar.html' %}
+<main class="ep-page">
+    <header class="ep-hero">
+        <div>
+            <div class="ep-eyebrow"><span></span> Finance workspace · Superusers only</div>
+            <h1>Expense Planner<span>.</span></h1>
+            <p>A clear view of what’s due. One-time expenses and monthly commitments, in one place.</p>
+            <div class="ep-hero-meta"><span>USD</span> Independent of client &amp; supplier invoices</div>
+        </div>
+        <div class="ep-hero-actions">
+            <button type="button" class="ep-button ep-button-white" data-dialog="addExpense"><i class="fas fa-plus" aria-hidden="true"></i> Add payment</button>
+            <button type="button" class="ep-button ep-button-glass" data-dialog="addType">Manage payment types</button>
+        </div>
+    </header>
+
+    {% for message in messages %}
+    <div class="ep-notice" role="status">{{ message }}</div>
+    {% endfor %}
+
+    <section class="ep-stats" aria-label="Totals for the applied filters">
+        <article class="ep-stat ep-stat-primary">
+            <div class="ep-stat-label">Still to pay <i class="fas fa-wallet" aria-hidden="true"></i></div>
+            <strong><small>USD</small> {{ totals.outstanding|floatformat:2 }}</strong>
+            <p>Unpaid balance · applied filters</p>
+        </article>
+        <article class="ep-stat">
+            <div class="ep-stat-label">Overdue <span class="ep-dot ep-dot-red"></span></div>
+            <strong class="ep-danger"><small>USD</small> {{ totals.overdue_total|floatformat:2 }}</strong>
+            <p>Unpaid, with a due date before today</p>
+        </article>
+        <article class="ep-stat">
+            <div class="ep-stat-label">Already paid <i class="fas fa-check-circle ep-success" aria-hidden="true"></i></div>
+            <strong><small>USD</small> {{ totals.paid_total|floatformat:2 }}</strong>
+            <p>Paid payments · applied filters</p>
+        </article>
+        <article class="ep-stat">
+            <div class="ep-stat-label">Payments in view <i class="fas fa-list-ul" aria-hidden="true"></i></div>
+            <strong>{{ page.paginator.count }}</strong>
+            <p>Across all pages of these results</p>
+        </article>
+    </section>
+
+    <section class="ep-panel ep-filters" aria-label="Payment filters">
+        <div class="ep-panel-heading"><h2><i class="fas fa-sliders-h" aria-hidden="true"></i> Find your payments</h2><a href="{% url 'expense_planner' %}">Reset filters</a></div>
+        <form method="get">
+            {% if filters.errors %}<div class="ep-errors" role="alert">{{ filters.errors }}</div>{% endif %}
+            <div class="ep-filter-grid">
+                <div><label for="{{ filters.payment_type.id_for_label }}">Payment type</label>{{ filters.payment_type }}</div>
+                <div><label for="{{ filters.status.id_for_label }}">Payment status</label>{{ filters.status }}</div>
+                <div><label for="{{ filters.due_from.id_for_label }}">Due from</label>{{ filters.due_from }}</div>
+                <div><label for="{{ filters.due_to.id_for_label }}">Due to</label>{{ filters.due_to }}</div>
+                <div><label for="{{ filters.repeat.id_for_label }}">Frequency</label>{{ filters.repeat }}</div>
+                <div><label for="{{ filters.sort.id_for_label }}">Sort by</label>{{ filters.sort }}</div>
+            </div>
+            <div class="ep-filter-bottom">
+                <div class="ep-search"><label class="ep-sr-only" for="{{ filters.search.id_for_label }}">Search payments</label><i class="fas fa-search" aria-hidden="true"></i>{{ filters.search }}</div>
+                <label class="ep-check">{{ filters.overdue }} Overdue only</label>
+                <button type="submit" class="ep-button ep-button-dark">Apply filters <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+            </div>
+        </form>
+    </section>
+
+    <section class="ep-panel">
+        <div class="ep-panel-heading ep-table-heading">
+            <div><h2>Payment schedule <span class="ep-count">{{ page.paginator.count }}</span></h2><p>Paid items leave the default list. Switch the status filter to see their history.</p></div>
+            <button type="button" class="ep-button ep-button-quiet ep-print" onclick="window.print()"><i class="fas fa-print" aria-hidden="true"></i> Print this page</button>
+        </div>
+        <div class="ep-table-scroll">
+            <table class="ep-table">
+                <thead><tr><th>Payment type</th><th>Description</th><th class="ep-money">Amount</th><th>Due date</th><th>Frequency</th><th>Paid</th><th><span class="ep-sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                {% for payment in page %}
+                <tr class="{% if payment.is_paid %}ep-row-paid{% elif payment.due_date < today %}ep-row-overdue{% endif %}">
+                    <td data-label="Payment type"><span class="ep-type-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span><strong>{{ payment.payment_type.name }}</strong></td>
+                    <td data-label="Description" class="ep-description">{{ payment.description|default:"—"|linebreaksbr }}</td>
+                    <td data-label="Amount" class="ep-money"><strong>{{ payment.amount|floatformat:2 }}</strong> <span class="ep-currency">USD</span></td>
+                    <td data-label="Due date">
+                        <strong class="ep-date">{{ payment.due_date|date:"d M Y" }}</strong>
+                        {% if payment.is_paid %}
+                        <small class="ep-success">Paid {{ payment.paid_at|date:"d M Y" }}</small>
+                        {% elif payment.due_date < today %}<small class="ep-danger">Overdue</small>
+                        {% elif payment.due_date == today %}<small class="ep-warning">Due today</small>
+                        {% else %}<small>Upcoming</small>{% endif %}
+                    </td>
+                    <td data-label="Frequency">
+                        {% if payment.plan.frequency == 'monthly' %}<span class="ep-badge ep-badge-purple"><i class="fas fa-redo" aria-hidden="true"></i> Monthly</span>{% if not payment.plan.is_active %}<small>Recurrence stopped</small>{% endif %}
+                        {% else %}<span class="ep-badge">One time</span>{% endif %}
+                    </td>
+                    <td data-label="Paid">
+                        <form method="post" class="ep-paid-form">
+                            {% csrf_token %}<input type="hidden" name="action" value="paid"><input type="hidden" name="payment_id" value="{{ payment.pk }}">
+                            <input type="hidden" name="paid" value="{% if payment.is_paid %}no{% else %}yes{% endif %}">
+                            <button type="submit" class="ep-paid-button {% if payment.is_paid %}is-paid{% endif %}" aria-label="{% if payment.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}: {{ payment.payment_type.name }}" title="{% if payment.is_paid %}Restore to outstanding{% else %}Mark as paid{% endif %}">
+                                <span>{% if payment.is_paid %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>{% if payment.is_paid %}Paid{% else %}Unpaid{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                    <td data-label="Actions" class="ep-row-actions">{% if not payment.is_paid %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.number }}&amp;edit={{ payment.pk }}" class="ep-edit-link" aria-label="Edit {{ payment.payment_type.name }}"><i class="fas fa-pen" aria-hidden="true"></i> Edit</a>{% else %}<span class="ep-settled">Settled</span>{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7"><div class="ep-empty"><div><i class="fas fa-check-double" aria-hidden="true"></i></div><h3>Nothing to chase here.</h3><p>No payments match this view. Adjust the filters or add your next expense.</p><button type="button" class="ep-button ep-button-dark" data-dialog="addExpense">Add a payment</button></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <footer class="ep-table-footer">
+            <span>{% if page.paginator.count %}Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }} payments{% else %}0 payments{% endif %} · Totals include every filtered result.</span>
+            {% if page.has_other_pages %}<nav aria-label="Payment pages">{% if page.has_previous %}<a href="?{{ filter_query }}&amp;page={{ page.previous_page_number }}">Previous</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?{{ filter_query }}&amp;page={{ page.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+        </footer>
+    </section>
+
+    <details class="ep-panel ep-recurring">
+        <summary><span><i class="fas fa-redo" aria-hidden="true"></i> Monthly commitments <span class="ep-count">{{ plans|length }}</span></span><span class="ep-muted">Manage recurrence <i class="fas fa-chevron-down" aria-hidden="true"></i></span></summary>
+        <div class="ep-recurring-body"><p>Each month gets its own installment, added as that month begins. Unpaid months stay outstanding; paying one month never clears another. Stopping recurrence keeps payments already created.</p>
+            {% for plan in plans %}
+            <div class="ep-plan"><div><strong>{{ plan.payment_type }}</strong><p>{{ plan.description|default:"Monthly payment" }}</p><small>Started {{ plan.start_date|date:"d M Y" }} · Due on day {{ plan.start_date.day }} (last day in shorter months)</small></div><strong class="ep-plan-amount">{{ plan.amount|floatformat:2 }} <small>USD / month</small></strong><form method="post" onsubmit="return confirm('Stop future monthly installments? Payments already created will remain.');">{% csrf_token %}<input type="hidden" name="action" value="stop"><input type="hidden" name="plan_id" value="{{ plan.pk }}"><button class="ep-button ep-button-quiet" type="submit">Stop recurrence</button></form></div>
+            {% empty %}<p class="ep-muted">No active monthly commitments yet. Choose “Monthly” when adding a payment.</p>{% endfor %}
+        </div>
+    </details>
+    <p class="ep-bottom-note"><i class="fas fa-lock" aria-hidden="true"></i> Private to superusers. This tracker does not create client, supplier, or accounting transactions.</p>
+</main>
+
+<dialog id="addExpense" class="ep-dialog" {% if open_dialog == 'addExpense' %}data-open{% endif %}>
+    <div class="ep-dialog-heading"><div><span class="ep-eyebrow">Plan ahead</span><h2>Add a payment</h2></div><button type="button" data-close aria-label="Close">×</button></div>
+    <p class="ep-dialog-intro">One payment or a monthly commitment. Keep the details simple.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create">
+        {{ create_form.non_field_errors }}
+        {% for field in create_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+        <p class="ep-help">For monthly payments, the amount and description are copied to each installment. Unpaid balances carry over.</p>
+        <footer><button type="button" class="ep-button ep-button-quiet" data-close>Cancel</button><button type="submit" class="ep-button ep-button-dark">Add payment</button></footer>
+    </form>
+</dialog>
+<dialog id="addType" class="ep-dialog" {% if open_dialog == 'addType' %}data-open{% endif %}>
+    <div class="ep-dialog-heading"><div><span class="ep-eyebrow">Your categories</span><h2>Payment types</h2></div><button type="button" data-close aria-label="Close">×</button></div>
+    <div class="ep-types">{% for type in create_form.fields.payment_type.queryset %}<span class="ep-badge">{{ type.name }}</span>{% empty %}<p>Add your first payment type below.</p>{% endfor %}</div>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_type">{{ type_form.non_field_errors }}
+        {% for field in type_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+        <footer><button type="button" class="ep-button ep-button-quiet" data-close>Close</button><button type="submit" class="ep-button ep-button-dark">Add type</button></footer>
+    </form>
+</dialog>
+{% if edit_form %}
+<dialog id="editExpense" class="ep-dialog" data-open>
+    <div class="ep-dialog-heading"><div><span class="ep-eyebrow">Adjust the details</span><h2>Edit payment</h2></div><button type="button" data-close aria-label="Close">×</button></div>
+    <p class="ep-dialog-intro">Changes apply to this installment only, not future months.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="payment_id" value="{{ edit_payment.pk }}">{{ edit_form.non_field_errors }}
+        {% for field in edit_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+        <footer><button type="button" class="ep-button ep-button-quiet" data-close>Cancel</button><button type="submit" class="ep-button ep-button-dark">Save changes</button></footer>
+    </form>
+</dialog>
+{% endif %}
+<script>
+document.querySelectorAll('[data-dialog]').forEach(function(button) {
+    button.addEventListener('click', function() { document.getElementById(button.dataset.dialog).showModal(); });
+});
+document.querySelectorAll('[data-close]').forEach(function(button) {
+    button.addEventListener('click', function() { button.closest('dialog').close(); });
+});
+document.querySelectorAll('dialog').forEach(function(dialog) {
+    dialog.addEventListener('click', function(event) { if (event.target === dialog) { var rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } });
+    if (dialog.hasAttribute('data-open')) dialog.showModal();
+});
+document.querySelectorAll('form[method="post"]').forEach(function(form) {
+    form.addEventListener('submit', function() {
+        // Disable submit buttons only; keep inputs for Django's POST validation.
+        form.querySelectorAll('button[type="submit"]').forEach(function(button) { button.disabled = true; });
+    });
+});
+</script>
+</body>
+</html>

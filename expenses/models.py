@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.core.validators import MinValueValidator
 
 
 class OperatingExpense(models.Model):
@@ -150,3 +151,69 @@ class EmployeeSalaryPayment(models.Model):
 
     class Meta:
         ordering = ["-payment_date", "-posted_at"]
+
+
+class UpcomingExpenseType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                models.functions.Lower("name"), name="unique_upcoming_expense_type_name",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class UpcomingExpensePlan(models.Model):
+    class Frequency(models.TextChoices):
+        ONCE = "once", "One time"
+        MONTHLY = "monthly", "Monthly"
+
+    payment_type = models.ForeignKey(UpcomingExpenseType, on_delete=models.PROTECT)
+    description = models.TextField(blank=True)
+    amount = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    start_date = models.DateField()
+    frequency = models.CharField(max_length=10, choices=Frequency.choices, default=Frequency.ONCE)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["start_date", "pk"]
+        constraints = [
+            models.CheckConstraint(check=models.Q(amount__gt=0), name="upcoming_plan_positive_amount"),
+        ]
+
+    def __str__(self):
+        return f"{self.payment_type} — {self.amount} USD"
+
+
+class UpcomingExpensePayment(models.Model):
+    plan = models.ForeignKey(UpcomingExpensePlan, on_delete=models.PROTECT, related_name="payments")
+    payment_type = models.ForeignKey(UpcomingExpenseType, on_delete=models.PROTECT)
+    description = models.TextField(blank=True)
+    amount = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    scheduled_for = models.DateField(help_text="Original installment date; not changed when a due date is edited.")
+    due_date = models.DateField()
+    is_paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["due_date", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "scheduled_for"], name="unique_upcoming_expense_installment"),
+            models.CheckConstraint(check=models.Q(amount__gt=0), name="upcoming_payment_positive_amount"),
+        ]
+
+    def __str__(self):
+        return f"{self.payment_type} — {self.due_date}"

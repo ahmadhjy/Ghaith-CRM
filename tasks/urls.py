@@ -2,8 +2,10 @@
 from django.urls import path
 from . import views
 from . import babylon_views
+from .expense_planner_views import expense_planner
 
 urlpatterns = [
+    path('upcoming-expenses/', expense_planner, name='expense_planner'),
     path('current/', views.display_current_tasks, name='current tasks'),
     path('current/expired/', views.expired_tasks, name='expired_tasks'),
     path('done/', views.display_done_tasks, name='done tasks'),
