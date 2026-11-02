@@ -37,6 +37,15 @@ change client/supplier balances, or create invoice payments.
 
 ## Monthly behavior
 
+- Set **Last due date** to end a fixed-term schedule automatically (inclusive).
+  Five installments starting 1 November end on 1 March. Existing paid and unpaid
+  records are kept. Alternatively use **Monthly commitments → Stop recurrence**
+  to stop manually without deleting history.
+- **Stop recurrence** is available directly on each active monthly row and in
+  the expanded **Monthly commitments** section at the bottom of the page.
+- The checkbox is labeled **Paid**: unchecked means unpaid; checking it pays the
+  entire remaining balance. Use **Record payment** for partial amounts.
+
 - The first installment is created immediately, even if its date is in the future.
 - Other installments accrue through the current calendar month as the page is
   opened. No extra scheduled task or deployment configuration is needed.

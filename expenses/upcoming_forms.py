@@ -13,10 +13,11 @@ class PaymentFieldsMixin:
 class UpcomingExpenseForm(PaymentFieldsMixin, forms.ModelForm):
     class Meta:
         model = UpcomingExpensePlan
-        fields = ["payment_type", "description", "amount", "start_date", "frequency"]
-        labels = {"start_date": "First due date", "amount": "Amount (USD)", "frequency": "Repeat"}
+        fields = ["payment_type", "description", "amount", "start_date", "frequency", "end_date"]
+        labels = {"start_date": "First due date", "end_date": "Last due date (optional, inclusive)", "amount": "Amount (USD)", "frequency": "Repeat"}
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "end_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "description": forms.Textarea(attrs={"rows": 3, "placeholder": "What is this payment for?"}),
             "amount": forms.NumberInput(attrs={"min": "0.01", "step": "0.01"}),
         }
@@ -30,6 +31,15 @@ class UpcomingExpenseForm(PaymentFieldsMixin, forms.ModelForm):
         if not date(2000, 1, 1) <= value <= date(2100, 12, 31):
             raise forms.ValidationError("Choose a date between 2000 and 2100.")
         return value
+
+    def clean(self):
+        values = super().clean()
+        start, end = values.get("start_date"), values.get("end_date")
+        if start and end and end < start:
+            self.add_error("end_date", "Last due date must be on or after the first due date.")
+        if end and values.get("frequency") == "once":
+            values["end_date"] = None
+        return values
 
 
 class UpcomingPaymentEditForm(PaymentFieldsMixin, forms.ModelForm):

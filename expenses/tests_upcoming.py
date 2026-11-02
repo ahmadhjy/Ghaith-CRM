@@ -387,3 +387,61 @@ class ExpensePlannerTests(TestCase):
         migration.preserve_paid_balances(apps, SimpleNamespace(connection=connection))
         payment.refresh_from_db()
         self.assertEqual(payment.amount_paid, payment.amount)
+
+    def test_five_month_schedule_ends_and_keeps_all_records(self):
+        plan = self.plan(frequency="monthly", start_date=date(2026, 11, 1), end_date=date(2027, 3, 1))
+        materialize_monthly_payments(date(2028, 1, 1))
+        self.assertEqual(plan.payments.count(), 5)
+        self.assertEqual(list(plan.payments.values_list("scheduled_for", flat=True)), [
+            date(2026, 11, 1), date(2026, 12, 1), date(2027, 1, 1),
+            date(2027, 2, 1), date(2027, 3, 1),
+        ])
+        for payment in plan.payments.all():
+            set_payment_paid(payment.pk, True, self.user)
+        materialize_monthly_payments(date(2028, 2, 1))
+        self.assertEqual(plan.payments.count(), 5)
+        self.assertEqual(plan.payments.filter(is_paid=True).count(), 5)
+
+    def test_end_date_can_be_added_to_existing_schedule(self):
+        plan = self.plan(frequency="monthly", start_date=date(2026, 7, 1))
+        materialize_monthly_payments(self.today)
+        first = plan.payments.first()
+        set_payment_paid(first.pk, True, self.user)
+        response = self.client.post(self.url, self.schedule_data(plan, **{
+            "plan-start_date": "2026-07-01", "plan-end_date": "2026-10-01",
+        }))
+        self.assertEqual(response.status_code, 302)
+        plan.refresh_from_db()
+        self.assertEqual(plan.end_date, date(2026, 10, 1))
+        self.assertEqual(plan.payments.filter(is_deleted=False).count(), 4)
+        self.assertTrue(plan.payments.get(pk=first.pk).is_paid)
+        materialize_monthly_payments(date(2027, 1, 1))
+        self.assertEqual(plan.payments.filter(is_deleted=False).count(), 4)
+
+    def test_invalid_end_date_rejected(self):
+        response = self.client.post(self.url, {
+            "action": "create", "payment_type": self.type.pk, "amount": "500",
+            "start_date": "2026-11-01", "end_date": "2026-10-01", "frequency": "monthly",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("end_date", response.context["create_form"].errors)
+        self.assertFalse(UpcomingExpensePlan.objects.exists())
+
+    def test_paid_check_label_and_state(self):
+        payment = self.plan().payments.get()
+        response = self.client.get(self.url)
+        self.assertContains(response, 'aria-checked="false"')
+        self.assertContains(response, '</span>Paid')
+        set_payment_paid(payment.pk, True, self.user)
+        response = self.client.get(self.url, {"status": "paid"})
+        self.assertContains(response, 'aria-checked="true"')
+
+    def test_stop_recurrence_is_visible_in_rows_and_expanded_section(self):
+        plan = self.plan(frequency="monthly")
+        response = self.client.get(self.url)
+        self.assertContains(response, 'class="ep-panel ep-recurring" open')
+        self.assertContains(response, "Stop recurrence", count=3)
+        self.client.post(self.url, {"action": "stop", "plan_id": plan.pk})
+        plan.refresh_from_db()
+        self.assertFalse(plan.is_active)
+        self.assertEqual(plan.payments.count(), 1)

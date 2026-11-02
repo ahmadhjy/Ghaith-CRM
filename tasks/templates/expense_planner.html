@@ -100,8 +100,8 @@
                         <form method="post" class="ep-paid-form">
                             {% csrf_token %}<input type="hidden" name="action" value="paid"><input type="hidden" name="payment_id" value="{{ payment.pk }}">
                             <input type="hidden" name="paid" value="{% if payment.is_paid %}no{% else %}yes{% endif %}">
-                            <button type="submit" class="ep-paid-button {% if payment.is_paid %}is-paid{% endif %}" aria-label="{% if payment.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}: {{ payment.payment_type.name }}" title="{% if payment.is_paid %}Restore to outstanding{% else %}Mark as paid{% endif %}" {% if payment.is_paid %}onclick="return confirm('Reverse all recorded payments and restore the full original balance?');"{% endif %}>
-                                <span>{% if payment.is_paid %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>{% if payment.is_paid %}Undo payments{% else %}Settle remaining{% endif %}
+                            <button type="submit" class="ep-paid-button {% if payment.is_paid %}is-paid{% endif %}" role="checkbox" aria-checked="{% if payment.is_paid %}true{% else %}false{% endif %}" aria-label="{% if payment.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}: {{ payment.payment_type.name }}" title="{% if payment.is_paid %}Restore to outstanding{% else %}Mark as paid{% endif %}" {% if payment.is_paid %}onclick="return confirm('Reverse all recorded payments and restore the full original balance?');"{% endif %}>
+                                <span>{% if payment.is_paid %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>Paid
                             </button>
                         </form>
                         {% if payment.amount_paid and not payment.is_paid %}<form method="post" onsubmit="return confirm('Reverse all recorded payments and restore the full original balance?');">{% csrf_token %}<input type="hidden" name="action" value="paid"><input type="hidden" name="payment_id" value="{{ payment.pk }}"><input type="hidden" name="paid" value="no"><button type="submit" class="ep-edit-link">Undo payments</button></form>{% endif %}
@@ -110,6 +110,9 @@
                     <td data-label="Actions" class="ep-row-actions">
                         {% if not payment.is_paid %}<a href="?{{ filter_query }}&amp;edit={{ payment.pk }}" class="ep-edit-link">Edit this installment</a>{% endif %}
                         <a href="?{{ filter_query }}&amp;edit_plan={{ payment.plan_id }}" class="ep-edit-link">Edit entire schedule</a>
+                        {% if payment.plan.frequency == 'monthly' and payment.plan.is_active %}
+                        <form method="post" onsubmit="return confirm('Stop future monthly installments? All existing payment records will remain.');">{% csrf_token %}<input type="hidden" name="action" value="stop"><input type="hidden" name="plan_id" value="{{ payment.plan_id }}"><button type="submit" class="ep-edit-link ep-danger">Stop recurrence</button></form>
+                        {% endif %}
                         {% if not payment.amount_paid %}<form method="post" onsubmit="return confirm('Delete only this installment? Other months are unchanged.');">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="payment_id" value="{{ payment.pk }}"><button type="submit" class="ep-edit-link ep-danger">Delete installment</button></form>{% endif %}
                     </td>
                 </tr>
@@ -125,11 +128,11 @@
         </footer>
     </section>
 
-    <details class="ep-panel ep-recurring">
+    <details class="ep-panel ep-recurring" open>
         <summary><span><i class="fas fa-redo" aria-hidden="true"></i> Monthly commitments <span class="ep-count">{{ plans|length }}</span></span><span class="ep-muted">Manage recurrence <i class="fas fa-chevron-down" aria-hidden="true"></i></span></summary>
-        <div class="ep-recurring-body"><p>Each month gets its own installment, added as that month begins. Unpaid months stay outstanding; paying one month never clears another. Stopping recurrence keeps payments already created.</p>
+        <div class="ep-recurring-body"><p>Each month gets its own installment, added as that month begins. Set a last due date for a fixed term, or use Stop recurrence below. Both options keep existing payment records. For five payments starting 1 November, choose 1 March as the last due date.</p>
             {% for plan in plans %}
-            <div class="ep-plan"><div><strong>{{ plan.payment_type }}</strong><p>{{ plan.description|default:"Monthly payment" }}</p><small>Started {{ plan.start_date|date:"d M Y" }} · Due on day {{ plan.start_date.day }} (last day in shorter months)</small></div><strong class="ep-plan-amount">{{ plan.amount|floatformat:2 }} <small>USD / month</small></strong><form method="post" onsubmit="return confirm('Stop future monthly installments? Payments already created will remain.');">{% csrf_token %}<input type="hidden" name="action" value="stop"><input type="hidden" name="plan_id" value="{{ plan.pk }}"><button class="ep-button ep-button-quiet" type="submit">Stop recurrence</button></form></div>
+            <div class="ep-plan"><div><strong>{{ plan.payment_type }}</strong><p>{{ plan.description|default:"Monthly payment" }}</p><small>Started {{ plan.start_date|date:"d M Y" }} · Due on day {{ plan.start_date.day }} (last day in shorter months)</small>{% if plan.end_date %}<p>{% if plan.end_date < today %}Ended{% else %}Last due date{% endif %}: {{ plan.end_date|date:"d M Y" }}</p>{% endif %}<a class="ep-edit-link" href="?{{ filter_query }}&amp;edit_plan={{ plan.pk }}">Edit schedule / last due date</a></div><strong class="ep-plan-amount">{{ plan.amount|floatformat:2 }} <small>USD / month</small></strong><form method="post" onsubmit="return confirm('Stop future monthly installments? Payments already created will remain.');">{% csrf_token %}<input type="hidden" name="action" value="stop"><input type="hidden" name="plan_id" value="{{ plan.pk }}"><button class="ep-button ep-button-quiet" type="submit">Stop recurrence</button></form></div>
             {% empty %}<p class="ep-muted">No active monthly commitments yet. Choose “Monthly” when adding a payment.</p>{% endfor %}
         </div>
     </details>

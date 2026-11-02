@@ -43,10 +43,11 @@ def materialize_monthly_payments(today=None, *, plan_id=None):
     if plan_id is not None:
         plans = plans.filter(pk=plan_id)
     for plan in plans:
+        plan_through = min(through, plan.end_date) if plan.end_date else through
         existing = {(d.year, d.month) for d in plan.payments.values_list("scheduled_for", flat=True)}
         missing = []
         offset = 0
-        while monthly_date(plan.start_date, offset) <= through:
+        while monthly_date(plan.start_date, offset) <= plan_through:
             scheduled_for = monthly_date(plan.start_date, offset)
             if (scheduled_for.year, scheduled_for.month) not in existing:
                 missing.append(UpcomingExpensePayment(
@@ -111,7 +112,7 @@ def record_partial_payment(payment_id, raw_amount, user, request_id=None):
 @transaction.atomic
 def update_expense_plan(plan_id, values, today=None):
     plan = UpcomingExpensePlan.objects.select_for_update().get(pk=plan_id, is_deleted=False)
-    for field in ("payment_type", "description", "amount", "start_date", "frequency"):
+    for field in ("payment_type", "description", "amount", "start_date", "frequency", "end_date"):
         setattr(plan, field, values[field])
     plan.save()
     today = today or timezone.localdate()
@@ -126,6 +127,8 @@ def update_expense_plan(plan_id, values, today=None):
             (plan.frequency == "monthly" and (due <= through or due == plan.start_date))
             or (plan.frequency == "once" and due == plan.start_date)
         )
+        if wanted and plan.end_date and due > plan.end_date:
+            wanted = False
         if not wanted:
             payment.is_deleted = True
         else:

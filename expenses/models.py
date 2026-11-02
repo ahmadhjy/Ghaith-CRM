@@ -179,6 +179,7 @@ class UpcomingExpensePlan(models.Model):
         max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))],
     )
     start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
     frequency = models.CharField(max_length=10, choices=Frequency.choices, default=Frequency.ONCE)
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
@@ -189,6 +190,7 @@ class UpcomingExpensePlan(models.Model):
         ordering = ["start_date", "pk"]
         constraints = [
             models.CheckConstraint(check=models.Q(amount__gt=0), name="upcoming_plan_positive_amount"),
+            models.CheckConstraint(check=models.Q(end_date__isnull=True) | models.Q(end_date__gte=models.F("start_date")), name="upcoming_plan_valid_end"),
         ]
 
     def __str__(self):
