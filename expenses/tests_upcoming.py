@@ -41,7 +41,7 @@ class ExpensePlannerTests(TestCase):
             user.user_permissions.set(Permission.objects.filter(content_type__app_label="expenses"))
             self.client.force_login(user)
             self.assertEqual(self.client.get(self.url).status_code, 403)
-            for action in ("create", "create_type", "paid", "edit", "stop"):
+            for action in ("create", "create_type", "paid", "edit", "stop", "partial", "delete", "delete_plan", "edit_plan"):
                 response = self.client.post(self.url, {"action": action})
                 self.assertEqual(response.status_code, 403)
         self.assertFalse(UpcomingExpensePlan.objects.exists())
@@ -258,3 +258,132 @@ class ExpensePlannerTests(TestCase):
             self.assertFalse(admin.has_view_permission(request))
             self.assertFalse(admin.has_change_permission(request))
             self.assertFalse(admin.has_module_permission(request))
+
+    def test_partial_payments_keep_original_and_deduct_only_paid_amount(self):
+        payment = self.plan(amount=Decimal("1000")).payments.get()
+        response = self.client.post(self.url, {
+            "action": "partial", "payment_id": payment.pk, "payment_amount": "700",
+        })
+        self.assertEqual(response.status_code, 302)
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount, Decimal("1000"))
+        self.assertEqual(payment.amount_paid, Decimal("700"))
+        self.assertEqual(payment.balance, Decimal("300"))
+        self.assertFalse(payment.is_paid)
+        page = self.client.get(self.url)
+        self.assertEqual(page.context["totals"]["outstanding"], Decimal("300"))
+        self.assertEqual(page.context["totals"]["paid_total"], Decimal("700"))
+        self.assertContains(page, "Remaining 300.00")
+        self.client.post(self.url, {"action": "partial", "payment_id": payment.pk, "payment_amount": "300"})
+        payment.refresh_from_db()
+        self.assertTrue(payment.is_paid)
+        self.assertEqual(payment.receipts.count(), 2)
+        self.assertEqual(self.client.get(self.url).context["page"].paginator.count, 0)
+        self.client.post(self.url, {"action": "paid", "payment_id": payment.pk, "paid": "no"})
+        payment.refresh_from_db()
+        self.assertEqual(payment.balance, Decimal("1000"))
+        self.assertEqual(payment.receipts.filter(is_reversed=True).count(), 2)
+
+    def test_partial_overpayments_invalid_amounts_and_retries(self):
+        from uuid import uuid4
+        payment = self.plan().payments.get()
+        for amount in ("101", "-5", "0", "NaN", "1.001"):
+            self.client.post(self.url, {"action": "partial", "payment_id": payment.pk, "payment_amount": amount})
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount_paid, 0)
+        token = uuid4()
+        for _ in range(2):
+            self.client.post(self.url, {
+                "action": "partial", "payment_id": payment.pk,
+                "payment_amount": "30", "request_id": token,
+            })
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount_paid, Decimal("30"))
+        self.assertEqual(payment.receipts.count(), 1)
+        self.client.post(self.url, {"action": "paid", "payment_id": payment.pk, "paid": "yes"})
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount_paid, Decimal("100"))
+        self.assertEqual(payment.receipts.count(), 2)
+
+    def schedule_data(self, plan, **overrides):
+        data = {
+            "action": "edit_plan", "plan_id": plan.pk,
+            "plan-payment_type": self.type.pk, "plan-description": "Lebadvisor office",
+            "plan-amount": "500", "plan-start_date": "2026-10-01",
+            "plan-frequency": "monthly",
+        }
+        data.update(overrides)
+        return data
+
+    def test_sara_backdating_schedule_adds_october_without_duplicating_november(self):
+        plan = self.plan(frequency="monthly", amount=Decimal("500"), start_date=date(2026, 11, 2))
+        response = self.client.post(self.url, self.schedule_data(plan))
+        self.assertEqual(response.status_code, 302)
+        payments = plan.payments.filter(is_deleted=False)
+        self.assertEqual(list(payments.values_list("scheduled_for", flat=True)), [
+            date(2026, 10, 1), date(2026, 11, 1),
+        ])
+        materialize_monthly_payments(self.today)
+        self.assertEqual(plan.payments.count(), 2)
+        self.assertEqual(self.client.get(self.url).context["totals"]["outstanding"], Decimal("1000"))
+        self.assertContains(self.client.get(self.url, {"edit_plan": plan.pk}), "Edit entire schedule")
+
+    def test_schedule_changes_preserve_paid_and_partial_but_update_unpaid(self):
+        from expenses.upcoming_services import record_partial_payment
+        plan = self.plan(frequency="monthly", start_date=date(2026, 9, 10))
+        materialize_monthly_payments(self.today)
+        first, second, third = list(plan.payments.all())
+        set_payment_paid(first.pk, True, self.user)
+        record_partial_payment(second.pk, "40", self.user)
+        self.client.post(self.url, self.schedule_data(plan, **{"plan-start_date": "2026-09-15"}))
+        materialize_monthly_payments(self.today)
+        self.assertEqual(plan.payments.count(), 3)
+        first.refresh_from_db(); second.refresh_from_db(); third.refresh_from_db()
+        self.assertEqual(first.amount, Decimal("100"))
+        self.assertEqual(second.amount, Decimal("100"))
+        self.assertEqual(second.balance, Decimal("60"))
+        self.assertEqual(third.amount, Decimal("500"))
+        self.assertEqual(third.due_date, date(2026, 11, 15))
+
+    def test_delete_installment_does_not_reappear_or_delete_other_months(self):
+        plan = self.plan(frequency="monthly", start_date=date(2026, 10, 10))
+        materialize_monthly_payments(self.today)
+        first = plan.payments.first()
+        self.client.post(self.url, {"action": "delete", "payment_id": first.pk})
+        materialize_monthly_payments(self.today)
+        first.refresh_from_db()
+        self.assertTrue(first.is_deleted)
+        self.assertEqual(plan.payments.filter(is_deleted=False).count(), 1)
+        self.assertEqual(self.client.get(self.url).context["totals"]["outstanding"], Decimal("100"))
+        self.client.post(self.url, {"action": "delete_plan", "plan_id": plan.pk})
+        self.assertEqual(self.client.get(self.url).context["page"].paginator.count, 0)
+        materialize_monthly_payments(date(2027, 2, 1))
+        self.assertEqual(plan.payments.count(), 2)
+
+    def test_delete_protects_payment_history(self):
+        from expenses.upcoming_services import record_partial_payment
+        plan = self.plan()
+        payment = plan.payments.get()
+        record_partial_payment(payment.pk, "40", self.user)
+        for data in (
+            {"action": "delete", "payment_id": payment.pk},
+            {"action": "delete_plan", "plan_id": plan.pk},
+        ):
+            self.client.post(self.url, data)
+        payment.refresh_from_db(); plan.refresh_from_db()
+        self.assertFalse(payment.is_deleted)
+        self.assertFalse(plan.is_deleted)
+        self.assertEqual(payment.amount_paid, Decimal("40"))
+
+    def test_migration_preserves_existing_fully_paid_amounts(self):
+        from importlib import import_module
+        from django.apps import apps
+        from django.db import connection
+        payment = self.plan().payments.get()
+        payment.is_paid = True
+        payment.save()
+        migration = import_module("expenses.migrations.0004_expense_partial_payments_and_schedule_edits")
+        from types import SimpleNamespace
+        migration.preserve_paid_balances(apps, SimpleNamespace(connection=connection))
+        payment.refresh_from_db()
+        self.assertEqual(payment.amount_paid, payment.amount)

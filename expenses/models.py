@@ -181,6 +181,7 @@ class UpcomingExpensePlan(models.Model):
     start_date = models.DateField()
     frequency = models.CharField(max_length=10, choices=Frequency.choices, default=Frequency.ONCE)
     is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -204,6 +205,8 @@ class UpcomingExpensePayment(models.Model):
     scheduled_for = models.DateField(help_text="Original installment date; not changed when a due date is edited.")
     due_date = models.DateField()
     is_paid = models.BooleanField(default=False)
+    amount_paid = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    is_deleted = models.BooleanField(default=False)
     paid_at = models.DateTimeField(null=True, blank=True)
     paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -213,7 +216,21 @@ class UpcomingExpensePayment(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["plan", "scheduled_for"], name="unique_upcoming_expense_installment"),
             models.CheckConstraint(check=models.Q(amount__gt=0), name="upcoming_payment_positive_amount"),
+            models.CheckConstraint(check=models.Q(amount_paid__gte=0, amount_paid__lte=models.F("amount")), name="upcoming_paid_within_amount"),
         ]
+
+    @property
+    def balance(self):
+        return self.amount - self.amount_paid
 
     def __str__(self):
         return f"{self.payment_type} — {self.due_date}"
+
+
+class UpcomingExpenseReceipt(models.Model):
+    request_id = models.UUIDField(null=True, blank=True, unique=True)
+    payment = models.ForeignKey(UpcomingExpensePayment, on_delete=models.PROTECT, related_name="receipts")
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    is_reversed = models.BooleanField(default=False)

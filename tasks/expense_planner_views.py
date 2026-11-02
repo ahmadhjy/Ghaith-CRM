@@ -1,13 +1,14 @@
 """Superuser-only expense planning, separate from invoices and accounting."""
 
 from decimal import Decimal
+from uuid import uuid4
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -17,7 +18,7 @@ from expenses.models import UpcomingExpensePayment, UpcomingExpensePlan
 from expenses.upcoming_forms import (
     UpcomingExpenseForm, UpcomingFilterForm, UpcomingPaymentEditForm, UpcomingTypeForm,
 )
-from expenses.upcoming_services import ensure_installment, materialize_monthly_payments, set_payment_paid
+from expenses.upcoming_services import ensure_installment, materialize_monthly_payments, set_payment_paid, record_partial_payment, update_expense_plan, delete_expense
 
 
 def _positive_id(value):
@@ -41,6 +42,8 @@ def expense_planner(request):
     type_form = UpcomingTypeForm(prefix="type")
     edit_form = None
     edit_payment = None
+    plan_form = None
+    selected_plan = None
     open_dialog = ""
     if request.method == "POST":
         action = request.POST.get("action")
@@ -67,8 +70,32 @@ def expense_planner(request):
                     open_dialog = "addType"
             else:
                 open_dialog = "addType"
+        elif action in ("partial", "delete", "delete_plan", "edit_plan"):
+            if action in ("partial", "delete"):
+                payment = get_object_or_404(UpcomingExpensePayment, pk=_positive_id(request.POST.get("payment_id")), is_deleted=False)
+            else:
+                selected_plan = get_object_or_404(UpcomingExpensePlan, pk=_positive_id(request.POST.get("plan_id")), is_deleted=False)
+            try:
+                if action == "partial":
+                    record_partial_payment(payment.pk, request.POST.get("payment_amount"), request.user, request.POST.get("request_id"))
+                    messages.success(request, "Payment recorded. The original amount is unchanged.")
+                elif action == "delete":
+                    delete_expense(payment_id=payment.pk)
+                    messages.success(request, "Installment deleted. It will not be regenerated.")
+                elif action == "delete_plan":
+                    delete_expense(plan_id=selected_plan.pk)
+                    messages.success(request, "Expense and its unpaid installments deleted.")
+                else:
+                    plan_form = UpcomingExpenseForm(request.POST, instance=selected_plan, prefix="plan")
+                    if plan_form.is_valid():
+                        update_expense_plan(selected_plan.pk, plan_form.cleaned_data, today)
+                        messages.success(request, "Schedule updated, including missing months. Paid and partially paid installments were preserved.")
+                    else:
+                        open_dialog = "editPlan"
+            except ValidationError as exc:
+                messages.error(request, " ".join(exc.messages))
         elif action == "paid":
-            payment = get_object_or_404(UpcomingExpensePayment, pk=_positive_id(request.POST.get("payment_id")))
+            payment = get_object_or_404(UpcomingExpensePayment, pk=_positive_id(request.POST.get("payment_id")), is_deleted=False)
             desired = request.POST.get("paid")
             if desired not in ("yes", "no"):
                 raise PermissionDenied("Invalid payment action.")
@@ -79,6 +106,7 @@ def expense_planner(request):
                 edit_payment = get_object_or_404(
                     UpcomingExpensePayment.objects.select_for_update(),
                     pk=_positive_id(request.POST.get("payment_id")),
+                    is_deleted=False,
                 )
                 if edit_payment.is_paid:
                     messages.error(request, "Mark this payment unpaid before editing it.")
@@ -93,7 +121,7 @@ def expense_planner(request):
             with transaction.atomic():
                 plan = get_object_or_404(
                     UpcomingExpensePlan.objects.select_for_update(),
-                    pk=_positive_id(request.POST.get("plan_id")), frequency="monthly",
+                    pk=_positive_id(request.POST.get("plan_id")), frequency="monthly", is_deleted=False,
                 )
                 plan.is_active = False
                 plan.save(update_fields=["is_active"])
@@ -103,16 +131,21 @@ def expense_planner(request):
         if not open_dialog:
             query = request.GET.copy()
             query.pop("edit", None)
+            query.pop("edit_plan", None)
             return redirect(reverse("expense_planner") + ("?" + query.urlencode() if query else ""))
 
     materialize_monthly_payments(today)
     if request.GET.get("edit") and not edit_form:
-        edit_payment = get_object_or_404(UpcomingExpensePayment, pk=_positive_id(request.GET["edit"]), is_paid=False)
+        edit_payment = get_object_or_404(UpcomingExpensePayment, pk=_positive_id(request.GET["edit"]), is_paid=False, is_deleted=False)
         edit_form = UpcomingPaymentEditForm(instance=edit_payment, prefix="edit")
         open_dialog = "editExpense"
+    if request.GET.get("edit_plan") and not plan_form:
+        selected_plan = get_object_or_404(UpcomingExpensePlan, pk=_positive_id(request.GET["edit_plan"]), is_deleted=False)
+        plan_form = UpcomingExpenseForm(instance=selected_plan, prefix="plan")
+        open_dialog = "editPlan"
 
     filters = UpcomingFilterForm(request.GET)
-    payments = UpcomingExpensePayment.objects.select_related("payment_type", "plan", "paid_by")
+    payments = UpcomingExpensePayment.objects.filter(is_deleted=False, plan__is_deleted=False).select_related("payment_type", "plan", "paid_by").prefetch_related("receipts")
     if filters.is_valid():
         values = filters.cleaned_data
         status = values.get("status") or "unpaid"
@@ -139,19 +172,22 @@ def expense_planner(request):
         payments = payments.none()
 
     totals = payments.aggregate(
-        outstanding=Sum("amount", filter=Q(is_paid=False)),
-        overdue_total=Sum("amount", filter=Q(is_paid=False, due_date__lt=today)),
-        paid_total=Sum("amount", filter=Q(is_paid=True)),
+        outstanding=Sum(F("amount")-F("amount_paid"), filter=Q(is_paid=False)),
+        overdue_total=Sum(F("amount")-F("amount_paid"), filter=Q(is_paid=False, due_date__lt=today)),
+        paid_total=Sum("amount_paid"),
     )
     totals = {key: value or Decimal("0.00") for key, value in totals.items()}
     query = request.GET.copy()
     query.pop("page", None)
     query.pop("edit", None)
+    query.pop("edit_plan", None)
     page = Paginator(payments, 50).get_page(request.GET.get("page"))
     return render(request, "expense_planner.html", {
         "create_form": create_form, "type_form": type_form, "edit_form": edit_form,
         "edit_payment": edit_payment, "filters": filters, "page": page,
         "totals": totals, "today": today, "filter_query": query.urlencode(),
-        "plans": UpcomingExpensePlan.objects.filter(frequency="monthly", is_active=True).select_related("payment_type"),
+        "plans": UpcomingExpensePlan.objects.filter(frequency="monthly", is_active=True, is_deleted=False).select_related("payment_type"),
+        "plan_form": plan_form, "selected_plan": selected_plan,
+        "payment_request_id": uuid4(),
         "open_dialog": open_dialog,
     })

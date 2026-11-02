@@ -1,3 +1,4 @@
+.ep-row-actions .ep-edit-link{display:block;margin:9px 0;background:none;border:0;cursor:pointer;padding:0;font-family:inherit}.ep-payment-history{font-size:10px;margin-top:10px;color:#6a818f;max-width:180px}.ep-payment-history summary{cursor:pointer}.ep-payment-history small{white-space:normal!important;line-height:1.6}
 .ep-page{max-width:1500px;margin:0 auto;padding:32px 28px 50px;color:#142d40}
 .ep-hero{background:linear-gradient(115deg,#112e43,#174658 70%,#14584f);border-radius:24px;padding:38px 40px;color:white;display:flex;justify-content:space-between;gap:30px;align-items:center;box-shadow:0 14px 38px #123d4a17;position:relative;overflow:hidden}
 .ep-hero:after{content:"";width:260px;height:260px;border:45px solid #ffffff04;border-radius:50%;position:absolute;right:200px;top:-120px;pointer-events:none}

@@ -19,11 +19,21 @@ change client/supplier balances, or create invoice payments.
    Paid date and user are retained while a payment is marked paid.
 5. Filter by payment type, dates, frequency, search text, status, or overdue-only.
    Totals use all matching records, not only the current table page (50 rows).
-6. Edit unpaid installments using the row's Edit link. Mark a paid payment
-   unpaid before correcting it. Installment edits do not change the monthly plan.
-7. Use **Monthly commitments → Stop recurrence** to stop future installments.
-   Payments already created remain in the list and history. To replace a monthly
-   amount or description, stop the old plan and add the replacement.
+6. **Record payment** accepts partial amounts: an original USD 1,000 payment
+   with USD 700 paid keeps its original amount and shows USD 300 remaining.
+   Multiple receipts are retained in Payment history. Settle remaining pays the
+   rest; Undo payments reverses recorded receipts and restores the full balance.
+7. **Edit this installment** changes one row. **Edit entire schedule** changes
+   the original start date, amount, description, and frequency, including unpaid
+   installments and future months. Moving the start from November to October
+   creates October's missing installment. Paid and partially paid rows are never
+   rewritten by schedule changes.
+8. **Delete installment** removes one unpaid row without regenerating it.
+   **Edit entire schedule → Delete entire expense** removes the schedule and
+   its unpaid rows. Deletion is soft (retained internally). Expenses with recorded
+   payments are protected; reverse the receipts before deleting, or stop recurrence.
+9. Use **Monthly commitments → Stop recurrence** to stop future installments.
+   Payments already created remain in the list and history.
 
 ## Monthly behavior
 
@@ -40,8 +50,10 @@ change client/supplier balances, or create invoice payments.
 
 ## Deploy
 
-Migration `expenses.0003_upcoming_expense_planner` adds three new tables and the
-initial payment types. It does not modify existing invoices or expenses.
+Migration `expenses.0003_upcoming_expense_planner` adds the planner.
+`expenses.0004_expense_partial_payments_and_schedule_edits` adds receipts, partial
+balances, and deletion flags. Existing fully paid installments are backfilled
+with their full paid amount. Existing invoices and accounting expenses are unchanged.
 
 ```bash
 cd /home/ghaithtravel/ghaithleads && BACKUP_MEDIA=no bash deploy/deploy.sh

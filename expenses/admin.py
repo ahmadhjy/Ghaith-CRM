@@ -58,7 +58,7 @@ class UpcomingExpenseTypeAdmin(SuperuserExpenseAdmin):
 class UpcomingExpensePlanAdmin(SuperuserExpenseAdmin):
     list_display = ("payment_type", "amount", "start_date", "frequency", "is_active")
     list_filter = ("frequency", "is_active", "payment_type")
-    readonly_fields = ("created_by", "created_at", "start_date", "frequency", "payment_type", "amount", "description")
+    readonly_fields = ("created_by", "created_at", "start_date", "frequency", "payment_type", "amount", "description", "is_deleted")
 
     def has_add_permission(self, request):
         return False  # Use the planner to create the first installment atomically.
@@ -71,7 +71,7 @@ class UpcomingExpensePlanAdmin(SuperuserExpenseAdmin):
 class UpcomingExpensePaymentAdmin(SuperuserExpenseAdmin):
     list_display = ("payment_type", "description", "amount", "due_date", "is_paid")
     list_filter = ("is_paid", "payment_type")
-    readonly_fields = ("plan", "scheduled_for", "is_paid", "paid_at", "paid_by", "created_at")
+    readonly_fields = ("plan", "scheduled_for", "is_paid", "amount_paid", "is_deleted", "paid_at", "paid_by", "created_at")
 
     def has_add_permission(self, request):
         return False

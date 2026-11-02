@@ -82,7 +82,7 @@
                 <tr class="{% if payment.is_paid %}ep-row-paid{% elif payment.due_date < today %}ep-row-overdue{% endif %}">
                     <td data-label="Payment type"><span class="ep-type-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span><strong>{{ payment.payment_type.name }}</strong></td>
                     <td data-label="Description" class="ep-description">{{ payment.description|default:"—"|linebreaksbr }}</td>
-                    <td data-label="Amount" class="ep-money"><strong>{{ payment.amount|floatformat:2 }}</strong> <span class="ep-currency">USD</span></td>
+                    <td data-label="Amount" class="ep-money"><div><strong>{{ payment.amount|floatformat:2 }}</strong> <span class="ep-currency">USD original</span><small class="ep-success">Paid {{ payment.amount_paid|floatformat:2 }}</small><small><b>Remaining {{ payment.balance|floatformat:2 }} USD</b></small></div></td>
                     <td data-label="Due date">
                         <strong class="ep-date">{{ payment.due_date|date:"d M Y" }}</strong>
                         {% if payment.is_paid %}
@@ -96,15 +96,22 @@
                         {% else %}<span class="ep-badge">One time</span>{% endif %}
                     </td>
                     <td data-label="Paid">
+                        {% if not payment.is_paid %}<button type="button" class="ep-button ep-button-quiet" data-record-payment="{{ payment.pk }}" data-balance="{{ payment.balance|stringformat:'.2f' }}">Record payment</button>{% endif %}
                         <form method="post" class="ep-paid-form">
                             {% csrf_token %}<input type="hidden" name="action" value="paid"><input type="hidden" name="payment_id" value="{{ payment.pk }}">
                             <input type="hidden" name="paid" value="{% if payment.is_paid %}no{% else %}yes{% endif %}">
-                            <button type="submit" class="ep-paid-button {% if payment.is_paid %}is-paid{% endif %}" aria-label="{% if payment.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}: {{ payment.payment_type.name }}" title="{% if payment.is_paid %}Restore to outstanding{% else %}Mark as paid{% endif %}">
-                                <span>{% if payment.is_paid %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>{% if payment.is_paid %}Paid{% else %}Unpaid{% endif %}
+                            <button type="submit" class="ep-paid-button {% if payment.is_paid %}is-paid{% endif %}" aria-label="{% if payment.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}: {{ payment.payment_type.name }}" title="{% if payment.is_paid %}Restore to outstanding{% else %}Mark as paid{% endif %}" {% if payment.is_paid %}onclick="return confirm('Reverse all recorded payments and restore the full original balance?');"{% endif %}>
+                                <span>{% if payment.is_paid %}<i class="fas fa-check" aria-hidden="true"></i>{% endif %}</span>{% if payment.is_paid %}Undo payments{% else %}Settle remaining{% endif %}
                             </button>
                         </form>
+                        {% if payment.amount_paid and not payment.is_paid %}<form method="post" onsubmit="return confirm('Reverse all recorded payments and restore the full original balance?');">{% csrf_token %}<input type="hidden" name="action" value="paid"><input type="hidden" name="payment_id" value="{{ payment.pk }}"><input type="hidden" name="paid" value="no"><button type="submit" class="ep-edit-link">Undo payments</button></form>{% endif %}
+                        {% if payment.receipts.all %}<details class="ep-payment-history"><summary>Payment history</summary>{% for receipt in payment.receipts.all %}<small>{{ receipt.recorded_at|date:"d M Y H:i" }} · {{ receipt.amount|floatformat:2 }} USD {% if receipt.is_reversed %}(reversed){% endif %}</small>{% endfor %}</details>{% endif %}
                     </td>
-                    <td data-label="Actions" class="ep-row-actions">{% if not payment.is_paid %}<a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page.number }}&amp;edit={{ payment.pk }}" class="ep-edit-link" aria-label="Edit {{ payment.payment_type.name }}"><i class="fas fa-pen" aria-hidden="true"></i> Edit</a>{% else %}<span class="ep-settled">Settled</span>{% endif %}</td>
+                    <td data-label="Actions" class="ep-row-actions">
+                        {% if not payment.is_paid %}<a href="?{{ filter_query }}&amp;edit={{ payment.pk }}" class="ep-edit-link">Edit this installment</a>{% endif %}
+                        <a href="?{{ filter_query }}&amp;edit_plan={{ payment.plan_id }}" class="ep-edit-link">Edit entire schedule</a>
+                        {% if not payment.amount_paid %}<form method="post" onsubmit="return confirm('Delete only this installment? Other months are unchanged.');">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="payment_id" value="{{ payment.pk }}"><button type="submit" class="ep-edit-link ep-danger">Delete installment</button></form>{% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="7"><div class="ep-empty"><div><i class="fas fa-check-double" aria-hidden="true"></i></div><h3>Nothing to chase here.</h3><p>No payments match this view. Adjust the filters or add your next expense.</p><button type="button" class="ep-button ep-button-dark" data-dialog="addExpense">Add a payment</button></div></td></tr>
@@ -150,14 +157,43 @@
 {% if edit_form %}
 <dialog id="editExpense" class="ep-dialog" data-open>
     <div class="ep-dialog-heading"><div><span class="ep-eyebrow">Adjust the details</span><h2>Edit payment</h2></div><button type="button" data-close aria-label="Close">×</button></div>
-    <p class="ep-dialog-intro">Changes apply to this installment only, not future months.</p>
+                <p class="ep-dialog-intro">Changes apply to this installment only, not future months.</p>
     <form method="post">{% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="payment_id" value="{{ edit_payment.pk }}">{{ edit_form.non_field_errors }}
         {% for field in edit_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
         <footer><button type="button" class="ep-button ep-button-quiet" data-close>Cancel</button><button type="submit" class="ep-button ep-button-dark">Save changes</button></footer>
     </form>
 </dialog>
 {% endif %}
+{% if plan_form %}
+<dialog id="editPlan" class="ep-dialog" data-open>
+    <div class="ep-dialog-heading"><h2>Edit entire schedule</h2><button type="button" data-close aria-label="Close">×</button></div>
+    <p class="ep-dialog-intro">Change the original start date, monthly amount, or description here. Missing months are added. Unpaid installments update; paid and partially paid installments keep their original details.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="edit_plan"><input type="hidden" name="plan_id" value="{{ selected_plan.pk }}">{{ plan_form.non_field_errors }}
+    {% for field in plan_form %}<div class="ep-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+    <footer><button type="button" class="ep-button ep-button-quiet" data-close>Cancel</button><button type="submit" class="ep-button ep-button-dark">Update schedule</button></footer>
+    </form>
+    <form method="post" onsubmit="return confirm('Delete the entire expense and its unpaid installments, and stop future recurrence? Expenses with recorded payments cannot be deleted until payments are reversed.');">{% csrf_token %}<input type="hidden" name="action" value="delete_plan"><input type="hidden" name="plan_id" value="{{ selected_plan.pk }}"><button type="submit" class="ep-button ep-button-quiet ep-danger">Delete entire expense</button></form>
+</dialog>
+{% endif %}
+<dialog id="recordPayment" class="ep-dialog">
+    <div class="ep-dialog-heading"><h2>Record a payment</h2><button type="button" data-close aria-label="Close">×</button></div>
+    <p class="ep-dialog-intro">Enter only the amount you paid. The original expense amount stays unchanged.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="partial"><input type="hidden" name="request_id" value="{{ payment_request_id }}"><input type="hidden" id="recordPaymentId" name="payment_id">
+    <div class="ep-form-field"><label for="recordPaymentAmount">Amount paid (USD)</label><input class="ep-input" type="number" name="payment_amount" id="recordPaymentAmount" min="0.01" step="0.01" required></div>
+    <footer><button type="button" class="ep-button ep-button-quiet" data-close>Cancel</button><button type="submit" class="ep-button ep-button-dark">Record payment</button></footer>
+    </form>
+</dialog>
 <script>
+document.querySelectorAll('[data-record-payment]').forEach(function(button) {
+    button.addEventListener('click', function() {
+        document.getElementById('recordPaymentId').value = button.dataset.recordPayment;
+        var amount = document.getElementById('recordPaymentAmount');
+        amount.max = button.dataset.balance;
+        amount.value = '';
+        document.getElementById('recordPayment').showModal();
+        amount.focus();
+    });
+});
 document.querySelectorAll('[data-dialog]').forEach(function(button) {
     button.addEventListener('click', function() { document.getElementById(button.dataset.dialog).showModal(); });
 });

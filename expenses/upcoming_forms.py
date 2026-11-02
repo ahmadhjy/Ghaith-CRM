@@ -47,6 +47,14 @@ class UpcomingPaymentEditForm(PaymentFieldsMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.style_fields()
 
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount < self.instance.amount_paid:
+            raise forms.ValidationError("The original amount cannot be less than the amount already paid.")
+        if self.instance.amount_paid and amount == self.instance.amount_paid:
+            raise forms.ValidationError("Use Record payment to settle the balance, rather than reducing the original amount.")
+        return amount
+
 
 class UpcomingTypeForm(PaymentFieldsMixin, forms.ModelForm):
     class Meta:
