@@ -6,6 +6,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.views import generic
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.formats import date_format
 import calendar
 from django.db.models import Count, Q, Sum
 from .models import Event
@@ -604,7 +605,7 @@ def client_payments_pdf(request):
 
     rows = [
         [
-            p.date.strftime("%d %b %Y") if p.date else "—",
+            date_format(timezone.template_localtime(p.date), "j M Y") if p.date else "—",
             p.leadtask.lead.name,
             f"-{p.amount}" if p.is_refund else str(p.amount),
             "Refund" if p.is_refund else "Payment",

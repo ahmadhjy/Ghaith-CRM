@@ -1,7 +1,9 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as datetime_timezone
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.http import HttpResponse
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -26,6 +28,35 @@ class FilteredPaymentTotalsTests(TestCase):
             travel_date=timezone.now() + timedelta(days=10),
         )
         self.client.force_login(self.user)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="Asia/Beirut")
+    def test_client_payment_pdf_matches_local_dates_at_month_boundary(self):
+        Payment.objects.create(
+            leadtask=self.order, amount=1080,
+            date=datetime(2026, 10, 31, 22, tzinfo=datetime_timezone.utc),
+        )
+        Payment.objects.create(
+            leadtask=self.order, amount=1400,
+            date=datetime(2026, 11, 3, 22, tzinfo=datetime_timezone.utc),
+        )
+        Payment.objects.create(
+            leadtask=self.order, amount=1500,
+            date=datetime(2026, 11, 30, 22, tzinfo=datetime_timezone.utc),
+        )
+        for filters, expected_dates in (
+            ({"month": "2026-11"}, ["1 Nov 2026", "4 Nov 2026"]),
+            ({"date": "2026-11-04"}, ["4 Nov 2026"]),
+        ):
+            with self.subTest(filters=filters), timezone.override("Asia/Beirut"):
+                page = self.client.get(reverse("client_payments_list"), filters)
+                self.assertEqual(page.context["filtered_count"], len(expected_dates))
+                for date_label in expected_dates:
+                    self.assertContains(page, date_label)
+                # Verify the exact date cells passed to the PDF renderer.
+                with patch("dashboard.views._build_modern_pdf", return_value=HttpResponse()) as render_pdf:
+                    response = self.client.get(reverse("client_payments_pdf"), filters)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual([row[0] for row in render_pdf.call_args.args[2]], expected_dates)
 
     def test_purchases_total_uses_issue_price_and_applied_filters(self):
         due = timezone.now() + timedelta(days=5)
